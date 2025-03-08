@@ -1,0 +1,1 @@
+{"version":3,"names":["palette","exports","Main","DeepGray","LightGray","Gray","White"],"sourceRoot":"../../../src","sources":["theme/palette.ts"],"mappings":";;;;;;AAAO,MAAMA,OAAO,GAAAC,OAAA,CAAAD,OAAA,GAAG;EACrBE,IAAI,EAAE,SAAS;EACfC,QAAQ,EAAE,SAAS;EACnBC,SAAS,EAAE,SAAS;EACpBC,IAAI,EAAE,SAAS;EACfC,KAAK,EAAE;AACT,CAAC","ignoreList":[]}

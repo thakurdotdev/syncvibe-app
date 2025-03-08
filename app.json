@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Syncvibe",
+    "slug": "Syncvibe",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736590968/hlm0vbni5809d2qilia8.jpg",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_500,w_500//v1736590968/hlm0vbni5809d2qilia8.jpg",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736590968/hlm0vbni5809d2qilia8.jpg"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736590968/hlm0vbni5809d2qilia8.jpg",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c26f6a56-3874-4847-bc2a-5293d01fd34c"
+      }
+    }
+  }
+}

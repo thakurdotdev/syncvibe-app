@@ -1,0 +1,166 @@
+{
+  "name": "react-native-awesome-slider",
+  "version": "2.9.0",
+  "description": "A versatile, responsive <Slider /> component for React Native and Web.",
+  "main": "lib/commonjs/index",
+  "module": "lib/module/index",
+  "types": "lib/typescript/src/index.d.ts",
+  "react-native": "src/index",
+  "source": "src/index",
+  "files": [
+    "src",
+    "lib",
+    "android",
+    "ios",
+    "cpp",
+    "react-native-awesome-gallery.podspec",
+    "!lib/typescript/example",
+    "!android/build",
+    "!ios/build",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__"
+  ],
+  "scripts": {
+    "example": "yarn workspace awesome-slider-example",
+    "prepare": "bob build",
+    "release": "release-it",
+    "lint": "eslint \"**/*.{js,ts,tsx}\"",
+    "fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
+    "test": "jest",
+    "bootstrap": "yarn example && yarn install"
+  },
+  "keywords": [
+    "react-native",
+    "react-native-reanimted",
+    "react-native-gesture-handle",
+    "slider",
+    "scrubber",
+    "react-native-slider",
+    "react-native-scrubber",
+    "slider haptics feedback"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alantoa/react-native-awesome-slider.git"
+  },
+  "author": "Alan <toacncom@gmail.com> (https://github.com/alantoa)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alantoa/react-native-awesome-slider/issues"
+  },
+  "homepage": "https://slider.0xalt.xyz",
+  "devDependencies": {
+    "@react-native/eslint-config": "^0.72.2",
+    "@release-it/conventional-changelog": "^5.0.0",
+    "@types/jest": "^28.1.2",
+    "@types/react": "~18.2.45",
+    "@types/react-native": "0.70.0",
+    "del-cli": "^5.0.0",
+    "eslint": "^8.4.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "jest": "^28.1.1",
+    "pod-install": "^0.1.0",
+    "prettier": "^3.4.2",
+    "react": "18.2.0",
+    "react-native": "0.76.5",
+    "react-native-builder-bob": "^0.23.2",
+    "react-native-gesture-handler": "~2.20.2",
+    "react-native-reanimated": "3.16.1",
+    "release-it": "^15.0.0",
+    "typescript": "^5.3.3"
+  },
+  "resolutions": {
+    "@types/react": "~18.2.45",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-gesture-handler": ">=2.0.0",
+    "react-native-reanimated": ">=3.0.0"
+  },
+  "workspaces": [
+    "example"
+  ],
+  "packageManager": "yarn@4.5.3",
+  "engines": {
+    "node": ">= 18.0.0"
+  },
+  "jest": {
+    "preset": "react-native",
+    "modulePathIgnorePatterns": [
+      "<rootDir>/example/node_modules",
+      "<rootDir>/lib/"
+    ]
+  },
+  "release-it": {
+    "git": {
+      "commitMessage": "chore: release ${version}",
+      "tagName": "v${version}"
+    },
+    "npm": {
+      "publish": true
+    },
+    "github": {
+      "release": true
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": "angular"
+      }
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@react-native",
+      "prettier"
+    ],
+    "rules": {
+      "prettier/prettier": [
+        "error",
+        {
+          "quoteProps": "consistent",
+          "singleQuote": true,
+          "tabWidth": 2,
+          "trailingComma": "es5",
+          "useTabs": false
+        }
+      ],
+      "react/react-in-jsx-scope": "off",
+      "react/jsx-uses-react": "off",
+      "react-native/no-inline-styles": "off",
+      "no-unused-vars": "off",
+      "react/no-unstable-nested-components": "off"
+    }
+  },
+  "eslintIgnore": [
+    "node_modules/",
+    "lib/",
+    "example/node_modules/",
+    "example/",
+    "docs/"
+  ],
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      "commonjs",
+      "module",
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  }
+}
