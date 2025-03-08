@@ -4,7 +4,7 @@
     "slug": "Syncvibe",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736590968/hlm0vbni5809d2qilia8.jpg",
+    "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_500,w_500//v1736590968/hlm0vbni5809d2qilia8.jpg",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.thakurdotdev.syncvibe"
@@ -25,14 +25,14 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736590968/hlm0vbni5809d2qilia8.jpg"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736590968/hlm0vbni5809d2qilia8.jpg",
+          "image": "./assets/images/icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
