@@ -2,7 +2,6 @@ import { SONG_URL } from "@/constants";
 import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import { Ionicons } from "@expo/vector-icons";
-import AntDesign from "@expo/vector-icons/AntDesign";
 import axios from "axios";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -12,25 +11,98 @@ import {
   Text,
   TouchableOpacity,
   View,
+  StyleSheet,
 } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  interpolate,
+  runOnJS,
+  FadeIn,
+  FadeOut,
+  useAnimatedGestureHandler,
+  withSpring,
+  Extrapolation,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { SongContols } from "./MusicCards";
+import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
+import { PanGestureHandler } from "react-native-gesture-handler";
 
-const { height } = Dimensions.get("window");
+const { height, width } = Dimensions.get("window");
+const ANIMATION_DURATION = 250;
+const TAB_ANIMATION_DURATION = 150;
+const SWIPE_THRESHOLD = 80;
+
+const PlayerTab = React.memo(
+  ({
+    currentSong,
+    artistName,
+  }: {
+    currentSong: Song | null;
+    artistName: string;
+  }) => (
+    <View style={styles.playerTabContainer}>
+      <Animated.Image
+        entering={FadeIn.duration(300)}
+        source={{ uri: currentSong?.image[2]?.link }}
+        style={styles.albumArt}
+        resizeMode="cover"
+      />
+      <View style={styles.songInfoContainer}>
+        <Text style={styles.songTitle}>{currentSong?.name}</Text>
+        <Text style={styles.artistName}>{artistName}</Text>
+      </View>
+      <SongControls />
+    </View>
+  ),
+);
+
+const QueueTab = React.memo(({ playlist }: { playlist: Song[] }) => (
+  <Animated.View
+    entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
+    exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
+    style={styles.tabContentContainer}
+  >
+    <MusicQueue playlist={playlist} />
+  </Animated.View>
+));
+
+const RecommendationsTab = React.memo(
+  ({
+    recommendations,
+    loading,
+  }: {
+    recommendations: Song[];
+    loading: boolean;
+  }) => (
+    <Animated.View
+      entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
+      exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
+      style={styles.tabContentContainer}
+    >
+      <SimilarSongs recommendations={recommendations} loading={loading} />
+    </Animated.View>
+  ),
+);
 
 export default function Player() {
-  const { handlePlayPauseSong, addToPlaylist } = usePlayer();
+  const { handlePlayPauseSong, addToPlaylist, handleNextSong } = usePlayer();
   const { currentSong, isPlaying } = usePlayerState();
   const { playlist } = usePlaylist();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("player");
   const insets = useSafeAreaInsets();
-  const [isMinimized, setIsMinimized] = useState(false);
 
-  const [recommendations, setRecommendations] = useState<Song[]>([]);
+  const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Animation values
+  const translateY = useSharedValue(height);
+  const gestureTranslateY = useSharedValue(0);
+  const miniPlayerOpacity = useSharedValue(1);
 
   const getRecommendations = useCallback(async () => {
     if (!currentSong?.id) return;
@@ -57,9 +129,53 @@ export default function Player() {
     getRecommendations();
   }, [getRecommendations]);
 
-  const toggleExpanded = useCallback(() => {
-    setIsExpanded((prev) => !prev);
-  }, []);
+  // Open player function
+  const openPlayer = useCallback(() => {
+    setIsExpanded(true);
+
+    // YouTube-like animation: fast at the beginning, slower at the end
+    translateY.value = withTiming(0, {
+      duration: ANIMATION_DURATION,
+      easing: Easing.bezier(0.17, 0.67, 0.23, 0.96),
+    });
+
+    // Fade out the mini player
+    miniPlayerOpacity.value = withTiming(0, {
+      duration: ANIMATION_DURATION * 0.6,
+      easing: Easing.out(Easing.ease),
+    });
+  }, [translateY, miniPlayerOpacity]);
+
+  // Close player function - YouTube-like dismissal
+  const closePlayer = useCallback(() => {
+    // Single smooth animation that doesn't bounce
+    translateY.value = withTiming(
+      height,
+      {
+        duration: ANIMATION_DURATION,
+        easing: Easing.bezier(0.33, 0.01, 0.66, 1),
+      },
+      () => {
+        runOnJS(setIsExpanded)(false);
+        gestureTranslateY.value = 0;
+      },
+    );
+
+    // Fade in mini player slightly before the expanded player is completely gone
+    miniPlayerOpacity.value = withTiming(1, {
+      duration: ANIMATION_DURATION,
+      easing: Easing.bezier(0.33, 0.01, 0.66, 1),
+    });
+  }, [translateY, miniPlayerOpacity, gestureTranslateY]);
+
+  const handleTabPress = useCallback(
+    (tab: string) => {
+      if (tab !== activeTab) {
+        setActiveTab(tab);
+      }
+    },
+    [activeTab],
+  );
 
   const artistName = useMemo(
     () =>
@@ -70,35 +186,100 @@ export default function Player() {
     [currentSong],
   );
 
+  // Swipe gesture handler for closing expanded player - YouTube style
+  const gestureHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx) => {
+      ctx.startY = gestureTranslateY.value;
+    },
+    onActive: (event, ctx: any) => {
+      if (event.translationY > 0) {
+        // Only allow downward swipes
+        // Add some resistance to the drag
+        const dampenedDrag = event.translationY * 0.8;
+        gestureTranslateY.value = ctx.startY + dampenedDrag;
+      }
+    },
+    onEnd: (event, velocity: any) => {
+      if (event.translationY > SWIPE_THRESHOLD || velocity.velocityY > 500) {
+        // If swiped beyond threshold or with high velocity, close the player
+        // The close animation runs from JavaScript thread for smoother coordination
+        runOnJS(closePlayer)();
+      } else {
+        // Reset position with a quick spring animation
+        gestureTranslateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 300,
+          mass: 0.8,
+        });
+      }
+    },
+  });
+
+  const expandedPlayerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value + gestureTranslateY.value }],
+      position: "absolute",
+      width: "100%",
+      height: "100%",
+      zIndex: isExpanded ? 10 : -1,
+    };
+  });
+
+  const miniPlayerStyle = useAnimatedStyle(() => {
+    const calculatedOpacity = interpolate(
+      translateY.value,
+      [0, height * 0.2, height * 0.5],
+      [0, 0, 1],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      opacity: isExpanded ? calculatedOpacity : miniPlayerOpacity.value,
+      transform: [
+        {
+          translateY: interpolate(
+            translateY.value,
+            [height * 0.7, height],
+            [10, 0],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
+
+  // Swipe area for closing expanded player
+  const SwipeHandle = () => (
+    <View style={styles.swipeHandleContainer}>
+      <View style={styles.swipeHandle} />
+    </View>
+  );
+
   const renderMiniPlayer = () => (
-    <Animated.View className="absolute w-full px-4 bottom-16 left-0">
+    <Animated.View style={[styles.miniPlayerContainer, miniPlayerStyle]}>
       <TouchableOpacity
-        className="flex-row items-center px-3 py-3 bg-black/90 rounded-2xl border border-white/10 shadow-lg"
-        style={{ shadowColor: "#ffffff" }}
-        onPress={toggleExpanded}
-        activeOpacity={0.95}
+        style={styles.miniPlayerContent}
+        onPress={openPlayer}
+        activeOpacity={0.9}
       >
         <Image
           source={{ uri: currentSong?.image[1]?.link }}
-          className="w-12 h-12 rounded-xl"
+          style={styles.miniPlayerImage}
         />
-        <View className="flex-1 px-3">
-          <Text className="text-white font-semibold" numberOfLines={1}>
+        <View style={styles.miniPlayerTextContainer}>
+          <Text style={styles.miniPlayerTitle} numberOfLines={1}>
             {currentSong?.name}
           </Text>
-          <Text className="text-gray-400 text-sm" numberOfLines={1}>
+          <Text style={styles.miniPlayerArtist} numberOfLines={1}>
             {artistName}
           </Text>
         </View>
         <TouchableOpacity
-          onPress={() => setIsMinimized(true)}
-          className="p-2 rounded-full mr-2"
-        >
-          <AntDesign name="shrink" size={18} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handlePlayPauseSong}
-          className="bg-white/15 p-2.5 rounded-full"
+          onPress={(e) => {
+            e.stopPropagation();
+            handlePlayPauseSong();
+          }}
+          style={styles.playPauseButton}
         >
           <Ionicons
             name={isPlaying ? "pause" : "play"}
@@ -106,111 +287,255 @@ export default function Player() {
             color="white"
           />
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={(e) => {
+            e.stopPropagation();
+            handleNextSong();
+          }}
+          style={styles.playPauseButton}
+          className="ml-2"
+        >
+          <Ionicons name="play-skip-forward" size={22} color="white" />
+        </TouchableOpacity>
       </TouchableOpacity>
+      <ProgressBar />
     </Animated.View>
   );
 
-  const renderCircleIcon = () => (
-    <TouchableOpacity
-      onPress={() => setIsMinimized(false)}
-      className="bg-black/90 p-1 rounded-full absolute shadow-lg bottom-20 right-4"
-    >
-      <View className="relative">
-        <Image
-          source={{ uri: currentSong?.image[1]?.link }}
-          className="w-12 h-12 rounded-full"
-        />
-        {isPlaying && (
-          <View className="absolute bottom-0 right-0 bg-green-500 w-4 h-4 rounded-full border-2 border-black" />
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-
-  // Player tab content
-  const renderPlayerTab = () => (
-    <View className="items-center">
-      <Image
-        source={{ uri: currentSong?.image[2]?.link }}
-        className="w-full aspect-square rounded-2xl"
-        style={{ maxHeight: height * 0.45 }}
-        resizeMode="cover"
-      />
-      <View className="w-full mt-8 mb-4">
-        <Text className="text-white text-2xl font-bold text-center">
-          {currentSong?.name}
-        </Text>
-        <Text className="text-gray-400 text-lg text-center mt-2">
-          {artistName}
-        </Text>
-      </View>
-      <SongContols />
-    </View>
-  );
-
   const renderExpandedPlayer = () => (
-    <View className="absolute inset-0 bg-black">
+    <Animated.View style={expandedPlayerStyle}>
       <StatusBar barStyle="light-content" />
-      <View style={{ paddingTop: insets.top }} className="flex-1">
-        {/* Header */}
-        <View className="flex-row justify-between items-center py-4 px-4">
-          <TouchableOpacity
-            onPress={toggleExpanded}
-            className="bg-white/10 p-2 rounded-full"
-          >
-            <Ionicons name="chevron-down" size={24} color="white" />
-          </TouchableOpacity>
-          <Text className="text-white text-base font-medium">Now Playing</Text>
-          <TouchableOpacity
-            onPress={() => {}}
-            className="bg-white/10 p-2 rounded-full"
-          >
-            <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-          </TouchableOpacity>
-        </View>
+      <View
+        style={[styles.expandedPlayerBackground, { paddingTop: insets.top }]}
+      >
+        <PanGestureHandler onGestureEvent={gestureHandler}>
+          <Animated.View>
+            <SwipeHandle />
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={closePlayer}
+                style={styles.headerButton}
+              >
+                <Ionicons name="chevron-down" size={24} color="white" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Now Playing</Text>
+              <TouchableOpacity style={styles.headerButton}>
+                <Ionicons name="ellipsis-horizontal" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </PanGestureHandler>
 
-        {/* Tabs */}
-        <View className="flex-row justify-between bg-white/5 rounded-xl p-1 mx-4 mb-4">
+        <View style={styles.tabsContainer}>
           {["player", "queue", "recommendations"].map((tab) => (
             <TouchableOpacity
               key={tab}
-              className={`flex-1 ${
-                activeTab === tab ? "bg-white/15" : ""
-              } rounded-lg py-2.5`}
-              onPress={() => setActiveTab(tab)}
+              style={styles.tab}
+              onPress={() => handleTabPress(tab)}
+              activeOpacity={0.7}
             >
-              <Text className="text-white text-center font-medium">
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab ? styles.activeTabText : null,
+                ]}
+              >
                 {tab === "player"
                   ? "Now Playing"
                   : tab === "queue"
                   ? "Queue"
                   : "For You"}
               </Text>
+              {activeTab === tab && (
+                <Animated.View
+                  entering={FadeIn.duration(150)}
+                  style={styles.activeTabIndicator}
+                />
+              )}
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Content area */}
-        <View className="flex-1 px-4">
-          {activeTab === "player" && renderPlayerTab()}
-          {activeTab === "queue" && <MusicQueue playlist={playlist} />}
+        <View style={styles.contentContainer}>
+          {activeTab === "player" && (
+            <Animated.View
+              entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
+              exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
+              style={styles.tabContentContainer}
+            >
+              <PlayerTab currentSong={currentSong} artistName={artistName} />
+            </Animated.View>
+          )}
+          {activeTab === "queue" && <QueueTab playlist={playlist} />}
           {activeTab === "recommendations" && (
-            <SimilarSongs recommendations={recommendations} loading={loading} />
+            <RecommendationsTab
+              recommendations={recommendations}
+              loading={loading}
+            />
           )}
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 
   if (!currentSong) return null;
 
   return (
     <>
-      {isExpanded
-        ? renderExpandedPlayer()
-        : isMinimized
-        ? renderCircleIcon()
-        : renderMiniPlayer()}
+      {renderExpandedPlayer()}
+      {renderMiniPlayer()}
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  miniPlayerContainer: {
+    position: "absolute",
+    width: "100%",
+    bottom: 60,
+    left: 0,
+    zIndex: 5,
+  },
+  miniPlayerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#121212",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    elevation: 8,
+    marginHorizontal: 8,
+  },
+  miniPlayerImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+  },
+  miniPlayerTextContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  miniPlayerTitle: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+  miniPlayerArtist: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 13,
+    marginTop: 2,
+  },
+  playPauseButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    padding: 10,
+    borderRadius: 24,
+    marginLeft: 8,
+  },
+
+  // Expanded Player styles
+  expandedPlayerBackground: {
+    flex: 1,
+    backgroundColor: "#121212",
+    height: "100%",
+  },
+  swipeHandleContainer: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  swipeHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 3,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  headerButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 8,
+    borderRadius: 24,
+  },
+  headerTitle: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  tabsContainer: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    position: "relative",
+  },
+  tabText: {
+    color: "rgba(255, 255, 255, 0.6)",
+    textAlign: "center",
+    fontWeight: "500",
+    fontSize: 14,
+  },
+  activeTabText: {
+    color: "white",
+  },
+  activeTabIndicator: {
+    position: "absolute",
+    bottom: -1,
+    height: 3,
+    width: "70%",
+    backgroundColor: "#1DB954",
+    borderRadius: 3,
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  tabContentContainer: {
+    flex: 1,
+  },
+
+  // Player Tab styles
+  playerTabContainer: {
+    alignItems: "center",
+  },
+  albumArt: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.44,
+    shadowRadius: 10.32,
+    elevation: 16,
+    maxHeight: height * 0.45,
+  },
+  songInfoContainer: {
+    width: "100%",
+    marginTop: 32,
+    marginBottom: 16,
+  },
+  songTitle: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  artistName: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 18,
+    textAlign: "center",
+    marginTop: 8,
+  },
+});

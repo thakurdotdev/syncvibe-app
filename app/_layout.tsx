@@ -7,6 +7,7 @@ import Player from "@/components/music/Player";
 import { MusicProvider } from "@/context/MusicContext";
 import { UserProvider, useUser } from "@/context/UserContext";
 import "../global.css";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 function useAuthenticatedRoute() {
   const { user, loading } = useUser();
@@ -35,9 +36,11 @@ export default function RootLayout() {
   return (
     <UserProvider>
       <MusicProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <RootLayoutNav />
-        </GestureHandlerRootView>
+        <SafeAreaProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <RootLayoutNav />
+          </GestureHandlerRootView>
+        </SafeAreaProvider>
       </MusicProvider>
     </UserProvider>
   );
@@ -69,13 +72,13 @@ function RootLayoutNav() {
           headerBlurEffect: "dark",
         }}
       >
-        <Stack.Screen
+        {/* <Stack.Screen
           name="login"
           options={{
             headerShown: false,
             gestureEnabled: false,
           }}
-        />
+        /> */}
         <Stack.Screen
           name="(tabs)"
           options={{
@@ -83,7 +86,7 @@ function RootLayoutNav() {
             gestureEnabled: false,
           }}
         />
-        <Stack.Screen
+        {/* <Stack.Screen
           name="edit-profile"
           options={{
             title: "Edit Profile",
@@ -110,13 +113,27 @@ function RootLayoutNav() {
             title: "Update Profile Picture",
             presentation: "modal",
           }}
-        />
+        /> */}
         <Stack.Screen
           name="playlists"
           options={{
             navigationBarColor: "#000000",
-
             title: "Playlist",
+            presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="albums"
+          options={{
+            navigationBarColor: "#000000",
+            title: "Album",
+            presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="music-language"
+          options={{
+            title: "Update Language Preferences",
             presentation: "modal",
           }}
         />

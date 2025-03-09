@@ -13,6 +13,7 @@ import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useUser } from "@/context/UserContext";
 import axios from "axios";
 import { API_URL } from "@/constants";
+import { LanguagesIcon, Music2Icon } from "lucide-react-native";
 
 interface StatButtonProps {
   icon: React.ReactNode;
@@ -147,7 +148,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Stats Section */}
-        <View className="flex-row justify-between mb-6">
+        {/* <View className="flex-row justify-between mb-6">
           <StatButton
             icon={<Ionicons name="people" size={24} color="#10b981" />}
             label="Following"
@@ -160,7 +161,7 @@ export default function ProfileScreen() {
             value={followers.length}
             onPress={() => router.push("/followers")}
           />
-        </View>
+        </View> */}
 
         {/* Profile Management */}
         <ProfileSection
@@ -174,6 +175,24 @@ export default function ProfileScreen() {
             <View className="flex-row items-center">
               <Feather name="edit-2" size={20} color="#9ca3af" />
               <Text className="text-white ml-3">Edit Profile</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color="#9ca3af" />
+          </TouchableOpacity>
+        </ProfileSection>
+
+        <ProfileSection
+          title="Music Preferences"
+          icon={<Music2Icon color="#fff" size="20px" />}
+        >
+          <TouchableOpacity
+            className="flex-row items-center justify-between py-3"
+            onPress={() => router.push("/music-language")}
+          >
+            <View className="flex-row items-center">
+              <LanguagesIcon size={20} color="#9ca3af" />
+              <Text className="text-white ml-3">
+                Update Language Preferences
+              </Text>
             </View>
             <Feather name="chevron-right" size={20} color="#9ca3af" />
           </TouchableOpacity>
@@ -200,7 +219,7 @@ export default function ProfileScreen() {
             />
           }
         >
-          {user?.logintype === "EMAILPASSWORD" && (
+          {/* {user?.logintype === "EMAILPASSWORD" && (
             <TouchableOpacity
               className="flex-row items-center justify-between py-3 border-b border-gray-700/30"
               onPress={() => router.push("/change-password")}
@@ -211,7 +230,7 @@ export default function ProfileScreen() {
               </View>
               <Feather name="chevron-right" size={20} color="#9ca3af" />
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* {user?.passkeyEnabled && (
             <TouchableOpacity
@@ -242,7 +261,7 @@ export default function ProfileScreen() {
         </ProfileSection>
 
         {/* Danger Zone */}
-        <View className="bg-red-900/20 backdrop-blur-lg rounded-xl p-4 mt-4 border border-red-500/30">
+        {/* <View className="bg-red-900/20 backdrop-blur-lg rounded-xl p-4 mt-4 border border-red-500/30">
           <View className="justify-between">
             <View>
               <Text className="text-xl font-semibold text-red-400">
@@ -259,7 +278,7 @@ export default function ProfileScreen() {
               <Text className="text-white font-semibold">Delete Account</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
       </View>
     </ScrollView>
   );

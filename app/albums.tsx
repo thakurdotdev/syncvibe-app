@@ -1,16 +1,18 @@
 import { SongCard } from "@/components/music/MusicCards";
+import { Button, ButtonText } from "@/components/ui/button";
 import { SONG_URL } from "@/constants";
 import { usePlayer } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import axios from "axios";
 import { useLocalSearchParams } from "expo-router";
+import { Music2Icon } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Button,
   FlatList,
   Image,
   ImageBackground,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -33,6 +35,8 @@ export default function AlbumScreen() {
   const [albumData, setAlbumData] = useState<AlbumData | null>(null);
   const { addToPlaylist, playSong } = usePlayer();
   const [loading, setLoading] = useState(true);
+
+  console.log("AlbumScreen -> id", id);
 
   const fetchAlbumData = useCallback(async () => {
     try {
@@ -79,6 +83,18 @@ export default function AlbumScreen() {
     );
   }
 
+  if (!albumData) {
+    return (
+      <SafeAreaView className="flex-1 bg-black items-center justify-center">
+        <Music2Icon size={100} color="white" className="mt-4" />
+        <Text className="text-white mt-4">No album found</Text>
+        <Button onPress={fetchAlbumData} action="primary" className="mt-4">
+          <ButtonText>Retry</ButtonText>
+        </Button>
+      </SafeAreaView>
+    );
+  }
+
   const bgUrl = albumData?.image?.[2]?.link;
   const artistName = albumData?.artist_map?.artists
     ?.slice(0, 2)
@@ -86,7 +102,7 @@ export default function AlbumScreen() {
     .join(", ");
 
   const renderHeader = () => (
-    <View>
+    <SafeAreaView>
       {/* Album Info */}
       <ImageBackground
         source={{ uri: bgUrl }}
@@ -122,23 +138,28 @@ export default function AlbumScreen() {
       </ImageBackground>
 
       {/* Actions */}
-      <View className="flex-row justify-center gap-5 w-full mt-6">
+      <View style={styles.container}>
         <Button
           onPress={handlePlayAll}
           disabled={!albumData?.songs?.length}
-          title="Play All"
-        />
+          action="primary"
+        >
+          <ButtonText>Play All</ButtonText>
+        </Button>
 
         <Button
-          onPress={handleShuffle}
           disabled={!albumData?.songs?.length}
-          title="Shuffle"
-        />
+          variant="outline"
+          action="primary"
+          onPress={handleShuffle}
+        >
+          <ButtonText>Shuffle</ButtonText>
+        </Button>
       </View>
 
       {/* Album Songs */}
       <Text className="text-white text-xl font-bold mt-8 mb-4">Songs</Text>
-    </View>
+    </SafeAreaView>
   );
 
   return (
@@ -155,3 +176,13 @@ export default function AlbumScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 20,
+    width: "100%",
+    marginTop: 24,
+  },
+});

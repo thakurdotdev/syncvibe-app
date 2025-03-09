@@ -6,8 +6,15 @@ import {
 import { Song } from "@/types/song";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { memo, default as React, useCallback, useMemo } from "react";
-import { Image, View, Text } from "react-native";
+import {
+  memo,
+  default as React,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
+import { Image, View, Text, StyleSheet, Pressable } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { Slider } from "react-native-awesome-slider";
@@ -38,6 +45,38 @@ const formatTime = (time: number) => {
   return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
 };
 
+interface CardContainerProps {
+  children: React.ReactNode;
+  onPress: () => void | Promise<void>;
+  width?: number;
+}
+
+const CardContainer = ({
+  children,
+  onPress,
+  width = 160,
+}: CardContainerProps) => (
+  <Pressable
+    style={{
+      width: width,
+      backgroundColor: "rgba(24, 24, 27, 0.8)",
+      borderRadius: 8,
+      marginBottom: 16,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    }}
+    onPress={onPress}
+    android_ripple={{ color: "rgba(255, 255, 255, 0.1)", borderless: false }}
+    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+  >
+    {children}
+  </Pressable>
+);
+
 export const SongCard = memo(({ song }: SongCardProps) => {
   const { handlePlayPauseSong, playSong } = usePlayer();
   const { currentSong, isPlaying } = usePlayerState();
@@ -45,7 +84,7 @@ export const SongCard = memo(({ song }: SongCardProps) => {
   const isCurrentSong = currentSong?.id === song.id;
   return (
     <View
-      className="flex-row items-center bg-white/10 rounded-2xl p-2 mb-1"
+      className="flex-row items-center bg-white/10 rounded-xl p-2 mb-1"
       key={song.id}
     >
       <TouchableOpacity
@@ -92,14 +131,26 @@ export const SongCard = memo(({ song }: SongCardProps) => {
   );
 });
 
-// AlbumCard Component
+const CardImage = ({ uri, alt }: { uri: string; alt: string }) => (
+  <View
+    style={{ width: "100%", height: 140, borderRadius: 6, overflow: "hidden" }}
+  >
+    <Image
+      source={{ uri: uri || "https://via.placeholder.com/140" }}
+      style={{ width: "100%", height: "100%" }}
+      resizeMode="cover"
+      alt={alt}
+    />
+  </View>
+);
+
 export const AlbumCard = memo(({ album }: AlbumCardProps) => {
   const handlePress = useCallback(() => {
     router.push({
       pathname: "/albums",
       params: { id: album.id },
     });
-  }, [album, router]);
+  }, [album?.id]);
 
   if (!album) return null;
 
@@ -107,149 +158,71 @@ export const AlbumCard = memo(({ album }: AlbumCardProps) => {
   const imageUrl = album.image?.[2]?.link || album.image?.[2]?.url;
 
   return (
-    <TouchableOpacity
-      className="w-44 rounded-xl bg-zinc-800/60 overflow-hidden mb-4"
-      activeOpacity={0.7}
-      onPress={handlePress}
-    >
-      <View className="p-3 space-y-3">
-        <Image
-          source={{ uri: imageUrl }}
-          className="w-44 h-40 rounded-lg"
-          resizeMode="cover"
-          alt="Album cover"
-        />
-
+    <CardContainer onPress={handlePress}>
+      <View style={{ padding: 12, gap: 8 }}>
+        <CardImage uri={imageUrl} alt={`Album: ${name}`} />
         <Text
-          className="font-semibold text-white truncate"
+          style={{
+            color: "white",
+            fontWeight: "600",
+            fontSize: 14,
+            paddingHorizontal: 4,
+          }}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
           {name}
         </Text>
       </View>
-    </TouchableOpacity>
+    </CardContainer>
   );
 });
 
-// PlaylistCard Component
 export const PlaylistCard = memo(({ playlist }: PlaylistCardProps) => {
   const handlePress = useCallback(() => {
     router.push({
       pathname: "/playlists",
       params: { id: playlist.id },
     });
-  }, [playlist, router]);
+  }, [playlist?.id]);
 
   if (!playlist?.name || !playlist?.image) return null;
 
   const subtitle = playlist.subtitle || playlist.description || "Playlist";
   const imageUrl = Array.isArray(playlist.image)
-    ? playlist.image[2].link
+    ? playlist.image[2]?.link
     : playlist.image;
 
   return (
-    <TouchableOpacity
-      className="w-40 rounded-xl bg-zinc-800/60 overflow-hidden"
-      activeOpacity={0.7}
-      onPress={handlePress}
-    >
-      <View className="flex gap-3">
-        <Image
-          source={{ uri: imageUrl }}
-          className="w-40 h-40 rounded-lg"
-          resizeMode="cover"
-          alt="Playlist cover"
-        />
-
-        <View className="space-y-1">
+    <CardContainer onPress={handlePress}>
+      <View style={{ padding: 12, gap: 8 }}>
+        <CardImage uri={imageUrl} alt={`Playlist: ${playlist.name}`} />
+        <View style={{ gap: 4, paddingHorizontal: 4 }}>
           <Text
-            className="font-semibold text-white"
+            style={{ color: "white", fontWeight: "600", fontSize: 14 }}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {playlist.name}
           </Text>
           <Text
-            className="text-xs text-gray-400"
-            numberOfLines={2}
+            style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
+            numberOfLines={1}
             ellipsizeMode="tail"
           >
             {subtitle}
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
-  );
-});
-
-export const SongContols = memo(() => {
-  const {
-    handleTimeSeek,
-    handlePrevSong,
-    handleNextSong,
-    handlePlayPauseSong,
-  } = usePlayer();
-  const { currentTime, duration } = usePlayerTime();
-  const { isPlaying } = usePlayerState();
-
-  const progress = useSharedValue(currentTime);
-  const min = useSharedValue(0);
-  const max = useSharedValue(duration);
-
-  return (
-    <View className="w-full px-8 mb-4 mt-4">
-      <Slider
-        minimumValue={min || 0}
-        maximumValue={max || 0}
-        progress={progress}
-        steps={100}
-        onValueChange={handleTimeSeek}
-        theme={{
-          minimumTrackTintColor: "#007AFF",
-          maximumTrackTintColor: "#DEDEDE",
-          cacheTrackTintColor: "#F2F2F2",
-        }}
-      />
-
-      <View className="flex-row justify-between mt-2">
-        <Text className="text-gray-400">{formatTime(currentTime)}</Text>
-        <Text className="text-gray-400">{formatTime(duration)}</Text>
-      </View>
-
-      <View className="flex-row items-center justify-between mt-8">
-        <TouchableOpacity
-          onPress={handlePrevSong}
-          className="bg-white/10 p-3 rounded-full"
-        >
-          <Ionicons name="play-skip-back" size={30} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handlePlayPauseSong}
-          className="bg-white/10 p-6 rounded-full"
-        >
-          <Ionicons
-            name={isPlaying ? "pause" : "play"}
-            size={40}
-            color="white"
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleNextSong}
-          className="bg-white/10 p-3 rounded-full"
-        >
-          <Ionicons name="play-skip-forward" size={30} color="white" />
-        </TouchableOpacity>
-      </View>
-    </View>
+    </CardContainer>
   );
 });
 
 export const NewSongCard = memo(({ song }: SongCardProps) => {
   const { handlePlayPauseSong, playSong } = usePlayer();
   const { currentSong, isPlaying } = usePlayerState();
-
   const isCurrentSong = currentSong?.id === song.id;
+
   const imageUrl = song.image?.[2]?.link || song.image?.[1]?.link;
   const artistName =
     song.subtitle || song.artist_map?.artists?.[0]?.name || "Unknown Artist";
@@ -263,66 +236,72 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   }, [isCurrentSong, handlePlayPauseSong, playSong, song]);
 
   return (
-    <View className="w-40 bg-zinc-900/60 rounded-xl overflow-hidden mb-4">
-      <View className="p-2 space-y-2">
-        {/* Image with Play Overlay */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handlePress}
-          className="relative w-full aspect-square"
+    <CardContainer width={160} onPress={handlePress}>
+      <View style={{ padding: 12, gap: 8 }}>
+        <CardImage uri={imageUrl} alt={`Song: ${song.name}`} />
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.2)",
+            borderRadius: 6,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: isCurrentSong ? 1 : 0,
+          }}
         >
-          <Image
-            source={{ uri: imageUrl }}
-            className="w-40 h-40 rounded-lg"
-            resizeMode="cover"
-            alt={song.name}
-          />
-
-          {/* Semi-transparent overlay that appears on hover/active state */}
           <View
-            className={`absolute inset-0 bg-black/30 rounded-lg ${
-              isCurrentSong ? "opacity-100" : "opacity-0"
-            } transition-opacity`}
+            style={{
+              padding: 8,
+              borderRadius: 50,
+              backgroundColor: isCurrentSong
+                ? "rgb(34, 197, 94)"
+                : "rgba(0, 0, 0, 0.5)",
+            }}
           >
-            {/* Centered play button with pulsing effect for currently playing song */}
-            <View className="absolute inset-0 flex items-center justify-center">
-              <View
-                className={`p-3 rounded-full ${
-                  isCurrentSong ? "bg-[#1DB954]" : "bg-black/50"
-                }`}
-              >
-                <Ionicons
-                  name={isCurrentSong && isPlaying ? "pause" : "play"}
-                  size={28}
-                  color="white"
-                />
-              </View>
-            </View>
+            <Ionicons
+              name={isCurrentSong && isPlaying ? "pause" : "play"}
+              size={24}
+              color="white"
+            />
           </View>
+        </View>
 
-          {/* Subtle playing indicator at corner */}
-          {isCurrentSong && (
-            <View className="absolute top-2 left-2 h-6 w-6 rounded-full bg-[#1DB954] items-center justify-center">
-              <Ionicons
-                name={isPlaying ? "musical-notes" : "pause"}
-                size={14}
-                color="white"
-              />
-            </View>
-          )}
-        </TouchableOpacity>
+        {isCurrentSong && (
+          <View
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              height: 24,
+              width: 24,
+              borderRadius: 12,
+              backgroundColor: "rgb(34, 197, 94)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons
+              name={isPlaying ? "musical-note" : "pause"}
+              size={12}
+              color="white"
+            />
+          </View>
+        )}
 
-        {/* Song Info */}
-        <View className="px-1">
+        <View style={{ paddingHorizontal: 4 }}>
           <Text
-            className="text-white font-semibold text-base"
+            style={{ color: "white", fontWeight: "500", fontSize: 14 }}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {song.name}
           </Text>
           <Text
-            className="text-gray-400 text-xs"
+            style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
@@ -330,7 +309,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
           </Text>
         </View>
       </View>
-    </View>
+    </CardContainer>
   );
 });
 
@@ -338,43 +317,188 @@ export const ArtistCard = memo(({ artist }: ArtistCardProps) => {
   if (!artist?.name || !artist?.image) return null;
 
   const imageUrl = useMemo(
-    () => (Array.isArray(artist.image) ? artist.image[2].link : artist.image),
+    () => (Array.isArray(artist.image) ? artist.image[2]?.link : artist.image),
     [artist.image],
   );
 
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     router.push({
       pathname: "/artist",
       params: { id: artist.id },
     });
-  };
+  }, [artist?.id]);
 
   return (
-    <View className="w-44 bg-zinc-900/60 rounded-xl overflow-hidden mb-4">
-      <View className="p-2 space-y-2">
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handlePress}
-          className="relative w-full aspect-square"
+    <CardContainer onPress={handlePress}>
+      <View style={{ padding: 12, gap: 8 }}>
+        <CardImage uri={imageUrl} alt={`Artist: ${artist.name}`} />
+        <Text
+          style={{
+            color: "white",
+            fontWeight: "500",
+            fontSize: 14,
+            paddingHorizontal: 4,
+          }}
+          numberOfLines={1}
+          ellipsizeMode="tail"
         >
-          <Image
-            source={{ uri: imageUrl }}
-            className="w-44 h-40 rounded-lg"
-            resizeMode="cover"
-            alt={artist.name}
+          {artist.name}
+        </Text>
+      </View>
+    </CardContainer>
+  );
+});
+
+export const SongControls = memo(() => {
+  const {
+    handleTimeSeek,
+    handlePrevSong,
+    handleNextSong,
+    handlePlayPauseSong,
+  } = usePlayer();
+  const { currentTime, duration } = usePlayerTime();
+  const { isPlaying } = usePlayerState();
+  const isDragging = useRef(false);
+
+  const progress = useSharedValue(currentTime);
+  const min = useSharedValue(0);
+  const max = useSharedValue(duration);
+
+  useEffect(() => {
+    progress.value = currentTime;
+    max.value = duration;
+  }, [currentTime, duration]);
+
+  return (
+    <View className="w-full p-4">
+      {/* Slider and time indicators */}
+      <View className="flex-row items-center">
+        <Slider
+          style={styles.slider}
+          progress={progress}
+          minimumValue={min}
+          maximumValue={max}
+          onSlidingStart={() => {
+            isDragging.current = true;
+          }}
+          onValueChange={(value) => {
+            progress.value = value;
+          }}
+          onSlidingComplete={(value) => {
+            handleTimeSeek(value);
+            isDragging.current = false;
+          }}
+          thumbWidth={12}
+          containerStyle={styles.sliderContainer}
+          theme={{
+            minimumTrackTintColor: "#fff",
+            maximumTrackTintColor: "rgba(99, 102, 241, 0.2)",
+            bubbleBackgroundColor: "#6366f1",
+          }}
+        />
+      </View>
+      <View className="flex-row justify-between">
+        <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
+        <Text style={styles.timeText}>{formatTime(duration)}</Text>
+      </View>
+
+      {/* Control buttons */}
+      <View style={styles.controls}>
+        <TouchableOpacity
+          style={styles.sideButton}
+          onPress={handlePrevSong}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="play-skip-back" size={24} color="#374151" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.playButton}
+          onPress={handlePlayPauseSong}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={isPlaying ? "pause" : "play"}
+            size={28}
+            color="white"
           />
         </TouchableOpacity>
 
-        <View className="px-1 space-y-1">
-          <Text
-            className="text-white font-semibold text-base"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {artist.name}
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={styles.sideButton}
+          onPress={handleNextSong}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="play-skip-forward" size={24} color="#374151" />
+        </TouchableOpacity>
       </View>
     </View>
   );
+});
+
+export const ProgressBar = memo(() => {
+  const { currentTime, duration } = usePlayerTime();
+
+  const progress = useSharedValue(currentTime);
+  const min = useSharedValue(0);
+  const max = useSharedValue(duration);
+
+  useEffect(() => {
+    progress.value = currentTime;
+    max.value = duration;
+  }, [currentTime, duration]);
+
+  return (
+    <View className="w-full">
+      <Slider
+        progress={progress}
+        minimumValue={min}
+        maximumValue={max}
+        thumbWidth={0}
+        sliderHeight={2}
+        theme={{
+          minimumTrackTintColor: "#1DB954",
+          maximumTrackTintColor: "#6b7280",
+        }}
+      />
+    </View>
+  );
+});
+
+const styles = StyleSheet.create({
+  timeText: {
+    fontSize: 12,
+    color: "#6b7280",
+    width: 40,
+    textAlign: "center",
+  },
+  slider: {
+    flex: 1,
+    height: 40,
+  },
+  sliderContainer: {
+    borderRadius: 8,
+  },
+  controls: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sideButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
+  },
+  playButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1DB954",
+    marginHorizontal: 24,
+  },
 });

@@ -68,6 +68,8 @@ interface User {
 interface UserContextType {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  selectedLanguages: string;
+  setSelectedLanguages: React.Dispatch<React.SetStateAction<string>>;
   getProfile: () => Promise<void>;
   loading: boolean;
   musicConfig: Record<string, any>;
@@ -91,6 +93,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [musicConfig, setMusicConfig] = useState<Record<string, any>>({});
+  const [selectedLanguages, setSelectedLanguages] = useState<string>("hindi");
 
   useEffect(() => {
     if (!user) {
@@ -104,9 +107,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const loadMusicConfig = async () => {
     try {
-      const data = await AsyncStorage.getItem("musicConfig");
+      const data = await AsyncStorage.getItem("language-preferance");
       if (data) {
-        setMusicConfig(JSON.parse(data));
+        setSelectedLanguages(data);
       }
     } catch (error) {
       console.error("Error loading music config:", error);
@@ -164,8 +167,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       musicConfig,
       setMusicConfig,
       logout,
+      selectedLanguages,
+      setSelectedLanguages,
     }),
-    [user, loading, musicConfig, logout],
+    [user, loading, musicConfig, logout, selectedLanguages],
   );
 
   return (
