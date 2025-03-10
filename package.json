@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "expo": "~52.0.23",
     "expo-av": "^15.0.1",
+    "expo-background-fetch": "^13.0.5",
     "expo-blur": "~14.0.1",
     "expo-constants": "~17.0.3",
     "expo-crypto": "^14.0.2",
@@ -48,6 +49,7 @@
     "react-native-reanimated": "~3.16.1",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
+    "react-native-track-player": "4.1.1",
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
     "tailwind-merge": "^3.0.2",
@@ -63,6 +65,5 @@
     "react-test-renderer": "18.3.1",
     "typescript": "^5.3.3"
   },
-  "private": true,
-  "packageManager": "pnpm@10.6.1+sha512.40ee09af407fa9fbb5fbfb8e1cb40fbb74c0af0c3e10e9224d7b53c7658528615b2c92450e74cfad91e3a2dcafe3ce4050d80bda71d757756d2ce2b66213e9a3"
+  "private": true
 }
