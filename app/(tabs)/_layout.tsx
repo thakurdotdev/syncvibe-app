@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import { Tabs, usePathname } from "expo-router";
+import { router, Tabs, usePathname } from "expo-router";
 import React, { useEffect } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -11,6 +10,12 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+enum iconEnum {
+  home = "home",
+  search = "search",
+  person = "person",
+}
 
 const AnimatedTabButton = ({
   isFocused,
@@ -21,14 +26,16 @@ const AnimatedTabButton = ({
   isFocused: boolean;
   onPress: () => void;
   label: string;
-  iconName: string;
+  iconName: keyof typeof iconEnum;
 }) => {
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(0);
+
+  const opacity = useSharedValue(isFocused ? 1 : 0.7);
 
   useEffect(() => {
     scale.value = withSpring(isFocused ? 1.1 : 1, { damping: 10 });
-    opacity.value = withTiming(isFocused ? 1 : 0, { duration: 200 });
+
+    opacity.value = withTiming(isFocused ? 1 : 0.7, { duration: 200 });
   }, [isFocused]);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -38,7 +45,8 @@ const AnimatedTabButton = ({
   });
 
   const labelStyle = useAnimatedStyle(() => {
-    const yOffset = interpolate(opacity.value, [0, 1], [5, 0]);
+    // Reduce or remove the Y-offset to keep the text more visible
+    const yOffset = interpolate(opacity.value, [0.7, 1], [2, 0]);
 
     return {
       opacity: opacity.value,
@@ -58,11 +66,7 @@ const AnimatedTabButton = ({
         style={animatedStyle}
         className="items-center justify-center"
       >
-        <Ionicons
-          name={isFocused ? iconName : `${iconName}-outline`}
-          size={24}
-          color={iconColor}
-        />
+        <Ionicons name={iconName} size={24} color={iconColor} />
         <Animated.Text
           style={labelStyle}
           className="text-xs font-medium mt-1"
@@ -92,6 +96,7 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          animation: "fade",
           tabBarStyle: {
             position: "absolute",
             bottom: 0,
@@ -102,17 +107,8 @@ export default function TabLayout() {
             elevation: 0,
             shadowOpacity: 0,
             borderTopWidth: 0,
-            backgroundColor: "transparent",
+            backgroundColor: "black",
           },
-          tabBarBackground: () => (
-            <BlurView
-              tint="dark"
-              intensity={Platform.OS === "ios" ? 70 : 100}
-              className="absolute inset-0"
-            >
-              <View className="absolute inset-0 bg-black opacity-80" />
-            </BlurView>
-          ),
           tabBarShowLabel: false,
         }}
       >
@@ -122,7 +118,7 @@ export default function TabLayout() {
             title: "Home",
             tabBarButton: (props) => (
               <AnimatedTabButton
-                {...props}
+                onPress={() => router.push("/home")}
                 label="Home"
                 iconName="home"
                 isFocused={isHomeActive}
@@ -136,7 +132,7 @@ export default function TabLayout() {
             title: "Search",
             tabBarButton: (props) => (
               <AnimatedTabButton
-                {...props}
+                onPress={() => router.push("/search")}
                 label="Search"
                 iconName="search"
                 isFocused={isSearchActive}
@@ -150,7 +146,7 @@ export default function TabLayout() {
             title: "Profile",
             tabBarButton: (props) => (
               <AnimatedTabButton
-                {...props}
+                onPress={() => router.push("/profile")}
                 label="Profile"
                 iconName="person"
                 isFocused={isProfileActive}

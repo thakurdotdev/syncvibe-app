@@ -3,33 +3,34 @@ import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
+import { usePathname } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   Image,
   StatusBar,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  StyleSheet,
 } from "react-native";
+import { PanGestureHandler } from "react-native-gesture-handler";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
   Easing,
-  interpolate,
-  runOnJS,
+  Extrapolation,
   FadeIn,
   FadeOut,
+  interpolate,
+  runOnJS,
   useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
   withSpring,
-  Extrapolation,
+  withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
-import { PanGestureHandler } from "react-native-gesture-handler";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
@@ -95,6 +96,13 @@ export default function Player() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("player");
   const insets = useSafeAreaInsets();
+
+  const pathname = usePathname();
+
+  // Determine active tab based on pathname
+  const isHomeActive = pathname.includes("/home");
+  const isSearchActive = pathname.includes("/search");
+  const isProfileActive = pathname.includes("/profile");
 
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -255,8 +263,18 @@ export default function Player() {
     </View>
   );
 
+  console.log(isHomeActive, isSearchActive, isProfileActive);
+
   const renderMiniPlayer = () => (
-    <Animated.View style={[styles.miniPlayerContainer, miniPlayerStyle]}>
+    <Animated.View
+      style={[
+        styles.miniPlayerContainer,
+        miniPlayerStyle,
+        {
+          bottom: isHomeActive || isSearchActive || isProfileActive ? 60 : 10,
+        },
+      ]}
+    >
       <TouchableOpacity
         style={styles.miniPlayerContent}
         onPress={openPlayer}
@@ -392,7 +410,6 @@ const styles = StyleSheet.create({
   miniPlayerContainer: {
     position: "absolute",
     width: "100%",
-    bottom: 60,
     left: 0,
     zIndex: 5,
   },
@@ -400,7 +417,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
-    backgroundColor: "#121212",
+    backgroundColor: "#000",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -436,7 +453,7 @@ const styles = StyleSheet.create({
   // Expanded Player styles
   expandedPlayerBackground: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: "#000",
     height: "100%",
   },
   swipeHandleContainer: {

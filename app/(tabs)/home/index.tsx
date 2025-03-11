@@ -39,7 +39,7 @@ interface HomePageData {
 }
 
 export default function HomeScreen() {
-  const { selectedLanguages } = useUser();
+  const { selectedLanguages, user } = useUser();
   const [homePageData, setHomePageData] = useState<HomePageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,6 +83,7 @@ export default function HomeScreen() {
 
   const getRecommendations = useCallback(async () => {
     try {
+      if (!user?.userid) return;
       setReccLoading(true);
       const response = await axios.get(`${API_URL}/api/music/recommendations`, {
         withCredentials: true,

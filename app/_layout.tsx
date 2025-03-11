@@ -1,13 +1,19 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
-import { ActivityIndicator, StatusBar, View } from "react-native";
+import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import Player from "@/components/music/Player";
 import { MusicProvider } from "@/context/MusicContext";
 import { UserProvider, useUser } from "@/context/UserContext";
-import "../global.css";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import TrackPlayer from "react-native-track-player";
+import "../global.css";
+import { PlaybackService } from "../service";
+import { setupPlayer } from "../utils/playerSetup";
+
+// Register playback service
+TrackPlayer.registerPlaybackService(() => PlaybackService);
 
 function useAuthenticatedRoute() {
   const { user, loading } = useUser();
@@ -33,6 +39,21 @@ function useAuthenticatedRoute() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        // We'll just call setupPlayer() here, but we won't do anything with the result
+        // This ensures the player is initialized early, but we don't need to act on it here
+        // The MusicProvider will handle the actual player state
+        await setupPlayer();
+      } catch (error) {
+        console.error("Failed to initialize player in RootLayout:", error);
+      }
+    };
+
+    initialize();
+  }, []);
+
   return (
     <UserProvider>
       <MusicProvider>
@@ -63,7 +84,10 @@ function RootLayoutNav() {
       <Stack
         initialRouteName="(tabs)"
         screenOptions={{
-          animation: "none",
+          animation: "ios_from_left",
+          animationDuration: 300,
+          animationTypeForReplace: "pop",
+          animationMatchesGesture: true,
           presentation: "modal",
           headerStyle: {
             backgroundColor: "#000",

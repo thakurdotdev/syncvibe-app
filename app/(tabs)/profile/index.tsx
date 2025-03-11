@@ -1,19 +1,19 @@
-import React, { useState, useCallback, useEffect } from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
-import { Tabs, router } from "expo-router";
-import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
-import { useUser } from "@/context/UserContext";
-import axios from "axios";
 import { API_URL } from "@/constants";
+import { useUser } from "@/context/UserContext";
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import axios from "axios";
+import { router } from "expo-router";
 import { LanguagesIcon, Music2Icon } from "lucide-react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface StatButtonProps {
   icon: React.ReactNode;
@@ -100,7 +100,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-black justify-center items-center">
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="small" color="#3b82f6" />
       </View>
     );
   }

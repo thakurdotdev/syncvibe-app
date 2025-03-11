@@ -1,8 +1,4 @@
-import {
-  usePlayer,
-  usePlayerState,
-  usePlayerTime,
-} from "@/context/MusicContext";
+import { usePlayer, usePlayerState } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -14,10 +10,15 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { Image, View, Text, StyleSheet, Pressable } from "react-native";
-import { TouchableOpacity } from "react-native-gesture-handler";
-import { useSharedValue } from "react-native-reanimated";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Slider } from "react-native-awesome-slider";
+import { TouchableOpacity } from "react-native-gesture-handler";
+import { useSharedValue, withTiming } from "react-native-reanimated";
+import TrackPlayer, {
+  State,
+  usePlaybackState,
+  useProgress,
+} from "react-native-track-player";
 
 interface SongCardProps {
   song: Song;
@@ -84,7 +85,7 @@ export const SongCard = memo(({ song }: SongCardProps) => {
   const isCurrentSong = currentSong?.id === song.id;
   return (
     <View
-      className="flex-row items-center bg-white/10 rounded-xl p-2 mb-1"
+      className="flex-row items-center bg-white/10 rounded-xl p-2 mb-2"
       key={song.id}
     >
       <TouchableOpacity
@@ -350,24 +351,32 @@ export const ArtistCard = memo(({ artist }: ArtistCardProps) => {
 });
 
 export const SongControls = memo(() => {
-  const {
-    handleTimeSeek,
-    handlePrevSong,
-    handleNextSong,
-    handlePlayPauseSong,
-  } = usePlayer();
-  const { currentTime, duration } = usePlayerTime();
-  const { isPlaying } = usePlayerState();
+  const { handleNextSong, handlePrevSong } = usePlayer();
+  const playbackState = usePlaybackState();
+  const isPlaying = playbackState.state === State.Playing;
   const isDragging = useRef(false);
+  const { position, duration } = useProgress();
 
-  const progress = useSharedValue(currentTime);
+  const progress = useSharedValue(position);
   const min = useSharedValue(0);
   const max = useSharedValue(duration);
 
   useEffect(() => {
-    progress.value = currentTime;
-    max.value = duration;
-  }, [currentTime, duration]);
+    progress.value = withTiming(position);
+    max.value = withTiming(duration);
+  }, [position, duration]);
+
+  const handlePlayPause = async () => {
+    if (isPlaying && !isDragging.current) {
+      await TrackPlayer.pause();
+    } else {
+      await TrackPlayer.play();
+    }
+  };
+
+  const handleSeek = async (value: number) => {
+    await TrackPlayer.seekTo(value);
+  };
 
   return (
     <View className="w-full p-4">
@@ -385,7 +394,7 @@ export const SongControls = memo(() => {
             progress.value = value;
           }}
           onSlidingComplete={(value) => {
-            handleTimeSeek(value);
+            handleSeek(value);
             isDragging.current = false;
           }}
           thumbWidth={12}
@@ -398,7 +407,7 @@ export const SongControls = memo(() => {
         />
       </View>
       <View className="flex-row justify-between">
-        <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
+        <Text style={styles.timeText}>{formatTime(position)}</Text>
         <Text style={styles.timeText}>{formatTime(duration)}</Text>
       </View>
 
@@ -414,7 +423,7 @@ export const SongControls = memo(() => {
 
         <TouchableOpacity
           style={styles.playButton}
-          onPress={handlePlayPauseSong}
+          onPress={handlePlayPause}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -437,16 +446,16 @@ export const SongControls = memo(() => {
 });
 
 export const ProgressBar = memo(() => {
-  const { currentTime, duration } = usePlayerTime();
+  const { position, duration } = useProgress();
 
-  const progress = useSharedValue(currentTime);
+  const progress = useSharedValue(position);
   const min = useSharedValue(0);
   const max = useSharedValue(duration);
 
   useEffect(() => {
-    progress.value = currentTime;
-    max.value = duration;
-  }, [currentTime, duration]);
+    progress.value = withTiming(position);
+    max.value = withTiming(duration);
+  }, [position, duration]);
 
   return (
     <View className="w-full">

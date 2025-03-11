@@ -40,7 +40,6 @@ export interface PlayerControls {
   playSong: (song: Song) => void;
   stopSong: () => void;
   handlePlayPauseSong: () => void;
-  handleTimeSeek: (time: number) => void;
   handleVolumeChange: (value: number) => void;
   addToPlaylist: (songs: Song | Song[]) => void;
   addToQueue: (songs: Song | Song[]) => void;

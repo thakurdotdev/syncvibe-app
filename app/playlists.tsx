@@ -4,17 +4,21 @@ import { usePlayer } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import axios from "axios";
 import { useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
-  Button,
   FlatList,
   Image,
-  ImageBackground,
+  Pressable,
   Text,
   View,
+  StyleSheet,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 interface PlaylistData {
   id: string;
@@ -31,6 +35,7 @@ export default function PlaylistScreen() {
   const [playlistData, setPlaylistData] = useState<PlaylistData | null>(null);
   const { addToPlaylist, playSong } = usePlayer();
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
 
   const fetchPlaylistData = useCallback(async () => {
     try {
@@ -51,118 +56,255 @@ export default function PlaylistScreen() {
     }
   }, [id, fetchPlaylistData]);
 
-  const handlePlayAll = () => {
+  const handlePlayAll = useCallback(() => {
     if (playlistData?.songs?.length) {
-      addToPlaylist(
-        playlistData.songs.map((song) => ({
-          ...song,
-          isPlaylist: true,
-          playlistId: playlistData.id,
-        })),
-      );
-      playSong(playlistData.songs[0]);
+      const songsWithPlaylistInfo = playlistData.songs.map((song) => ({
+        ...song,
+        isPlaylist: true,
+        playlistId: playlistData.id,
+      }));
+      addToPlaylist(songsWithPlaylistInfo);
+      playSong(songsWithPlaylistInfo[0]);
     }
-  };
+  }, [playlistData, addToPlaylist, playSong]);
 
-  const handleShuffle = () => {
+  const handleShuffle = useCallback(() => {
     if (playlistData?.songs?.length) {
-      const shuffledSongs = [...playlistData.songs].sort(
-        () => Math.random() - 0.5,
-      );
-      addToPlaylist(
-        shuffledSongs.map((song) => ({
+      const shuffledSongs = [...playlistData.songs]
+        .sort(() => Math.random() - 0.5)
+        .map((song) => ({
           ...song,
           isPlaylist: true,
           playlistId: playlistData.id,
-        })),
-      );
+        }));
+      addToPlaylist(shuffledSongs);
       playSong(shuffledSongs[0]);
     }
-  };
+  }, [playlistData, addToPlaylist, playSong]);
 
-  const formatCount = (count: any) => {
+  const formatCount = useCallback((count: any) => {
     if (count === undefined || count === null) return "N/A";
     if (count >= 1000000000) return (count / 1000000000).toFixed(1) + "B";
     if (count >= 1000000) return (count / 1000000).toFixed(1) + "M";
     if (count >= 1000) return (count / 1000).toFixed(1) + "K";
     return count.toString();
-  };
+  }, []);
+
+  const headerHeight = useMemo(() => Math.min(width * 0.8, 250), [width]);
+  const imageSize = useMemo(() => Math.min(width * 0.4, 240), [width]);
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
-        <ActivityIndicator size="large" color="white" />
-        <Text className="text-white mt-4">Loading playlist...</Text>
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1DB954" />
+        <Text style={styles.loadingText}>Loading playlist...</Text>
       </SafeAreaView>
     );
   }
 
-  const bgUrl = playlistData?.image;
-
   return (
-    <View className="flex-1 bg-black p-5">
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={playlistData?.songs}
-        renderItem={({ item }) => <SongCard song={item} />}
+        renderItem={({ item, index }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
-        className="flex-1"
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View className="h-3" />}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={styles.listContent}
+        style={{ paddingHorizontal: 20 }}
         ListHeaderComponent={
-          <View className="p-3">
-            <ImageBackground
-              source={{ uri: bgUrl }}
-              className="w-full h-[200px] rounded-2xl overflow-hidden"
-              resizeMode="cover"
+          <View>
+            <LinearGradient
+              colors={["#1E1E1E", "#121212"]}
+              style={[styles.headerContainer, { height: headerHeight }]}
             >
-              <View className="w-full h-full flex justify-center bg-black/60 backdrop-filter backdrop-blur-sm p-4">
-                <View className="flex-row gap-2">
+              <Image
+                source={{ uri: playlistData?.image }}
+                style={[styles.backgroundImage, { height: headerHeight }]}
+                blurRadius={30}
+              />
+              <BlurView intensity={80} style={styles.blurOverlay}>
+                <View style={styles.headerContent}>
                   <Image
-                    source={{ uri: bgUrl }}
-                    className="w-[150px] h-[150px] rounded-lg"
+                    source={{ uri: playlistData?.image }}
+                    style={[
+                      styles.playlistImage,
+                      { width: imageSize, height: imageSize },
+                    ]}
                     resizeMode="cover"
                   />
-                  <View className="flex-1 justify-center">
-                    <Text
-                      className="text-white text-xl font-bold mb-1"
-                      numberOfLines={2}
-                    >
+                  <View style={styles.infoContainer}>
+                    <Text style={styles.playlistName} numberOfLines={2}>
                       {playlistData?.name}
                     </Text>
-                    <Text className="text-white/70 text-base" numberOfLines={3}>
+                    <Text style={styles.description} numberOfLines={3}>
                       {playlistData?.header_desc}
                     </Text>
-                    <View className="mt-4">
-                      <Text className="text-white/80 text-sm">
+                    <View style={styles.statsContainer}>
+                      <Text style={styles.statText}>
                         {playlistData?.list_count} songs
                       </Text>
-                      <Text className="text-white/80 text-sm">
+                      <Text style={styles.statText}>
                         {formatCount(playlistData?.follower_count)} followers
                       </Text>
                     </View>
                   </View>
                 </View>
-              </View>
-            </ImageBackground>
+              </BlurView>
+            </LinearGradient>
 
-            {/* Actions */}
-            <View className="flex flex-row w-full justify-center gap-5 mt-6 mb-5">
-              <Button
+            {/* Action buttons */}
+            <View style={styles.actionsContainer}>
+              <Pressable
+                style={[styles.button, styles.playButton]}
                 onPress={handlePlayAll}
                 disabled={!playlistData?.songs?.length}
-                title="Play All"
-              />
+              >
+                <Ionicons name="play" size={22} color="white" />
+                <Text style={styles.buttonText}>Play All</Text>
+              </Pressable>
 
-              <Button
+              <Pressable
+                style={[styles.button, styles.shuffleButton]}
                 onPress={handleShuffle}
                 disabled={!playlistData?.songs?.length}
-                title="Shuffle"
-              />
+              >
+                <Ionicons name="shuffle" size={22} color="white" />
+                <Text style={styles.buttonText}>Shuffle</Text>
+              </Pressable>
+            </View>
+
+            {/* Songs header */}
+            <View style={styles.songsHeader}>
+              <Text style={styles.songsHeaderText}>Songs</Text>
             </View>
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#121212",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#121212",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: "white",
+    marginTop: 16,
+    fontSize: 16,
+  },
+  headerContainer: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  backgroundImage: {
+    position: "absolute",
+    width: "100%",
+    opacity: 0.6,
+  },
+  blurOverlay: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "flex-end",
+    padding: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 16,
+  },
+  playlistImage: {
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    paddingBottom: 4,
+  },
+  playlistName: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  description: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 4,
+  },
+  statText: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 13,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    gap: 16,
+  },
+  button: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 50,
+    minWidth: 140,
+    gap: 8,
+  },
+  playButton: {
+    backgroundColor: "#1DB954", // Spotify green
+  },
+  shuffleButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  songsHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  songsHeaderText: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    marginHorizontal: 20,
+  },
+  listContent: {
+    paddingBottom: 120,
+    // padding: 20,
+  },
+});
