@@ -1,16 +1,14 @@
 {
   "expo": {
     "name": "SyncVibe",
-    "slug": "Syncvibe",
+    "slug": "syncvibe",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thakurdotdev.syncvibe",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -47,8 +45,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "c26f6a56-3874-4847-bc2a-5293d01fd34c"
+        "projectId": "b578a8f2-2ffd-443b-a957-f8043828d5fe"
       }
-    }
+    },
+    "owner": "thakurdotdev"
   }
 }
