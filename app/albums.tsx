@@ -20,6 +20,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 
 interface AlbumData {
   id: string;
@@ -39,6 +46,7 @@ export default function AlbumScreen() {
   const { addToPlaylist, playSong } = usePlayer();
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
+  const scrollY = useSharedValue(0);
 
   const fetchAlbumData = useCallback(async () => {
     try {
@@ -85,6 +93,12 @@ export default function AlbumScreen() {
     }
   }, [albumData, addToPlaylist, playSong]);
 
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
   const headerHeight = useMemo(() => Math.min(width * 0.8, 250), [width]);
   const imageSize = useMemo(() => Math.min(width * 0.4, 250), [width]);
 
@@ -98,6 +112,52 @@ export default function AlbumScreen() {
       ?.map((artist) => artist.name)
       .join(", ");
   }, [albumData]);
+
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, headerHeight * 0.5, headerHeight],
+      [1, 0.8, 0],
+      Extrapolation.CLAMP,
+    );
+
+    const scale = interpolate(
+      scrollY.value,
+      [0, headerHeight],
+      [1, 0.85],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      opacity,
+      transform: [
+        { scale },
+        {
+          translateY: interpolate(
+            scrollY.value,
+            [0, headerHeight],
+            [0, -50],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
+
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          scale: interpolate(
+            scrollY.value,
+            [0, headerHeight],
+            [1, 0.9],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
 
   if (loading) {
     return (
@@ -121,72 +181,88 @@ export default function AlbumScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
+    <SafeAreaView style={styles.container}>
+      <Animated.FlatList
         data={albumData.songs}
         renderItem={({ item, index }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
+        style={{ paddingHorizontal: 20 }}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         ListHeaderComponent={
-          <>
-            <LinearGradient
-              colors={["#1E1E1E", "#121212"]}
-              style={[styles.headerContainer, { height: headerHeight }]}
+          <View>
+            <Animated.View
+              style={[
+                { height: headerHeight },
+                styles.headerContainer,
+                headerAnimatedStyle,
+              ]}
             >
-              <Image
-                source={{ uri: albumCoverUrl }}
-                style={[styles.backgroundImage, { height: headerHeight }]}
-                blurRadius={25}
-              />
-              <BlurView intensity={70} style={styles.blurOverlay}>
-                <View style={styles.headerContent}>
-                  <View style={styles.albumCoverContainer}>
-                    <Image
-                      source={{ uri: albumCoverUrl }}
-                      style={[
-                        styles.albumCover,
-                        { width: imageSize, height: imageSize },
-                      ]}
-                      resizeMode="cover"
-                    />
-                  </View>
-                  <View style={styles.infoContainer}>
-                    <Text style={styles.albumTitle} numberOfLines={2}>
-                      {albumData.name}
-                    </Text>
-                    {artistName && (
-                      <Text style={styles.artistName} numberOfLines={2}>
-                        {artistName}
+              <LinearGradient
+                colors={["#1E1E1E", "#121212"]}
+                style={[styles.headerGradient, { height: headerHeight }]}
+              >
+                <Image
+                  source={{ uri: albumCoverUrl }}
+                  style={[styles.backgroundImage, { height: headerHeight }]}
+                  blurRadius={25}
+                />
+                <BlurView intensity={70} style={styles.blurOverlay}>
+                  <View style={styles.headerContent}>
+                    <Animated.View
+                      style={[styles.albumCoverContainer, imageAnimatedStyle]}
+                    >
+                      <Image
+                        source={{ uri: albumCoverUrl }}
+                        style={[
+                          styles.albumCover,
+                          { width: imageSize, height: imageSize },
+                        ]}
+                        resizeMode="cover"
+                      />
+                    </Animated.View>
+                    <View style={styles.infoContainer}>
+                      <Text style={styles.albumTitle} numberOfLines={2}>
+                        {albumData.name}
                       </Text>
-                    )}
-                    <View style={styles.statsContainer}>
-                      {albumData.year && (
+                      {artistName && (
+                        <Text style={styles.artistName} numberOfLines={2}>
+                          {artistName}
+                        </Text>
+                      )}
+                      <View style={styles.statsContainer}>
+                        {albumData.year && (
+                          <View style={styles.stat}>
+                            <Ionicons
+                              name="calendar-outline"
+                              size={14}
+                              color="rgba(255,255,255,0.6)"
+                            />
+                            <Text style={styles.statText}>
+                              {albumData.year}
+                            </Text>
+                          </View>
+                        )}
                         <View style={styles.stat}>
                           <Ionicons
-                            name="calendar-outline"
+                            name="musical-note"
                             size={14}
                             color="rgba(255,255,255,0.6)"
                           />
-                          <Text style={styles.statText}>{albumData.year}</Text>
+                          <Text style={styles.statText}>
+                            {albumData.songcount}{" "}
+                            {albumData.songcount === 1 ? "song" : "songs"}
+                          </Text>
                         </View>
-                      )}
-                      <View style={styles.stat}>
-                        <Ionicons
-                          name="musical-note"
-                          size={14}
-                          color="rgba(255,255,255,0.6)"
-                        />
-                        <Text style={styles.statText}>
-                          {albumData.songcount}{" "}
-                          {albumData.songcount === 1 ? "song" : "songs"}
-                        </Text>
                       </View>
                     </View>
                   </View>
-                </View>
-              </BlurView>
-            </LinearGradient>
+                </BlurView>
+              </LinearGradient>
+            </Animated.View>
 
             {/* Action buttons */}
             <View style={styles.actionsContainer}>
@@ -213,10 +289,10 @@ export default function AlbumScreen() {
             <View style={styles.songsHeader}>
               <Text style={styles.songsHeaderText}>Tracks</Text>
             </View>
-          </>
+          </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -224,7 +300,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#121212",
-    paddingHorizontal: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -262,6 +337,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   headerContainer: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerGradient: {
     width: "100%",
     position: "relative",
     overflow: "hidden",
@@ -369,5 +451,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 120,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    marginHorizontal: 20,
   },
 });

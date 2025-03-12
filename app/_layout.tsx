@@ -96,13 +96,13 @@ function RootLayoutNav() {
           headerBlurEffect: "dark",
         }}
       >
-        {/* <Stack.Screen
+        <Stack.Screen
           name="login"
           options={{
             headerShown: false,
             gestureEnabled: false,
           }}
-        /> */}
+        />
         <Stack.Screen
           name="(tabs)"
           options={{
@@ -110,34 +110,7 @@ function RootLayoutNav() {
             gestureEnabled: false,
           }}
         />
-        {/* <Stack.Screen
-          name="edit-profile"
-          options={{
-            title: "Edit Profile",
-            presentation: "modal",
-          }}
-        />
-        <Stack.Screen
-          name="change-password"
-          options={{
-            title: "Change Password",
-            presentation: "modal",
-          }}
-        />
-        <Stack.Screen
-          name="delete-account"
-          options={{
-            title: "Delete Account",
-            presentation: "modal",
-          }}
-        />
-        <Stack.Screen
-          name="update-profile-picture"
-          options={{
-            title: "Update Profile Picture",
-            presentation: "modal",
-          }}
-        /> */}
+
         <Stack.Screen
           name="playlists"
           options={{

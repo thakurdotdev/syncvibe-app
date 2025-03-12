@@ -19,6 +19,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 
 interface PlaylistData {
   id: string;
@@ -36,6 +43,7 @@ export default function PlaylistScreen() {
   const { addToPlaylist, playSong } = usePlayer();
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
+  const scrollY = useSharedValue(0);
 
   const fetchPlaylistData = useCallback(async () => {
     try {
@@ -82,6 +90,12 @@ export default function PlaylistScreen() {
     }
   }, [playlistData, addToPlaylist, playSong]);
 
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
   const formatCount = useCallback((count: any) => {
     if (count === undefined || count === null) return "N/A";
     if (count >= 1000000000) return (count / 1000000000).toFixed(1) + "B";
@@ -92,6 +106,52 @@ export default function PlaylistScreen() {
 
   const headerHeight = useMemo(() => Math.min(width * 0.8, 250), [width]);
   const imageSize = useMemo(() => Math.min(width * 0.4, 240), [width]);
+
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, headerHeight * 0.5, headerHeight],
+      [1, 0.8, 0],
+      Extrapolation.CLAMP,
+    );
+
+    const scale = interpolate(
+      scrollY.value,
+      [0, headerHeight],
+      [1, 0.85],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      opacity,
+      transform: [
+        { scale },
+        {
+          translateY: interpolate(
+            scrollY.value,
+            [0, headerHeight],
+            [0, -50],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
+
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          scale: interpolate(
+            scrollY.value,
+            [0, headerHeight],
+            [1, 0.9],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
 
   if (loading) {
     return (
@@ -104,7 +164,7 @@ export default function PlaylistScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList
+      <Animated.FlatList
         data={playlistData?.songs}
         renderItem={({ item, index }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
@@ -112,46 +172,58 @@ export default function PlaylistScreen() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
         style={{ paddingHorizontal: 20 }}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         ListHeaderComponent={
           <View>
-            <LinearGradient
-              colors={["#1E1E1E", "#121212"]}
-              style={[styles.headerContainer, { height: headerHeight }]}
+            <Animated.View
+              style={[
+                { height: headerHeight },
+                styles.headerContainer,
+                headerAnimatedStyle,
+              ]}
             >
-              <Image
-                source={{ uri: playlistData?.image }}
-                style={[styles.backgroundImage, { height: headerHeight }]}
-                blurRadius={30}
-              />
-              <BlurView intensity={80} style={styles.blurOverlay}>
-                <View style={styles.headerContent}>
-                  <Image
-                    source={{ uri: playlistData?.image }}
-                    style={[
-                      styles.playlistImage,
-                      { width: imageSize, height: imageSize },
-                    ]}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.infoContainer}>
-                    <Text style={styles.playlistName} numberOfLines={2}>
-                      {playlistData?.name}
-                    </Text>
-                    <Text style={styles.description} numberOfLines={3}>
-                      {playlistData?.header_desc}
-                    </Text>
-                    <View style={styles.statsContainer}>
-                      <Text style={styles.statText}>
-                        {playlistData?.list_count} songs
+              <LinearGradient
+                colors={["#1E1E1E", "#121212"]}
+                style={[styles.headerGradient, { height: headerHeight }]}
+              >
+                <Image
+                  source={{ uri: playlistData?.image }}
+                  style={[styles.backgroundImage, { height: headerHeight }]}
+                  blurRadius={30}
+                />
+                <BlurView intensity={80} style={styles.blurOverlay}>
+                  <View style={styles.headerContent}>
+                    <Animated.View style={imageAnimatedStyle}>
+                      <Image
+                        source={{ uri: playlistData?.image }}
+                        style={[
+                          styles.playlistImage,
+                          { width: imageSize, height: imageSize },
+                        ]}
+                        resizeMode="cover"
+                      />
+                    </Animated.View>
+                    <View style={styles.infoContainer}>
+                      <Text style={styles.playlistName} numberOfLines={2}>
+                        {playlistData?.name}
                       </Text>
-                      <Text style={styles.statText}>
-                        {formatCount(playlistData?.follower_count)} followers
+                      <Text style={styles.description} numberOfLines={3}>
+                        {playlistData?.header_desc}
                       </Text>
+                      <View style={styles.statsContainer}>
+                        <Text style={styles.statText}>
+                          {playlistData?.list_count} songs
+                        </Text>
+                        <Text style={styles.statText}>
+                          {formatCount(playlistData?.follower_count)} followers
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </BlurView>
-            </LinearGradient>
+                </BlurView>
+              </LinearGradient>
+            </Animated.View>
 
             {/* Action buttons */}
             <View style={styles.actionsContainer}>
@@ -202,6 +274,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   headerContainer: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerGradient: {
     width: "100%",
     position: "relative",
     overflow: "hidden",
@@ -305,6 +384,5 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 120,
-    // padding: 20,
   },
 });

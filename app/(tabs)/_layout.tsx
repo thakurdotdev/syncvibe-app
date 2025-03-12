@@ -96,7 +96,7 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          animation: "fade",
+          animation: "none",
           tabBarStyle: {
             position: "absolute",
             bottom: 0,

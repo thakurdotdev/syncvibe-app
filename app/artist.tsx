@@ -1,32 +1,38 @@
 import { SongCard } from "@/components/music/MusicCards";
 import { SONG_URL } from "@/constants";
+import { usePlayer } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import axios from "axios";
 import { useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Image,
-  ImageBackground,
+  Pressable,
   Text,
   View,
+  StyleSheet,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const formatCount = (count: any) => {
-  if (count === undefined || count === null) return "N/A";
-  if (count >= 1000000000) return (count / 1000000000).toFixed(1) + "B";
-  if (count >= 1000000) return (count / 1000000).toFixed(1) + "M";
-  if (count >= 1000) return (count / 1000).toFixed(1) + "K";
-  return count.toString();
-};
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolate,
+  Extrapolation,
+} from "react-native-reanimated";
 
 interface ImageData {
   link: string;
 }
 
-interface artist {
+interface Artist {
   id: string;
   name: string;
   image: Image[];
@@ -42,13 +48,17 @@ interface ArtistData {
   top_songs: Song[];
   top_albums: any[];
   dedicated_artist_playlist: any[];
-  similar_artists: artist[];
+  similar_artists: Artist[];
 }
 
 export default function ArtistScreen() {
   const { id } = useLocalSearchParams();
   const [artistData, setArtistData] = useState<ArtistData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  const { addToPlaylist, playSong } = usePlayer();
+
+  const scrollY = useSharedValue(0);
 
   const fetchArtistData = useCallback(async () => {
     try {
@@ -57,7 +67,7 @@ export default function ArtistScreen() {
       const data = response.data;
       setArtistData(data.data);
     } catch (error) {
-      console.error("Error fetching playlist data:", error);
+      console.error("Error fetching artist data:", error);
     } finally {
       setLoading(false);
     }
@@ -69,68 +79,332 @@ export default function ArtistScreen() {
     }
   }, [id, fetchArtistData]);
 
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
-        <ActivityIndicator size="large" color="white" />
-        <Text className="text-white mt-4">Loading Artist...</Text>
-      </SafeAreaView>
+  const formatCount = useCallback((count: any) => {
+    if (count === undefined || count === null) return "N/A";
+    if (count >= 1000000000) return (count / 1000000000).toFixed(1) + "B";
+    if (count >= 1000000) return (count / 1000000).toFixed(1) + "M";
+    if (count >= 1000) return (count / 1000).toFixed(1) + "K";
+    return count.toString();
+  }, []);
+
+  const handlePlayTopSongs = useCallback(() => {
+    if (artistData?.top_songs?.length) {
+      const songsWithArtistInfo = artistData.top_songs.map((song) => ({
+        ...song,
+        isFromArtist: true,
+        artistId: artistData.id,
+      }));
+      addToPlaylist(songsWithArtistInfo);
+      playSong(songsWithArtistInfo[0]);
+    }
+  }, [artistData, addToPlaylist, playSong]);
+
+  const handleShuffleTopSongs = useCallback(() => {
+    if (artistData?.top_songs?.length) {
+      const shuffledSongs = [...artistData.top_songs]
+        .sort(() => Math.random() - 0.5)
+        .map((song) => ({
+          ...song,
+          isFromArtist: true,
+          artistId: artistData.id,
+        }));
+      addToPlaylist(shuffledSongs);
+      playSong(shuffledSongs[0]);
+    }
+  }, [artistData, addToPlaylist, playSong]);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const headerHeight = useMemo(() => Math.min(width * 0.8, 250), [width]);
+  const imageSize = useMemo(() => Math.min(width * 0.4, 200), [width]);
+
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [0, headerHeight * 0.5, headerHeight],
+      [1, 0.8, 0],
+      Extrapolation.CLAMP,
     );
-  }
+
+    const scale = interpolate(
+      scrollY.value,
+      [0, headerHeight],
+      [1, 0.85],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      opacity,
+      transform: [
+        { scale },
+        {
+          translateY: interpolate(
+            scrollY.value,
+            [0, headerHeight],
+            [0, -50],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
+
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          scale: interpolate(
+            scrollY.value,
+            [0, headerHeight],
+            [1, 0.9],
+            Extrapolation.CLAMP,
+          ),
+        },
+      ],
+    };
+  });
 
   const bgUrl = Array.isArray(artistData?.image)
     ? artistData?.image[2]?.link
     : artistData?.image;
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1DB954" />
+        <Text style={styles.loadingText}>Loading artist...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View className="flex-1 bg-black p-5">
-      <FlatList
+    <SafeAreaView style={styles.container}>
+      <Animated.FlatList
         data={artistData?.top_songs}
         renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
-        className="flex-1"
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View className="h-3" />}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={styles.listContent}
+        style={{ paddingHorizontal: 20 }}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         ListHeaderComponent={
-          <View className="p-3">
-            <ImageBackground
-              source={{ uri: bgUrl }}
-              className="w-full h-[200px] rounded-2xl overflow-hidden"
-              resizeMode="cover"
+          <View>
+            <Animated.View
+              style={[
+                { height: headerHeight },
+                styles.headerContainer,
+                headerAnimatedStyle,
+              ]}
             >
-              <View className="w-full h-full flex justify-center bg-black/60 backdrop-filter backdrop-blur-sm p-4">
-                <View className="flex-row gap-2">
-                  <Image
-                    source={{ uri: bgUrl }}
-                    className="w-[150px] h-[150px] rounded-lg"
-                    resizeMode="cover"
-                  />
-                  <View className="flex-1 justify-center">
-                    <Text
-                      className="text-white text-xl font-bold mb-1"
-                      numberOfLines={2}
-                    >
-                      {artistData?.name}
-                    </Text>
-                    <Text className="text-white/70 text-base" numberOfLines={3}>
-                      {artistData?.header_desc}
-                    </Text>
-                    <View className="mt-4">
-                      <Text className="text-white/80 text-sm">
-                        {artistData?.list_count} songs
+              <LinearGradient
+                colors={["#1E1E1E", "#121212"]}
+                style={[styles.headerGradient, { height: headerHeight }]}
+              >
+                <Image
+                  source={{ uri: bgUrl }}
+                  style={[styles.backgroundImage, { height: headerHeight }]}
+                  blurRadius={40}
+                />
+                <BlurView intensity={80} style={styles.blurOverlay}>
+                  <View style={styles.headerContent}>
+                    <Animated.View style={imageAnimatedStyle}>
+                      <Image
+                        source={{ uri: bgUrl }}
+                        style={[
+                          styles.artistImage,
+                          {
+                            width: imageSize,
+                            height: imageSize,
+                            borderRadius: imageSize / 2,
+                          },
+                        ]}
+                        resizeMode="cover"
+                      />
+                    </Animated.View>
+                    <View style={styles.infoContainer}>
+                      <Text style={styles.artistName} numberOfLines={2}>
+                        {artistData?.name}
                       </Text>
-                      <Text className="text-white/80 text-sm">
-                        {formatCount(artistData?.follower_count)} followers
+                      <Text style={styles.description} numberOfLines={3}>
+                        {artistData?.header_desc}
                       </Text>
+                      <View style={styles.statsContainer}>
+                        <Text style={styles.statText}>
+                          {artistData?.list_count} songs
+                        </Text>
+                        <Text style={styles.statText}>
+                          {formatCount(artistData?.follower_count)} followers
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </View>
-            </ImageBackground>
+                </BlurView>
+              </LinearGradient>
+            </Animated.View>
+
+            {/* Action buttons */}
+            <View style={styles.actionsContainer}>
+              <Pressable
+                style={[styles.button, styles.playButton]}
+                onPress={handlePlayTopSongs}
+                disabled={!artistData?.top_songs?.length}
+              >
+                <Ionicons name="play" size={22} color="white" />
+                <Text style={styles.buttonText}>Play Top Songs</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.button, styles.shuffleButton]}
+                onPress={handleShuffleTopSongs}
+                disabled={!artistData?.top_songs?.length}
+              >
+                <Ionicons name="shuffle" size={22} color="white" />
+                <Text style={styles.buttonText}>Shuffle</Text>
+              </Pressable>
+            </View>
+
+            {/* Songs header */}
+            <View style={styles.songsHeader}>
+              <Text style={styles.songsHeaderText}>Top Songs</Text>
+            </View>
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#121212",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#121212",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: "white",
+    marginTop: 16,
+    fontSize: 16,
+  },
+  headerContainer: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerGradient: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  backgroundImage: {
+    position: "absolute",
+    width: "100%",
+    opacity: 0.6,
+  },
+  blurOverlay: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "flex-end",
+    padding: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 16,
+  },
+  artistImage: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    paddingBottom: 4,
+  },
+  artistName: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  description: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 4,
+  },
+  statText: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 13,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    gap: 16,
+  },
+  button: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 50,
+    minWidth: 140,
+    gap: 8,
+  },
+  playButton: {
+    backgroundColor: "#1DB954", // Spotify green
+  },
+  shuffleButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  songsHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  songsHeaderText: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    marginHorizontal: 20,
+  },
+  listContent: {
+    paddingBottom: 120,
+  },
+});

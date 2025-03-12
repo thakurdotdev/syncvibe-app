@@ -1,6 +1,6 @@
 import { Song } from "@/types/song";
 import React, { memo } from "react";
-import { ActivityIndicator, FlatList, View, Text } from "react-native";
+import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import {
   AlbumCard,
   ArtistCard,
@@ -47,11 +47,6 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
       showsVerticalScrollIndicator={true}
       scrollEnabled={true}
       bounces={true}
-      overScrollMode="always"
-      maxToRenderPerBatch={10}
-      initialNumToRender={10}
-      removeClippedSubviews={true}
-      ItemSeparatorComponent={() => <View className="h-2" />}
     />
   );
 });
@@ -89,11 +84,6 @@ export const SimilarSongs = memo(
         showsVerticalScrollIndicator={true}
         scrollEnabled={true}
         bounces={true}
-        overScrollMode="always"
-        maxToRenderPerBatch={10}
-        initialNumToRender={10}
-        removeClippedSubviews={true}
-        ItemSeparatorComponent={() => <View className="h-2" />}
       />
     );
   },

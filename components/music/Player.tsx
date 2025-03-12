@@ -8,7 +8,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   Image,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -29,6 +28,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import TrackPlayer, {
+  State,
+  usePlaybackState,
+} from "react-native-track-player";
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 
@@ -90,12 +93,22 @@ const RecommendationsTab = React.memo(
 );
 
 export default function Player() {
-  const { handlePlayPauseSong, addToPlaylist, handleNextSong } = usePlayer();
-  const { currentSong, isPlaying } = usePlayerState();
+  const { addToPlaylist, handleNextSong } = usePlayer();
+  const { currentSong } = usePlayerState();
   const { playlist } = usePlaylist();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("player");
   const insets = useSafeAreaInsets();
+  const playbackState = usePlaybackState();
+  const isPlaying = playbackState.state === State.Playing;
+
+  const handlePlayPauseSong = async () => {
+    if (isPlaying) {
+      await TrackPlayer.pause();
+    } else {
+      await TrackPlayer.play();
+    }
+  };
 
   const pathname = usePathname();
 
@@ -209,11 +222,8 @@ export default function Player() {
     },
     onEnd: (event, velocity: any) => {
       if (event.translationY > SWIPE_THRESHOLD || velocity.velocityY > 500) {
-        // If swiped beyond threshold or with high velocity, close the player
-        // The close animation runs from JavaScript thread for smoother coordination
         runOnJS(closePlayer)();
       } else {
-        // Reset position with a quick spring animation
         gestureTranslateY.value = withSpring(0, {
           damping: 20,
           stiffness: 300,
@@ -255,15 +265,6 @@ export default function Player() {
       ],
     };
   });
-
-  // Swipe area for closing expanded player
-  const SwipeHandle = () => (
-    <View style={styles.swipeHandleContainer}>
-      <View style={styles.swipeHandle} />
-    </View>
-  );
-
-  console.log(isHomeActive, isSearchActive, isProfileActive);
 
   const renderMiniPlayer = () => (
     <Animated.View
@@ -322,13 +323,11 @@ export default function Player() {
 
   const renderExpandedPlayer = () => (
     <Animated.View style={expandedPlayerStyle}>
-      <StatusBar barStyle="light-content" />
       <View
         style={[styles.expandedPlayerBackground, { paddingTop: insets.top }]}
       >
         <PanGestureHandler onGestureEvent={gestureHandler}>
           <Animated.View>
-            <SwipeHandle />
             <View style={styles.header}>
               <TouchableOpacity
                 onPress={closePlayer}
@@ -523,7 +522,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Player Tab styles
   playerTabContainer: {
     alignItems: "center",
   },
