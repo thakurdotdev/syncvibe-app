@@ -20,7 +20,7 @@ interface PlaylistsGridProps {
 }
 
 interface RecommendationGridProps {
-  recommendations: Song[];
+  recommendations: any[];
   title: string;
 }
 
@@ -99,7 +99,7 @@ export const AlbumsGrid = ({ albums, title }: AlbumsGridProps) => {
       )}
       <FlatList
         data={albums}
-        keyExtractor={(item) => item.id || item.album_id || item.token}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => <AlbumCard album={item} />}
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -120,7 +120,7 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
       )}
       <FlatList
         data={playlists}
-        keyExtractor={(item) => item.id || item.token}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => <PlaylistCard playlist={item} />}
         horizontal
         showsHorizontalScrollIndicator={false}

@@ -1,13 +1,3 @@
-import React, { useCallback, useEffect, useState, useMemo } from "react";
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-  StatusBar,
-  Animated,
-} from "react-native";
 import {
   AlbumsGrid,
   ArtistGrid,
@@ -17,25 +7,25 @@ import {
 } from "@/components/music/MusicLists";
 import { API_URL, SONG_URL } from "@/constants";
 import { useUser } from "@/context/UserContext";
+import { Song } from "@/types/song";
 import axios from "axios";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  RefreshControl,
+  StatusBar,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-
-// Define types for better TypeScript support
-interface MediaItem {
-  id: string;
-  name: string;
-  image: string;
-  list_count: number;
-  type?: string;
-}
 
 interface HomePageData {
-  trending: MediaItem[];
-  playlists: MediaItem[];
-  albums: MediaItem[];
-  charts: MediaItem[];
-  artists: MediaItem[];
+  trending: Song[];
+  playlists: any[] | undefined;
+  albums: any[] | undefined;
+  charts: any[] | undefined;
+  artists: any[] | undefined;
 }
 
 export default function HomeScreen() {
@@ -169,7 +159,6 @@ export default function HomeScreen() {
             <RecommendationGrid
               recommendations={recommendations}
               title="Made For You"
-              loading={reccLoading}
             />
           )}
 
@@ -177,22 +166,22 @@ export default function HomeScreen() {
             <TrendingSongs songs={trendingSongs} title="Trending Now" />
           )}
 
-          {homePageData?.playlists?.length > 0 && (
+          {homePageData?.playlists && homePageData.playlists.length > 0 && (
             <PlaylistsGrid
               playlists={homePageData.playlists}
               title="Popular Playlists"
             />
           )}
 
-          {homePageData?.charts?.length > 0 && (
+          {homePageData?.charts && homePageData.charts.length > 0 && (
             <PlaylistsGrid playlists={homePageData.charts} title="Top Charts" />
           )}
 
-          {homePageData?.albums?.length > 0 && (
+          {homePageData?.albums && homePageData.albums.length > 0 && (
             <AlbumsGrid albums={homePageData.albums} title="New Albums" />
           )}
 
-          {homePageData?.artists?.length > 0 && (
+          {homePageData?.artists && homePageData.artists.length > 0 && (
             <ArtistGrid
               artists={homePageData.artists}
               title="Artists You'll Love"

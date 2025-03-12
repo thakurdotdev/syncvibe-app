@@ -11,6 +11,7 @@ import TrackPlayer from "react-native-track-player";
 import "../global.css";
 import { PlaybackService } from "../service";
 import { setupPlayer } from "../utils/playerSetup";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Register playback service
 TrackPlayer.registerPlaybackService(() => PlaybackService);
@@ -55,15 +56,17 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <UserProvider>
-      <MusicProvider>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
-      </MusicProvider>
-    </UserProvider>
+    <ErrorBoundary>
+      <UserProvider>
+        <MusicProvider>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </MusicProvider>
+      </UserProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -80,14 +83,11 @@ function RootLayoutNav() {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
       <Stack
         initialRouteName="(tabs)"
         screenOptions={{
-          animation: "ios_from_left",
-          animationDuration: 300,
-          animationTypeForReplace: "pop",
-          animationMatchesGesture: true,
+          animation: "fade",
           presentation: "modal",
           headerStyle: {
             backgroundColor: "#000",
@@ -124,6 +124,14 @@ function RootLayoutNav() {
           options={{
             navigationBarColor: "#000000",
             title: "Album",
+            presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="artist"
+          options={{
+            navigationBarColor: "#000000",
+            title: "Artist",
             presentation: "modal",
           }}
         />
