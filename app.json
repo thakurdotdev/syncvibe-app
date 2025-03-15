@@ -54,14 +54,6 @@
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
-      ],
-      [
-        "@sentry/react-native/expo",
-        {
-          "organization": "thakurdotdev",
-          "project": "thakurdotdev",
-          "url": "https://sentry.io/"
-        }
       ]
     ],
     "experiments": {

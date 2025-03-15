@@ -12,33 +12,33 @@ import TrackPlayer from "react-native-track-player";
 import "../global.css";
 import { PlaybackService } from "../service";
 
-import * as Sentry from "@sentry/react-native";
-import { isRunningInExpoGo } from "expo";
-import { useNavigationContainerRef } from "expo-router";
-import { useEffect } from "react";
+// import * as Sentry from "@sentry/react-native";
+// import { isRunningInExpoGo } from "expo";
+// import { useNavigationContainerRef } from "expo-router";
+// import { useEffect } from "react";
 
-const navigationIntegration = Sentry.reactNavigationIntegration({
-  enableTimeToInitialDisplay: !isRunningInExpoGo(),
-});
+// const navigationIntegration = Sentry.reactNavigationIntegration({
+//   enableTimeToInitialDisplay: !isRunningInExpoGo(),
+// });
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN_KEY,
-  tracesSampleRate: 1.0,
-  integrations: [navigationIntegration],
-  enableNativeFramesTracking: !isRunningInExpoGo(),
-});
+// Sentry.init({
+//   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN_KEY,
+//   tracesSampleRate: 1.0,
+//   integrations: [navigationIntegration],
+//   enableNativeFramesTracking: !isRunningInExpoGo(),
+// });
 
 // Register playback service
 TrackPlayer.registerPlaybackService(() => PlaybackService);
 
 function RootLayout() {
-  const ref = useNavigationContainerRef();
+  // const ref = useNavigationContainerRef();
 
-  useEffect(() => {
-    if (ref?.current) {
-      navigationIntegration.registerNavigationContainer(ref);
-    }
-  }, [ref]);
+  // useEffect(() => {
+  //   if (ref?.current) {
+  //     navigationIntegration.registerNavigationContainer(ref);
+  //   }
+  // }, [ref]);
 
   return (
     <ErrorBoundary>
@@ -150,4 +150,4 @@ function RootLayoutNav() {
   );
 }
 
-export default Sentry.wrap(RootLayout);
+export default RootLayout;
