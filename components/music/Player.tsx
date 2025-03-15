@@ -113,9 +113,11 @@ export default function Player() {
   const pathname = usePathname();
 
   // Determine active tab based on pathname
-  const isHomeActive = pathname.includes("/home");
-  const isSearchActive = pathname.includes("/search");
-  const isProfileActive = pathname.includes("/profile");
+  const isHomeActive =
+    pathname.includes("/home") ||
+    pathname === "/search" ||
+    pathname === "/profile" ||
+    pathname === "/playlist";
 
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -272,7 +274,7 @@ export default function Player() {
         styles.miniPlayerContainer,
         miniPlayerStyle,
         {
-          bottom: isHomeActive || isSearchActive || isProfileActive ? 60 : 10,
+          bottom: isHomeActive ? 60 : 10,
         },
       ]}
     >

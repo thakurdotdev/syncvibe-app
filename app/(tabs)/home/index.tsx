@@ -5,9 +5,10 @@ import {
   RecommendationGrid,
   TrendingSongs,
 } from "@/components/music/MusicLists";
-import { API_URL, SONG_URL } from "@/constants";
+import { SONG_URL } from "@/constants";
 import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
+import useApi from "@/utils/hooks/useApi";
 import axios from "axios";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -29,6 +30,7 @@ interface HomePageData {
 }
 
 export default function HomeScreen() {
+  const api = useApi();
   const { selectedLanguages, user } = useUser();
   const [homePageData, setHomePageData] = useState<HomePageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,12 +77,7 @@ export default function HomeScreen() {
     try {
       if (!user?.userid) return;
       setReccLoading(true);
-      const response = await axios.get(`${API_URL}/api/music/recommendations`, {
-        withCredentials: true,
-        headers: {
-          "Cache-Control": "max-age=3600",
-        },
-      });
+      const response = await api.get("/api/music/recommendations");
 
       if (response.status === 200) {
         setRecommendations(response.data.songs);
@@ -90,13 +87,16 @@ export default function HomeScreen() {
     } finally {
       setReccLoading(false);
     }
-  }, []);
+  }, [user?.userid]);
+
+  useEffect(() => {
+    getRecommendations();
+  }, [getRecommendations]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchData();
-    getRecommendations();
-  }, [fetchData, getRecommendations]);
+  }, [fetchData]);
 
   const trendingSongs = useMemo(() => {
     return (
@@ -106,15 +106,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchData();
-    getRecommendations();
-  }, [fetchData, getRecommendations]);
-
-  // Header opacity animation based on scroll position
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+  }, [fetchData]);
 
   if (loading) {
     return (

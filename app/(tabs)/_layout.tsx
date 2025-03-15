@@ -15,6 +15,8 @@ enum iconEnum {
   home = "home",
   search = "search",
   person = "person",
+  "musical-notes" = "musical-notes",
+  "chatbubbles-outline" = "chatbubbles-outline",
 }
 
 const AnimatedTabButton = ({
@@ -90,6 +92,8 @@ export default function TabLayout() {
   const isHomeActive = pathname.includes("/home");
   const isSearchActive = pathname.includes("/search");
   const isProfileActive = pathname.includes("/profile");
+  const isPlaylistActive = pathname.includes("/playlist");
+  const isChatActive = pathname.includes("/chat");
 
   return (
     <View className="flex-1 bg-black">
@@ -136,6 +140,34 @@ export default function TabLayout() {
                 label="Search"
                 iconName="search"
                 isFocused={isSearchActive}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="playlist/index"
+          options={{
+            title: "Playlist",
+            tabBarButton: (props) => (
+              <AnimatedTabButton
+                onPress={() => router.push("/playlist")}
+                label="Playlist"
+                iconName="musical-notes"
+                isFocused={isPlaylistActive}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="chat/index"
+          options={{
+            title: "Message",
+            tabBarButton: (props) => (
+              <AnimatedTabButton
+                onPress={() => router.push("/chat")}
+                label="Message"
+                iconName="chatbubbles-outline"
+                isFocused={isChatActive}
               />
             ),
           }}

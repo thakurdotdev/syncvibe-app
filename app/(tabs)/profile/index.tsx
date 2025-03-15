@@ -1,9 +1,20 @@
-import { API_URL } from "@/constants";
+import LoginScreen from "@/app/login";
 import { useUser } from "@/context/UserContext";
+import useApi from "@/utils/hooks/useApi";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { LanguagesIcon, Music2Icon } from "lucide-react-native";
+import {
+  ChevronRightIcon,
+  EditIcon,
+  LanguagesIcon,
+  LogOutIcon,
+  Music2Icon,
+  ShieldCheckIcon,
+} from "lucide-react-native";
+import { MotiView } from "moti";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface StatButtonProps {
   icon: React.ReactNode;
@@ -28,47 +40,109 @@ interface ProfileSectionProps {
   children: React.ReactNode;
 }
 
+// Improved ProfileSection with subtle animation and cleaner design
 const ProfileSection = ({ title, icon, children }: ProfileSectionProps) => (
-  <View className="bg-gray-800/60 backdrop-blur-lg rounded-xl p-4 mb-4 shadow-lg">
-    <View className="flex-row items-center mb-2">
-      {icon}
-      <Text className="text-xl font-semibold ml-2 text-white">{title}</Text>
-    </View>
-    {children}
-  </View>
+  <MotiView
+    from={{ opacity: 0, translateY: 10 }}
+    animate={{ opacity: 1, translateY: 0 }}
+    transition={{ type: "timing", duration: 500 }}
+    className="mb-5 overflow-hidden rounded-2xl"
+  >
+    <BlurView
+      intensity={20}
+      tint="dark"
+      className="overflow-hidden rounded-2xl"
+    >
+      <LinearGradient
+        colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
+        className="p-5 border border-gray-800/30 rounded-2xl"
+      >
+        <View className="flex-row items-center mb-3">
+          <View className="bg-gray-800/80 p-2 rounded-lg mr-3">{icon}</View>
+          <Text className="text-xl font-semibold text-white">{title}</Text>
+        </View>
+        {children}
+      </LinearGradient>
+    </BlurView>
+  </MotiView>
 );
 
+// Enhanced StatButton with improved visual feedback
 const StatButton = ({ icon, label, value, onPress }: StatButtonProps) => (
+  <TouchableOpacity onPress={onPress} className="flex-1" activeOpacity={0.8}>
+    <LinearGradient
+      colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
+      className="rounded-2xl border border-gray-800/30 overflow-hidden flex-1"
+    >
+      <BlurView
+        intensity={20}
+        tint="dark"
+        className="p-2 flex-1 flex-row items-center justify-center gap-2"
+      >
+        <View className="bg-blue-500/20 p-2.5 rounded-full">{icon}</View>
+        <Text className="text-white text-xl font-bold">{value}</Text>
+        <Text className="text-gray-400 text-sm">{label}</Text>
+      </BlurView>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
+// Styled menu item for better consistency
+const MenuItem = ({
+  icon,
+  label,
+  onPress,
+  color = "#fff",
+  showChevron = true,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  color?: string;
+  showChevron?: boolean;
+}) => (
   <TouchableOpacity
+    className="flex-row items-center justify-between py-3.5 border-b border-gray-800/30 last:border-b-0"
     onPress={onPress}
-    className="flex flex-row w-1/2 justify-center gap-3 items-center bg-gray-800/40 backdrop-blur-lg rounded-xl p-4 mx-1 shadow-lg border border-gray-700/30"
+    activeOpacity={0.7}
   >
-    {icon}
-    <Text className="text-white text-lg font-semibold">{value}</Text>
-    <Text className="text-gray-400 text-sm">{label}</Text>
+    <View className="flex-row items-center">
+      {icon}
+      <Text style={{ color }} className="ml-3 text-base">
+        {label}
+      </Text>
+    </View>
+    {showChevron && <ChevronRightIcon size={20} color="#9ca3af" />}
   </TouchableOpacity>
 );
 
 export default function ProfileScreen() {
-  const { user, logout, getProfile } = useUser();
-  const [loading, setLoading] = useState(false);
+  const api = useApi();
+  const { user, logout, getProfile, loading } = useUser();
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const token = await AsyncStorage.getItem("token");
+      if (!user && token) {
+        getProfile();
+      }
+    };
+
+    getUser();
+  }, [user, getProfile]);
 
   const fetchFollowData = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `${API_URL}/api/user/followlist/${user?.userid}`,
-        {
-          withCredentials: true,
-        },
-      );
+      const response = await api.get(`/api/user/followlist/${user?.userid}`);
       if (response.status === 200) {
         setFollowers(response.data.followers);
         setFollowing(response.data.following);
       }
     } catch (error) {
-      throw new Error("Error fetching user");
+      console.error("Error fetching follow data:", error);
     }
   }, [user?.userid]);
 
@@ -89,7 +163,7 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             await logout();
-            router.replace("/");
+            router.replace("/(tabs)/home");
           },
         },
       ],
@@ -105,181 +179,131 @@ export default function ProfileScreen() {
     );
   }
 
-  return (
-    <ScrollView className="flex-1 bg-black">
-      <View className="p-4">
-        {/* Profile Header */}
-        <View className="items-center mt-4 mb-6">
-          <View className="relative">
-            <View className="w-32 h-32 rounded-full bg-gray-800/60 backdrop-blur-lg overflow-hidden border-2 border-blue-500/30 shadow-lg">
-              <Image
-                source={{ uri: user?.profilepic }}
-                className="w-full h-full"
-              />
-            </View>
-            <TouchableOpacity
-              className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full shadow-lg border-2 border-black"
-              onPress={() => router.push("/update-profile-picture")}
+  return !user?.userid ? (
+    <LoginScreen />
+  ) : (
+    <View className="flex-1 bg-black">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingBottom: Math.max(insets.bottom, 20),
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <LinearGradient
+          colors={["#0000", "#111827"]}
+          className="pt-6 pb-12 px-5"
+        >
+          <View className="items-center">
+            <MotiView
+              from={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "timing", duration: 700 }}
+              className="relative"
             >
-              <Feather name="camera" size={20} color="white" />
-            </TouchableOpacity>
-          </View>
-          <View className="mt-4 items-center">
-            <View className="flex-row items-center">
-              <Text className="text-white text-2xl font-bold">
-                {user?.name}
+              {/* Profile Image with Glow Effect */}
+              <View className="w-28 h-28 rounded-full bg-blue-500/10 justify-center items-center">
+                <View className="w-24 h-24 rounded-full bg-gray-800/60 overflow-hidden border-2 border-blue-500/50 shadow-lg shadow-blue-500/20">
+                  <Image
+                    source={{ uri: user?.profilepic }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+                </View>
+              </View>
+              <TouchableOpacity
+                className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full shadow-lg border-2 border-black"
+                onPress={() => router.push("/update-profile-picture")}
+                activeOpacity={0.8}
+              >
+                <Feather name="camera" size={18} color="white" />
+              </TouchableOpacity>
+            </MotiView>
+
+            <View className="mt-4 items-center">
+              <View className="flex-row items-center">
+                <Text className="text-white text-2xl font-bold">
+                  {user?.name}
+                </Text>
+                {user?.verified && (
+                  <MaterialCommunityIcons
+                    name="check-decagram"
+                    size={20}
+                    color="#3b82f6"
+                    style={{ marginLeft: 6 }}
+                  />
+                )}
+              </View>
+              <Text className="text-gray-400 text-base mt-0.5">
+                @{user?.username}
               </Text>
-              {user?.verified && (
-                <MaterialCommunityIcons
-                  name="check-decagram"
-                  size={24}
-                  color="#3b82f6"
-                  className="ml-2"
-                />
+              {user?.bio && (
+                <Text className="text-gray-300 text-center mt-3 px-8 max-w-md">
+                  {user.bio}
+                </Text>
               )}
             </View>
-            <Text className="text-gray-400 text-lg">@{user?.username}</Text>
-            {user?.bio && (
-              <Text className="text-gray-300 text-center mt-2 px-4 max-w-md">
-                {user.bio}
-              </Text>
-            )}
+          </View>
+        </LinearGradient>
+
+        {/* Stats Section */}
+        <View className="px-5 mt-2">
+          <View className="flex-row justify-between gap-2">
+            <StatButton
+              icon={<Ionicons name="people" size={24} color="#10b981" />}
+              label="Following"
+              value={following.length}
+              onPress={() => router.push("/following")}
+            />
+            <StatButton
+              icon={<Ionicons name="people" size={24} color="#10b981" />}
+              label="Followers"
+              value={followers.length}
+              onPress={() => router.push("/followers")}
+            />
           </View>
         </View>
 
-        {/* Stats Section */}
-        {/* <View className="flex-row justify-between mb-6">
-          <StatButton
-            icon={<Ionicons name="people" size={24} color="#10b981" />}
-            label="Following"
-            value={following.length}
-            onPress={() => router.push("/following")}
-          />
-          <StatButton
-            icon={<Ionicons name="people" size={24} color="#10b981" />}
-            label="Followers"
-            value={followers.length}
-            onPress={() => router.push("/followers")}
-          />
-        </View> */}
-
-        {/* Profile Management */}
-        <ProfileSection
-          title="Profile Settings"
-          icon={<Ionicons name="person" size={24} color="#3b82f6" />}
-        >
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-3"
-            onPress={() => router.push("/edit-profile")}
+        {/* Main Content */}
+        <View className="px-5 mt-6">
+          {/* Profile Management */}
+          <ProfileSection
+            title="Profile Settings"
+            icon={<Ionicons name="person" size={22} color="#3b82f6" />}
           >
-            <View className="flex-row items-center">
-              <Feather name="edit-2" size={20} color="#9ca3af" />
-              <Text className="text-white ml-3">Edit Profile</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color="#9ca3af" />
-          </TouchableOpacity>
-        </ProfileSection>
-
-        <ProfileSection
-          title="Music Preferences"
-          icon={<Music2Icon color="#fff" size="20px" />}
-        >
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-3"
-            onPress={() => router.push("/music-language")}
-          >
-            <View className="flex-row items-center">
-              <LanguagesIcon size={20} color="#9ca3af" />
-              <Text className="text-white ml-3">
-                Update Language Preferences
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={20} color="#9ca3af" />
-          </TouchableOpacity>
-        </ProfileSection>
-
-        {/* Theme Settings */}
-        {/* <ProfileSection
-          title="Theme Settings"
-          icon={<Ionicons name="color-palette" size={24} color="#8b5cf6" />}
-        >
-          <View className="py-3">
-            <ThemeToggle />
-          </View>
-        </ProfileSection> */}
-
-        {/* Account Security */}
-        <ProfileSection
-          title="Account Security"
-          icon={
-            <MaterialCommunityIcons
-              name="shield-check"
-              size={24}
-              color="#10b981"
+            <MenuItem
+              icon={<EditIcon size={18} color="#9ca3af" />}
+              label="Edit Profile"
+              onPress={() => router.push("/edit-profile")}
             />
-          }
-        >
-          {/* {user?.logintype === "EMAILPASSWORD" && (
-            <TouchableOpacity
-              className="flex-row items-center justify-between py-3 border-b border-gray-700/30"
-              onPress={() => router.push("/change-password")}
-            >
-              <View className="flex-row items-center">
-                <Feather name="lock" size={20} color="#9ca3af" />
-                <Text className="text-white ml-3">Change Password</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          )} */}
+          </ProfileSection>
 
-          {/* {user?.passkeyEnabled && (
-            <TouchableOpacity
-              className="flex-row items-center justify-between py-3 border-b border-gray-700/30"
-              onPress={() => router.push("/passkey-manager")}
-            >
-              <View className="flex-row items-center">
-                <MaterialCommunityIcons
-                  name="fingerprint"
-                  size={20}
-                  color="#9ca3af"
-                />
-                <Text className="text-white ml-3">Manage Passkeys</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          )} */}
-
-          <TouchableOpacity
-            className="flex-row items-center justify-between py-3"
-            onPress={handleLogout}
+          <ProfileSection
+            title="Music Preferences"
+            icon={<Music2Icon color="#f59e0b" size={22} />}
           >
-            <View className="flex-row items-center">
-              <Feather name="log-out" size={20} color="#ef4444" />
-              <Text className="text-red-500 ml-3">Logout</Text>
-            </View>
-          </TouchableOpacity>
-        </ProfileSection>
+            <MenuItem
+              icon={<LanguagesIcon size={18} color="#9ca3af" />}
+              label="Update Language Preferences"
+              onPress={() => router.push("/music-language")}
+            />
+          </ProfileSection>
 
-        {/* Danger Zone */}
-        {/* <View className="bg-red-900/20 backdrop-blur-lg rounded-xl p-4 mt-4 border border-red-500/30">
-          <View className="justify-between">
-            <View>
-              <Text className="text-xl font-semibold text-red-400">
-                Delete Account
-              </Text>
-              <Text className="text-red-400/80 text-sm mt-1">
-                Permanently remove your account and all associated data
-              </Text>
-            </View>
-            <TouchableOpacity
-              className="bg-red-500 px-4 py-2 rounded-lg mt-3 shadow-lg"
-              onPress={() => router.push("/delete-account")}
-            >
-              <Text className="text-white font-semibold">Delete Account</Text>
-            </TouchableOpacity>
-          </View>
-        </View> */}
-      </View>
-    </ScrollView>
+          <ProfileSection
+            title="Account Security"
+            icon={<ShieldCheckIcon size={22} color="#10b981" />}
+          >
+            <MenuItem
+              icon={<LogOutIcon size={18} color="#ef4444" />}
+              label="Logout"
+              color="#ef4444"
+              showChevron={false}
+              onPress={handleLogout}
+            />
+          </ProfileSection>
+        </View>
+      </ScrollView>
+    </View>
   );
 }

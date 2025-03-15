@@ -23,6 +23,7 @@ import TrackPlayer, {
   useTrackPlayerEvents,
 } from "react-native-track-player";
 import { useUser } from "./UserContext";
+import useApi from "@/utils/hooks/useApi";
 
 const PlayerControlsContext = createContext<PlayerControls | undefined>(
   undefined,
@@ -114,6 +115,7 @@ const getAudioUrl = (song: Song | null): string => {
 };
 
 export function MusicProvider({ children }: PlayerProviderProps) {
+  const api = useApi();
   const { user } = useUser();
   const trackPlayerInitialized = useRef(false);
   const playbackStateRef = useRef<PlaybackState>({
@@ -445,11 +447,31 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     stopSong: () => playbackDispatch({ type: "STOP_SONG" }),
   };
 
+  const getPlaylists = async () => {
+    try {
+      if (!user) return;
+      const { data } = await api.get(`/api/playlist/get`);
+      if (data?.data) {
+        playlistDispatch({
+          type: "SET_USER_PLAYLIST",
+          payload: data.data,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching playlists:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.userid) {
+      getPlaylists();
+    }
+  }, [user?.userid]);
+
   const playlistValue: PlaylistContextValue = {
     ...playlistState,
-    getPlaylists: async () => {
-      // Implement playlist fetching logic with authentication
-    },
+    getPlaylists,
+
     setPlaylist: (playlist: Song[]) => {
       playlistDispatch({ type: "SET_PLAYLIST", payload: playlist });
     },

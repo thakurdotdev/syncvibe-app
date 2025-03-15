@@ -30,6 +30,7 @@ interface AlbumCardProps {
 
 interface PlaylistCardProps {
   playlist: any;
+  isUser?: boolean;
 }
 
 interface ImageType {
@@ -84,51 +85,38 @@ export const SongCard = memo(({ song }: SongCardProps) => {
 
   const isCurrentSong = currentSong?.id === song.id;
   return (
-    <View
-      className="flex-row items-center bg-white/10 rounded-xl p-2 mb-2"
+    <Pressable
+      onPress={() => {
+        if (isCurrentSong) {
+          handlePlayPauseSong();
+        } else {
+          playSong(song);
+        }
+      }}
+      android_ripple={{
+        color: "rgba(255, 255, 255, 0.1)",
+        borderless: false,
+      }}
+      hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+      className="flex-row items-center bg-white/10 rounded-md p-2 mb-2"
       key={song.id}
     >
-      <TouchableOpacity
-        onPress={() => {
-          if (isCurrentSong) {
-            handlePlayPauseSong();
-          } else {
-            playSong(song);
-          }
-        }}
-        className="flex-1 flex-row items-center"
-      >
+      <View className="flex-1 flex-row items-center">
         <Image
           source={{ uri: song.image[0]?.link }}
-          className="w-12 h-12 rounded-xl"
+          className="w-12 h-12"
           alt="Song cover"
         />
-      </TouchableOpacity>
-      <View className="flex-1 px-4">
-        <Text className="text-white font-semibold" numberOfLines={1}>
-          {song.name}
-        </Text>
-        <Text className="text-gray-400 text-sm" numberOfLines={1}>
-          {song.subtitle || song.artist_map?.artists?.[0]?.name}
-        </Text>
+        <View className="flex-1 px-4">
+          <Text className="text-white font-semibold" numberOfLines={1}>
+            {song.name}
+          </Text>
+          <Text className="text-gray-400 text-sm" numberOfLines={1}>
+            {song.subtitle || song.artist_map?.artists?.[0]?.name}
+          </Text>
+        </View>
       </View>
-      <TouchableOpacity
-        onPress={() => {
-          if (isCurrentSong) {
-            handlePlayPauseSong();
-          } else {
-            playSong(song);
-          }
-        }}
-        className="bg-white/10 p-2 rounded-full"
-      >
-        <Ionicons
-          name={isCurrentSong && isPlaying ? "pause" : "play"}
-          size={24}
-          color="white"
-        />
-      </TouchableOpacity>
-    </View>
+    </Pressable>
   );
 });
 
@@ -179,45 +167,47 @@ export const AlbumCard = memo(({ album }: AlbumCardProps) => {
   );
 });
 
-export const PlaylistCard = memo(({ playlist }: PlaylistCardProps) => {
-  const handlePress = useCallback(() => {
-    router.push({
-      pathname: "/playlists",
-      params: { id: playlist.id },
-    });
-  }, [playlist?.id]);
+export const PlaylistCard = memo(
+  ({ playlist, isUser = false }: PlaylistCardProps) => {
+    const handlePress = useCallback(() => {
+      router.push({
+        pathname: isUser ? "/user-playlist" : "/playlists",
+        params: { id: playlist.id },
+      });
+    }, [playlist?.id]);
 
-  if (!playlist?.name || !playlist?.image) return null;
+    if (!playlist?.name || !playlist?.image) return null;
 
-  const subtitle = playlist.subtitle || playlist.description || "Playlist";
-  const imageUrl = Array.isArray(playlist.image)
-    ? playlist.image[2]?.link
-    : playlist.image;
+    const subtitle = playlist.subtitle || playlist.description || "Playlist";
+    const imageUrl = Array.isArray(playlist.image)
+      ? playlist.image[2]?.link
+      : playlist.image;
 
-  return (
-    <CardContainer onPress={handlePress}>
-      <View style={{ padding: 12, gap: 8 }}>
-        <CardImage uri={imageUrl} alt={`Playlist: ${playlist.name}`} />
-        <View style={{ gap: 4, paddingHorizontal: 4 }}>
-          <Text
-            style={{ color: "white", fontWeight: "600", fontSize: 14 }}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {playlist.name}
-          </Text>
-          <Text
-            style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {subtitle}
-          </Text>
+    return (
+      <CardContainer onPress={handlePress} key={playlist.id}>
+        <View style={{ padding: 12, gap: 8 }}>
+          <CardImage uri={imageUrl} alt={`Playlist: ${playlist.name}`} />
+          <View style={{ gap: 4, paddingHorizontal: 4 }}>
+            <Text
+              style={{ color: "white", fontWeight: "600", fontSize: 14 }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {playlist.name}
+            </Text>
+            <Text
+              style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {subtitle}
+            </Text>
+          </View>
         </View>
-      </View>
-    </CardContainer>
-  );
-});
+      </CardContainer>
+    );
+  },
+);
 
 export const NewSongCard = memo(({ song }: SongCardProps) => {
   const { handlePlayPauseSong, playSong } = usePlayer();

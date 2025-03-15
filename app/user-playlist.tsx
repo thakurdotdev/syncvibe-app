@@ -1,13 +1,14 @@
 import { SongCard } from "@/components/music/MusicCards";
-import { SONG_URL } from "@/constants";
 import { usePlayer } from "@/context/MusicContext";
-import { Song } from "@/types/song";
-import axios from "axios";
-import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useUser } from "@/context/UserContext";
+import useApi from "@/utils/hooks/useApi";
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Image,
   Pressable,
   Text,
@@ -16,9 +17,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -27,34 +25,43 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 
-interface PlaylistData {
+type PlaylistSong = {
+  id: string;
+  songData: any; // Your song type
+};
+
+type PlaylistData = {
   id: string;
   name: string;
-  header_desc: string;
-  image: string;
-  list_count: number;
-  follower_count: number;
-  songs: Song[];
-}
+  description: string;
+  userId: number;
+  createdat: string;
+  image: Array<{ link: string }> | string;
+  songs: PlaylistSong[];
+};
 
-export default function PlaylistScreen() {
+export default function UserPlaylistDetails() {
+  const api = useApi();
   const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const { user } = useUser();
   const [playlistData, setPlaylistData] = useState<PlaylistData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { addToPlaylist, playSong } = usePlayer();
-  const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const scrollY = useSharedValue(0);
 
   const fetchPlaylistData = useCallback(async () => {
     try {
-      setLoading(true);
-      const response = await axios.get(`${SONG_URL}/playlist?id=${id}`);
-      const data = response.data;
-      setPlaylistData(data.data);
+      setIsLoading(true);
+      const response = await api.get(`/api/playlist/details`, {
+        params: { id },
+      });
+      setPlaylistData(response.data.data);
     } catch (error) {
       console.error("Error fetching playlist data:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [id]);
 
@@ -66,25 +73,16 @@ export default function PlaylistScreen() {
 
   const handlePlayAll = useCallback(() => {
     if (playlistData?.songs?.length) {
-      const songsWithPlaylistInfo = playlistData.songs.map((song) => ({
-        ...song,
-        isPlaylist: true,
-        playlistId: playlistData.id,
-      }));
-      addToPlaylist(songsWithPlaylistInfo);
-      playSong(songsWithPlaylistInfo[0]);
+      addToPlaylist(playlistData.songs.map((s) => s.songData));
+      playSong(playlistData.songs[0].songData);
     }
   }, [playlistData, addToPlaylist, playSong]);
 
   const handleShuffle = useCallback(() => {
     if (playlistData?.songs?.length) {
       const shuffledSongs = [...playlistData.songs]
-        .sort(() => Math.random() - 0.5)
-        .map((song) => ({
-          ...song,
-          isPlaylist: true,
-          playlistId: playlistData.id,
-        }));
+        .map((s) => s.songData)
+        .sort(() => Math.random() - 0.5);
       addToPlaylist(shuffledSongs);
       playSong(shuffledSongs[0]);
     }
@@ -96,16 +94,8 @@ export default function PlaylistScreen() {
     },
   });
 
-  const formatCount = useCallback((count: any) => {
-    if (count === undefined || count === null) return "N/A";
-    if (count >= 1000000000) return (count / 1000000000).toFixed(1) + "B";
-    if (count >= 1000000) return (count / 1000000).toFixed(1) + "M";
-    if (count >= 1000) return (count / 1000).toFixed(1) + "K";
-    return count.toString();
-  }, []);
-
   const headerHeight = useMemo(() => Math.min(width * 0.8, 250), [width]);
-  const imageSize = useMemo(() => Math.min(width * 0.4, 240), [width]);
+  const imageSize = useMemo(() => Math.min(width * 0.4, 160), [width]);
 
   const headerAnimatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -153,7 +143,14 @@ export default function PlaylistScreen() {
     };
   });
 
-  if (loading) {
+  const getBgUrl = useCallback(() => {
+    if (!playlistData?.image) return "";
+    return Array.isArray(playlistData.image)
+      ? playlistData.image[2]?.link
+      : playlistData.image;
+  }, [playlistData]);
+
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1DB954" />
@@ -166,10 +163,9 @@ export default function PlaylistScreen() {
     <SafeAreaView style={styles.container}>
       <Animated.FlatList
         data={playlistData?.songs}
-        renderItem={({ item, index }) => <SongCard song={item} />}
+        renderItem={({ item }) => <SongCard song={item.songData} />}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
         style={{ paddingHorizontal: 20 }}
         onScroll={scrollHandler}
@@ -188,7 +184,7 @@ export default function PlaylistScreen() {
                 style={[styles.headerGradient, { height: headerHeight }]}
               >
                 <Image
-                  source={{ uri: playlistData?.image }}
+                  source={{ uri: getBgUrl() }}
                   style={[styles.backgroundImage, { height: headerHeight }]}
                   blurRadius={30}
                 />
@@ -196,7 +192,7 @@ export default function PlaylistScreen() {
                   <View style={styles.headerContent}>
                     <Animated.View style={imageAnimatedStyle}>
                       <Image
-                        source={{ uri: playlistData?.image }}
+                        source={{ uri: getBgUrl() }}
                         style={[
                           styles.playlistImage,
                           { width: imageSize, height: imageSize },
@@ -209,14 +205,17 @@ export default function PlaylistScreen() {
                         {playlistData?.name}
                       </Text>
                       <Text style={styles.description} numberOfLines={3}>
-                        {playlistData?.header_desc}
+                        {playlistData?.description || "No description"}
                       </Text>
                       <View style={styles.statsContainer}>
                         <Text style={styles.statText}>
-                          {playlistData?.list_count} songs
+                          {playlistData?.songs?.length || 0} songs
                         </Text>
+                        <View style={styles.statDivider} />
                         <Text style={styles.statText}>
-                          {formatCount(playlistData?.follower_count)} followers
+                          {new Date(
+                            playlistData?.createdat || "",
+                          ).toLocaleDateString()}
                         </Text>
                       </View>
                     </View>
@@ -247,9 +246,34 @@ export default function PlaylistScreen() {
             </View>
 
             {/* Songs header */}
-            <View style={styles.songsHeader}>
-              <Text style={styles.songsHeaderText}>Songs</Text>
-            </View>
+            {playlistData?.songs?.length ? (
+              <View style={styles.songsHeader}>
+                <Text style={styles.songsHeaderText}>Songs</Text>
+              </View>
+            ) : (
+              <View style={styles.emptySongsContainer}>
+                <Ionicons
+                  name="musical-note"
+                  size={48}
+                  color="rgba(255,255,255,0.5)"
+                />
+                <Text style={styles.emptySongsText}>
+                  No songs in this playlist yet
+                </Text>
+              </View>
+            )}
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptySongsContainer}>
+            <Ionicons
+              name="musical-note"
+              size={48}
+              color="rgba(255,255,255,0.5)"
+            />
+            <Text style={styles.emptySongsText}>
+              No songs in this playlist yet
+            </Text>
           </View>
         }
       />
@@ -332,18 +356,24 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: "row",
-    gap: 16,
+    alignItems: "center",
     marginTop: 4,
   },
   statText: {
     color: "rgba(255, 255, 255, 0.6)",
     fontSize: 13,
   },
+  statDivider: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    marginHorizontal: 8,
+  },
   actionsContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
     paddingVertical: 24,
     gap: 16,
   },
@@ -369,7 +399,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   songsHeader: {
-    paddingHorizontal: 20,
     paddingBottom: 16,
   },
   songsHeaderText: {
@@ -380,9 +409,19 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: "rgba(255, 255, 255, 0.05)",
-    marginHorizontal: 20,
+    marginVertical: 8,
   },
   listContent: {
     paddingBottom: 120,
+  },
+  emptySongsContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptySongsText: {
+    color: "rgba(255, 255, 255, 0.5)",
+    fontSize: 16,
+    marginTop: 12,
   },
 });

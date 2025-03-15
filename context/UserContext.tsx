@@ -1,6 +1,6 @@
-import { API_URL } from "@/constants";
+import { User } from "@/types/user";
+import useApi from "@/utils/hooks/useApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { router } from "expo-router";
 import {
   createContext,
@@ -10,60 +10,6 @@ import {
   useMemo,
   useState,
 } from "react";
-
-// Create an axios instance with default config
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Add a request interceptor to add token to all requests
-api.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
-// Add a response interceptor to handle token expiration
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      await handleLogout();
-    }
-    return Promise.reject(error);
-  },
-);
-
-const handleLogout = async () => {
-  await AsyncStorage.clear();
-  // router.replace("/login");
-};
-
-interface User {
-  userid: number;
-  name: string;
-  username: string;
-  email: string;
-  bio: string;
-  profilepic: string;
-  verified: boolean;
-  logintype: "EMAILPASSWORD" | "GOOGLE" | "GUEST";
-  isDeleted: boolean;
-  passkeyEnabled: boolean;
-  lastPasskeyLogin?: string;
-  passKeyChallenge?: string;
-  challengeExpiry?: string;
-}
 
 interface UserContextType {
   user: User | null;
@@ -90,6 +36,7 @@ export const useUser = () => {
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const api = useApi();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [musicConfig, setMusicConfig] = useState<Record<string, any>>({});
@@ -127,20 +74,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       const response = await api.get("/api/profile");
       if (response.status === 200) {
         setUser(response.data.user);
-        await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
       }
     } catch (error: any) {
       console.error("Error fetching profile:", error);
       if (error.response?.status === 401) {
-        await handleLogout();
-      }
-      try {
-        const savedUser = await AsyncStorage.getItem("user");
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
-        }
-      } catch (e) {
-        console.error("Error loading saved user:", e);
+        await AsyncStorage.removeItem("token");
       }
     } finally {
       setLoading(false);
@@ -151,10 +89,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await AsyncStorage.clear();
       setUser(null);
-      router.replace("/login");
+      router.reload();
     } catch (error) {
       setUser(null);
-      router.replace("/login");
+      router.reload();
     }
   }, []);
 

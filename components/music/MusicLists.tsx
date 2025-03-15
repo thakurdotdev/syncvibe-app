@@ -121,7 +121,9 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
       <FlatList
         data={playlists}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PlaylistCard playlist={item} />}
+        renderItem={({ item }) => (
+          <PlaylistCard playlist={item} isUser={false} />
+        )}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingRight: 16 }}
