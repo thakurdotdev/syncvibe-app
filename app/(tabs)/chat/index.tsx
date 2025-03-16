@@ -170,11 +170,7 @@ const SearchUser: React.FC = () => {
           activeOpacity={0.7}
         >
           <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: user?.profilepic }}
-              style={styles.avatar}
-              defaultSource={require("./assets/icon.jpg")}
-            />
+            <Image source={{ uri: user?.profilepic }} style={styles.avatar} />
             {isOnline && <View style={styles.onlineIndicator} />}
           </View>
 

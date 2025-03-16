@@ -195,8 +195,6 @@ const ChatWithUser = () => {
   const handleTyping = useCallback(
     (text: string) => {
       setMessage(text);
-
-      // Adjust input height for longer messages
       if (text.length > 30) {
         setInputHeight(80);
       } else {
@@ -262,7 +260,6 @@ const ChatWithUser = () => {
 
     const isOwnMessage = item.senderid === loggedInUserId;
 
-    // Check if this is the first message in a sequence from the same sender
     const isFirstInSequence =
       index === 0 ||
       processedMessages()[index - 1].type === "date" ||
@@ -281,7 +278,6 @@ const ChatWithUser = () => {
           <Image
             source={{ uri: currentChat?.otherUser?.profilepic }}
             style={styles.messageBubbleAvatar}
-            defaultSource={require("./assets/icon.jpg")}
           />
         )}
 
@@ -381,8 +377,8 @@ const ChatWithUser = () => {
       if (status === "granted") {
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: "images",
-          // allowsEditing: true,
-          // quality: 0.8,
+          allowsEditing: true,
+          quality: 0.8,
         });
 
         if (!result.canceled) {
@@ -422,7 +418,6 @@ const ChatWithUser = () => {
             <Image
               source={{ uri: currentChat?.otherUser?.profilepic }}
               style={styles.avatar}
-              defaultSource={require("./assets/icon.jpg")}
             />
             {isOnline && <View style={styles.onlineIndicator} />}
           </View>
