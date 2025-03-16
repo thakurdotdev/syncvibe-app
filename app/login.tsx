@@ -131,7 +131,7 @@ const LoginScreen = () => {
           <View style={styles.logoWrapper}>
             <BlurView intensity={40} tint="dark" style={styles.logoBlur}>
               <Image
-                source={require("../assets/images/icon.png")}
+                source={require("./assets/icon.jpg")}
                 style={styles.logo}
                 resizeMode="contain"
               />
