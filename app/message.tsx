@@ -14,32 +14,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Pressable,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { BlurView } from "expo-blur";
-import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInUp,
-  SlideInRight,
-  SlideInLeft,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  interpolate,
-  Extrapolate,
-} from "react-native-reanimated";
 
 // Constants for styling
-const AVATAR_SIZE = 52;
-const ONLINE_INDICATOR_SIZE = 14;
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+const AVATAR_SIZE = 40;
+const ONLINE_INDICATOR_SIZE = 12;
 
 const formatTime = (date: string) => {
   return new Date(date).toLocaleTimeString([], {
@@ -70,8 +52,7 @@ const ChatWithUser = () => {
   const api = useApi();
   const { user } = useUser();
   const loggedInUserId = user?.userid;
-  const { currentChat, setCurrentChat, socket, getAllExistingChats } =
-    useChat();
+  const { currentChat, setCurrentChat, socket, onlineStatuses } = useChat();
 
   // States
   const [message, setMessage] = useState("");
@@ -82,54 +63,12 @@ const ChatWithUser = () => {
   );
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
-
-  // Animation values
-  const inputHeight = useSharedValue(50);
-  const attachmentOpacity = useSharedValue(0);
-  const headerOpacity = useSharedValue(1);
-  const sendButtonScale = useSharedValue(1);
+  const [inputHeight, setInputHeight] = useState(50);
 
   // Refs
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
-
-  // Animated styles
-  const inputContainerStyle = useAnimatedStyle(() => ({
-    height: inputHeight.value,
-  }));
-
-  const attachmentStyle = useAnimatedStyle(() => ({
-    opacity: attachmentOpacity.value,
-    transform: [
-      {
-        translateY: interpolate(
-          attachmentOpacity.value,
-          [0, 1],
-          [10, 0],
-          Extrapolate.CLAMP,
-        ),
-      },
-    ],
-  }));
-
-  const headerStyle = useAnimatedStyle(() => ({
-    opacity: headerOpacity.value,
-    transform: [
-      {
-        translateY: interpolate(
-          headerOpacity.value,
-          [0, 1],
-          [-10, 0],
-          Extrapolate.CLAMP,
-        ),
-      },
-    ],
-  }));
-
-  const sendButtonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sendButtonScale.value }],
-  }));
 
   const fetchMessages = useCallback(async () => {
     if (!loggedInUserId || !currentChat?.otherUser?.userid) return;
@@ -181,20 +120,14 @@ const ChatWithUser = () => {
     if (messages.length > 0 && flatListRef.current) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 200);
+      }, 100);
     }
   }, [messages]);
 
-  const handleSendMessage = useCallback(async () => {
+  const handleSendMessage = async () => {
     if (!message.trim() && !file) return;
 
     try {
-      // Animate send button press
-      sendButtonScale.value = withSpring(0.8, { damping: 10 });
-      setTimeout(() => {
-        sendButtonScale.value = withSpring(1);
-      }, 200);
-
       const newMessage = {
         senderid: loggedInUserId,
         content: message,
@@ -207,17 +140,17 @@ const ChatWithUser = () => {
       };
 
       setMessages((prevMessages) => [...prevMessages, newMessage]);
-      setMessage("");
-      setFile(null);
-      setFilePreview(null);
-
-      // Reset attachment animation
-      attachmentOpacity.value = withTiming(0);
-      inputHeight.value = withTiming(50);
+      setInputHeight(50);
 
       Keyboard.dismiss();
 
-      socket?.emit("new-message", newMessage);
+      if (!file) {
+        socket?.emit("new-message", newMessage);
+      }
+
+      setFile(null);
+      setFilePreview(null);
+      setMessage("");
 
       // Send typing status as false when message is sent
       socket?.emit("typing", {
@@ -226,31 +159,38 @@ const ChatWithUser = () => {
         isTyping: false,
       });
 
-      // Here you would actually call your API to save the message
       const formData = new FormData();
       formData.append("chatid", currentChat?.chatid);
       formData.append("senderid", loggedInUserId);
       formData.append("content", message);
-      if (file) {
-        formData.append("file", file);
+      if (file && file.assets?.[0]) {
+        const fileAsset = file.assets[0];
+        formData.append("file", {
+          uri: fileAsset.uri,
+          type: fileAsset.mimeType,
+          name: fileAsset.fileName,
+        } as any);
       }
 
-      // Actual API call would go here
+      const response = await api.post(`/api/send/message`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (file) {
+        let serverMessage = response.data.message;
+        serverMessage.participants = currentChat?.participants;
+        socket?.emit("new-message", serverMessage);
+      }
+
+      socket?.emit("typing", {
+        userId: loggedInUserId,
+        recipientId: currentChat?.otherUser.userid,
+        isTyping: false,
+      });
     } catch (error) {
       console.error("Error sending message:", error);
     }
-  }, [
-    message,
-    file,
-    loggedInUserId,
-    currentChat,
-    socket,
-    filePreview,
-    sendButtonScale,
-    attachmentOpacity,
-    inputHeight,
-    user?.name,
-  ]);
+  };
 
   const handleTyping = useCallback(
     (text: string) => {
@@ -258,9 +198,9 @@ const ChatWithUser = () => {
 
       // Adjust input height for longer messages
       if (text.length > 30) {
-        inputHeight.value = withTiming(80);
+        setInputHeight(80);
       } else {
-        inputHeight.value = withTiming(50);
+        setInputHeight(50);
       }
 
       if (typingTimeoutRef.current) {
@@ -285,7 +225,7 @@ const ChatWithUser = () => {
         }, 3000);
       }
     },
-    [loggedInUserId, currentChat?.otherUser?.userid, socket, inputHeight],
+    [loggedInUserId, currentChat?.otherUser?.userid, socket],
   );
 
   // Group messages by date
@@ -293,7 +233,7 @@ const ChatWithUser = () => {
     const result: any[] = [];
     let currentDate = "";
 
-    messages.forEach((msg, index) => {
+    messages.forEach((msg) => {
       const messageDate = formatDate(msg.createdat);
 
       if (messageDate !== currentDate) {
@@ -314,12 +254,9 @@ const ChatWithUser = () => {
   const renderItem = ({ item, index }: { item: any; index: number }) => {
     if (item.type === "date") {
       return (
-        <Animated.View
-          entering={FadeIn.delay(100 * (index % 5))}
-          style={styles.dateHeaderContainer}
-        >
+        <View style={styles.dateHeaderContainer}>
           <Text style={styles.dateHeaderText}>{item.date}</Text>
-        </Animated.View>
+        </View>
       );
     }
 
@@ -332,10 +269,7 @@ const ChatWithUser = () => {
       processedMessages()[index - 1].senderid !== item.senderid;
 
     return (
-      <Animated.View
-        entering={
-          isOwnMessage ? SlideInRight.delay(100) : SlideInLeft.delay(100)
-        }
+      <View
         style={[
           styles.messageContainer,
           isOwnMessage
@@ -411,7 +345,7 @@ const ChatWithUser = () => {
             {formatTime(item.createdat)}
           </Text>
         </View>
-      </Animated.View>
+      </View>
     );
   };
 
@@ -419,9 +353,7 @@ const ChatWithUser = () => {
     if (!filePreview) return null;
 
     return (
-      <Animated.View
-        style={[styles.attachmentPreviewContainer, attachmentStyle]}
-      >
+      <View style={styles.attachmentPreviewContainer}>
         <Image
           source={{ uri: filePreview }}
           style={styles.attachmentPreview}
@@ -432,13 +364,12 @@ const ChatWithUser = () => {
           onPress={() => {
             setFile(null);
             setFilePreview(null);
-            attachmentOpacity.value = withTiming(0);
-            inputHeight.value = withTiming(50);
+            setInputHeight(50);
           }}
         >
-          <Ionicons name="close-circle" size={24} color="#FFFFFF" />
+          <Ionicons name="close-circle" size={22} color="#FFFFFF" />
         </TouchableOpacity>
-      </Animated.View>
+      </View>
     );
   };
 
@@ -450,15 +381,14 @@ const ChatWithUser = () => {
       if (status === "granted") {
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: "images",
-          allowsEditing: true,
-          quality: 0.8,
+          // allowsEditing: true,
+          // quality: 0.8,
         });
 
         if (!result.canceled) {
           setFile(result);
           setFilePreview(result.assets[0].uri);
-          attachmentOpacity.value = withTiming(1);
-          inputHeight.value = withTiming(120);
+          setInputHeight(120);
         }
       }
     } catch (error) {
@@ -472,10 +402,11 @@ const ChatWithUser = () => {
     }
   };
 
+  const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ""];
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
-      <Animated.View style={[styles.header, headerStyle]}>
+      <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
             setCurrentChat(null);
@@ -483,7 +414,7 @@ const ChatWithUser = () => {
           }}
           style={styles.backButton}
         >
-          <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
         <View style={styles.headerContent}>
@@ -493,26 +424,20 @@ const ChatWithUser = () => {
               style={styles.avatar}
               defaultSource={require("@/assets/images/icon.png")}
             />
-            {currentChat?.isOnline && <View style={styles.onlineIndicator} />}
+            {isOnline && <View style={styles.onlineIndicator} />}
           </View>
 
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{currentChat?.otherUser?.name}</Text>
-            {currentChat?.isTyping ? (
+            {currentChat?.isTyping && (
               <View style={styles.typingContainer}>
-                <View style={styles.typingDot} />
-                <View style={[styles.typingDot, styles.typingDotDelay]} />
-                <View style={[styles.typingDot, styles.typingDotDelay2]} />
-                <Text style={styles.typingText}>Typing</Text>
+                <Text style={styles.typingText}>Typing...</Text>
               </View>
-            ) : (
-              <Text style={styles.lastSeen}>Online now</Text>
             )}
           </View>
         </View>
-      </Animated.View>
+      </View>
 
-      {/* Messages List */}
       <View style={styles.messagesContainer}>
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -538,36 +463,26 @@ const ChatWithUser = () => {
                 contentSize.height -
                 (contentOffset.y + layoutMeasurement.height);
               setShowScrollButton(distanceFromBottom > 200);
-
-              // Hide header when scrolling down
-              if (contentOffset.y > 10) {
-                headerOpacity.value = withTiming(0.3, { duration: 200 });
-              } else {
-                headerOpacity.value = withTiming(1, { duration: 200 });
-              }
             }}
             scrollEventThrottle={16}
           />
         )}
 
-        {/* Scroll to bottom button */}
         {showScrollButton && (
           <TouchableOpacity
             style={styles.scrollToBottomButton}
             onPress={scrollToBottom}
           >
-            <Ionicons name="chevron-down" size={20} color="#FFFFFF" />
+            <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Input Area */}
-      <Animated.View style={[styles.inputContainer, inputContainerStyle]}>
-        {renderAttachmentPreview()}
-
+      {renderAttachmentPreview()}
+      <View style={[styles.inputContainer, { height: inputHeight }]}>
         <View style={styles.inputRow}>
           <TouchableOpacity style={styles.attachButton} onPress={pickImage}>
-            <Ionicons name="image-outline" size={24} color="#0A84FF" />
+            <Ionicons name="image-outline" size={22} color="#0A84FF" />
           </TouchableOpacity>
 
           <View style={styles.textInputContainer}>
@@ -582,19 +497,27 @@ const ChatWithUser = () => {
             />
           </View>
 
-          <AnimatedPressable
-            style={[styles.sendButton, sendButtonStyle]}
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              {
+                backgroundColor:
+                  message.trim() || file
+                    ? "#0A84FF"
+                    : "rgba(10, 132, 255, 0. 5)",
+              },
+            ]}
             onPress={handleSendMessage}
             disabled={!message.trim() && !file}
           >
             <Ionicons
               name="send"
-              size={20}
-              color={message.trim() || file ? "#FFFFFF" : "#8E8E93"}
+              size={18}
+              color={message.trim() || file ? "#FFFFFF" : "#CCCCCC"}
             />
-          </AnimatedPressable>
+          </TouchableOpacity>
         </View>
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -611,8 +534,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-    zIndex: 10,
+    backgroundColor: "#121212",
   },
   backButton: {
     padding: 8,
@@ -625,7 +547,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: "relative",
-    marginRight: 10,
+    marginRight: 12,
   },
   avatar: {
     width: AVATAR_SIZE,
@@ -643,20 +565,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#30D158",
     borderWidth: 2,
     borderColor: "#121212",
-    shadowColor: "#30D158",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
   },
   userInfo: {
     flex: 1,
     justifyContent: "center",
   },
   userName: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "600",
     color: "#FFFFFF",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   lastSeen: {
     fontSize: 12,
@@ -666,28 +584,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  typingDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#30D158",
-    marginRight: 3,
-    opacity: 0.7,
-  },
-  typingDotDelay: {
-    animationDelay: "0.2s",
-  },
-  typingDotDelay2: {
-    animationDelay: "0.4s",
-  },
   typingText: {
     fontSize: 12,
     color: "#30D158",
     fontWeight: "500",
-    marginLeft: 4,
-  },
-  profileButton: {
-    padding: 12,
   },
   messagesContainer: {
     flex: 1,
@@ -705,7 +605,7 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     flexDirection: "row",
-    marginVertical: 4,
+    marginVertical: 3,
     maxWidth: "85%",
   },
   ownMessageContainer: {
@@ -726,36 +626,36 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   messageBubbleAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     marginRight: 8,
     alignSelf: "flex-end",
     backgroundColor: "#2C2C2E",
   },
   messageBubble: {
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     maxWidth: "100%",
   },
   ownMessageBubble: {
     backgroundColor: "#0A84FF",
-    borderTopRightRadius: 2,
+    borderBottomRightRadius: 4,
   },
   otherMessageBubble: {
     backgroundColor: "#262629",
-    borderTopLeftRadius: 2,
+    borderBottomLeftRadius: 4,
   },
   ownFirstBubble: {
-    borderTopRightRadius: 20,
+    borderTopRightRadius: 18,
   },
   otherFirstBubble: {
-    borderTopLeftRadius: 20,
+    borderTopLeftRadius: 18,
   },
   messageText: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   ownMessageText: {
     color: "#FFFFFF",
@@ -765,63 +665,63 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 10,
-    marginTop: 4,
+    marginTop: 2,
   },
   ownTimeText: {
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.5)",
     marginRight: 4,
   },
   otherTimeText: {
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.5)",
     marginLeft: 4,
   },
   dateHeaderContainer: {
     alignItems: "center",
-    marginVertical: 12,
+    marginVertical: 10,
   },
   dateHeaderText: {
     fontSize: 12,
     fontWeight: "500",
     color: "#8E8E93",
-    backgroundColor: "rgba(30, 30, 30, 0.8)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    overflow: "hidden",
+    backgroundColor: "rgba(30, 30, 30, 0.7)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   imageContainer: {
-    marginBottom: 8,
+    marginBottom: 6,
     borderRadius: 12,
     overflow: "hidden",
   },
   messageImage: {
-    width: 200,
-    height: 200,
+    width: 180,
+    height: 180,
     borderRadius: 12,
   },
   scrollToBottomButton: {
     position: "absolute",
-    right: 20,
-    bottom: 20,
-    width: 38,
-    height: 38,
-    backgroundColor: "rgba(30, 30, 30, 0.8)",
-    borderRadius: 19,
+    right: 15,
+    bottom: 15,
+    width: 32,
+    height: 32,
+    backgroundColor: "rgba(40, 40, 40, 0.7)",
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   inputContainer: {
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "rgba(10, 10, 10, 0.95)",
-    marginBottom: 20,
+    backgroundColor: "#121212",
+    justifyContent: "center",
+    marginBottom: 15,
   },
   inputRow: {
     flexDirection: "row",
@@ -829,12 +729,12 @@ const styles = StyleSheet.create({
   },
   textInputContainer: {
     flex: 1,
-    backgroundColor: "rgba(50, 50, 50, 0.8)",
-    borderRadius: 24,
+    backgroundColor: "#2C2C2E",
+    borderRadius: 20,
     marginHorizontal: 8,
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "ios" ? 12 : 6,
-    minHeight: 50,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "ios" ? 10 : 6,
+    minHeight: 40,
     justifyContent: "center",
   },
   input: {
@@ -843,41 +743,37 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   attachButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(20, 20, 20, 0.7)",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#2C2C2E",
     justifyContent: "center",
     alignItems: "center",
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(10, 132, 255, 0.8)",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
   },
   attachmentPreviewContainer: {
-    height: 100,
-    marginBottom: 8,
-    borderRadius: 12,
-    overflow: "hidden",
-    position: "relative",
-    backgroundColor: "#1C1C1E",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#121212",
   },
   attachmentPreview: {
-    width: 100,
-    height: "100%",
+    width: 80,
+    height: 80,
     borderRadius: 8,
   },
   removeAttachmentButton: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 12,
+    left: 70,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     borderRadius: 12,
-    padding: 4,
+    padding: 2,
   },
 });
 

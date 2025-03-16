@@ -7,35 +7,20 @@ import {
   FlatList,
   Image,
   Keyboard,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  Extrapolation,
-  FadeIn,
-  FadeOut,
-  interpolate,
-  SlideInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useChat } from "@/context/SocketContext";
 import useApi from "@/utils/hooks/useApi";
 import { useDebounce } from "@/utils/hooks/useDebounce";
 
-const AVATAR_SIZE = 52;
-const ONLINE_INDICATOR_SIZE = 14;
+const AVATAR_SIZE = 40;
+const ONLINE_INDICATOR_SIZE = 10;
 
 interface User {
   userid: string;
@@ -43,8 +28,6 @@ interface User {
   profilepic?: string;
   isTyping?: boolean;
 }
-
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 const SearchUser: React.FC = () => {
   const api = useApi();
@@ -62,42 +45,8 @@ const SearchUser: React.FC = () => {
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const initialLoad = useRef(true);
   const inputRef = useRef<TextInput>(null);
   const flatListRef = useRef<FlatList>(null);
-
-  const searchBarOpacity = useSharedValue(1);
-  const searchBarScale = useSharedValue(1);
-  const headerHeight = useSharedValue(60);
-  const listPaddingTop = useSharedValue(0);
-
-  const insets = useSafeAreaInsets();
-
-  // Animated styles
-  const searchBarAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: searchBarOpacity.value,
-    transform: [
-      { scale: searchBarScale.value },
-      {
-        translateY: interpolate(
-          searchBarScale.value,
-          [0.9, 1],
-          [5, 0],
-          Extrapolation.CLAMP,
-        ),
-      },
-    ],
-  }));
-
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
-    height: headerHeight.value,
-    paddingTop: insets.top > 0 ? insets.top : 8,
-    opacity: headerHeight.value > 40 ? 1 : 0,
-  }));
-
-  const listContainerStyle = useAnimatedStyle(() => ({
-    paddingTop: listPaddingTop.value,
-  }));
 
   // Search functionality
   const searchUsers = useCallback(
@@ -121,28 +70,18 @@ const SearchUser: React.FC = () => {
     [api, setLoading],
   );
 
-  const debouncedSearch = useDebounce(
-    (query: string) => searchUsers(query),
-    400,
+  // Make sure debouncedSearch is properly memoized
+  const debouncedSearch = useCallback(
+    useDebounce((query: string) => searchUsers(query), 400),
+    [searchUsers],
   );
 
   useEffect(() => {
-    if (initialLoad.current) {
-      initialLoad.current = false;
-      return;
-    }
-
-    debouncedSearch(searchQuery);
-
-    // Animate search bar based on query
-    if (searchQuery.length > 0) {
-      searchBarScale.value = withSpring(1.03);
-      headerHeight.value = withTiming(0, { duration: 300 });
-      listPaddingTop.value = withTiming(10, { duration: 300 });
+    // Only run this effect when searchQuery changes
+    if (searchQuery) {
+      debouncedSearch(searchQuery);
     } else {
-      searchBarScale.value = withSpring(1);
-      headerHeight.value = withTiming(60, { duration: 300 });
-      listPaddingTop.value = withTiming(0, { duration: 300 });
+      setSearchResults([]);
     }
   }, [searchQuery]);
 
@@ -190,6 +129,12 @@ const SearchUser: React.FC = () => {
     setSearchResults([]);
     Keyboard.dismiss();
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+
+    setTimeout(() => {
+      // This is a hack to force a re-render
+      setRefreshing(true);
+      setTimeout(() => setRefreshing(false), 50);
+    }, 50);
   };
 
   const handleRefresh = async () => {
@@ -197,6 +142,18 @@ const SearchUser: React.FC = () => {
     await getAllExistingChats();
     setRefreshing(false);
   };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchUsers(searchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery, searchUsers]);
 
   // Render functions
   const renderUserItem = useCallback(
@@ -207,57 +164,47 @@ const SearchUser: React.FC = () => {
       const isTyping = !isSearchResult && item.isTyping;
 
       return (
-        <Animated.View
-          entering={SlideInUp.delay(50 * index).springify()}
-          style={styles.userCardContainer}
+        <TouchableOpacity
+          onPress={() => handleUserSelect(item, isSearchResult)}
+          style={[styles.userCard, isOnline && styles.userCardOnline]}
+          activeOpacity={0.7}
         >
-          <TouchableOpacity
-            onPress={() => handleUserSelect(item, isSearchResult)}
-            style={[styles.userCard, isOnline && styles.userCardOnline]}
-            activeOpacity={0.7}
-          >
-            <View style={styles.avatarContainer}>
-              <Image
-                source={{ uri: user?.profilepic }}
-                style={styles.avatar}
-                defaultSource={require("@/assets/images/icon.png")}
-              />
-              {isOnline && <View style={styles.onlineIndicator} />}
-            </View>
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{ uri: user?.profilepic }}
+              style={styles.avatar}
+              defaultSource={require("@/assets/images/icon.png")}
+            />
+            {isOnline && <View style={styles.onlineIndicator} />}
+          </View>
 
-            <View style={styles.userInfo}>
-              <Text style={styles.userName} numberOfLines={1}>
-                {user?.name}
-              </Text>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {user?.name}
+            </Text>
 
-              {!isSearchResult &&
-                (isTyping ? (
-                  <View style={styles.typingContainer}>
-                    <View style={styles.typingDot} />
-                    <View style={[styles.typingDot, styles.typingDotDelay1]} />
-                    <View style={[styles.typingDot, styles.typingDotDelay2]} />
-                    <Text style={styles.typingText}>typing</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.lastMessage} numberOfLines={1}>
-                    {item?.lastmessage || ""}
-                  </Text>
-                ))}
-            </View>
+            {!isSearchResult &&
+              (isTyping ? (
+                <View style={styles.typingContainer}>
+                  <Text style={styles.typingText}>typing...</Text>
+                </View>
+              ) : (
+                <Text style={styles.lastMessage} numberOfLines={1}>
+                  {item?.lastmessage || ""}
+                </Text>
+              ))}
+          </View>
 
-            <TouchableOpacity style={styles.messageButton}>
-              <Ionicons name="chatbubble" size={18} color="#0A84FF" />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Animated.View>
+          <Ionicons name="chevron-forward" size={16} color="#8E8E93" />
+        </TouchableOpacity>
       );
     },
-    [handleUserSelect, onlineStatuses],
+    [handleUserSelect, onlineStatuses, searchResults],
   );
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="chatbubble-ellipses-outline" size={64} color="#8E8E93" />
+      <Ionicons name="chatbubble-ellipses-outline" size={48} color="#8E8E93" />
       <Text style={styles.emptyText}>
         {searchQuery.length > 0 ? "No users found" : "No conversations yet"}
       </Text>
@@ -281,20 +228,16 @@ const SearchUser: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Animated.View style={[styles.header, headerAnimatedStyle]}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
-      </Animated.View>
+      </View>
 
-      <Animated.View style={[styles.searchBarWrapper, searchBarAnimatedStyle]}>
-        <AnimatedBlurView
-          intensity={20}
-          tint="dark"
-          style={styles.searchBarBlur}
-        >
+      <View style={styles.searchBarWrapper}>
+        <BlurView intensity={20} tint="dark" style={styles.searchBarBlur}>
           <View style={styles.searchContainer}>
             <Ionicons
               name="search"
-              size={20}
+              size={18}
               color="#8E8E93"
               style={styles.searchIcon}
             />
@@ -313,25 +256,22 @@ const SearchUser: React.FC = () => {
                 onPress={clearSearch}
                 style={styles.clearButton}
               >
-                <Ionicons name="close-circle" size={20} color="#8E8E93" />
+                <Ionicons name="close-circle" size={18} color="#8E8E93" />
               </TouchableOpacity>
             )}
           </View>
-        </AnimatedBlurView>
-      </Animated.View>
+        </BlurView>
+      </View>
 
       {loading && (
-        <Animated.View
-          entering={FadeIn}
-          exiting={FadeOut}
-          style={styles.loadingContainer}
-        >
-          <ActivityIndicator size="large" color="#0A84FF" />
-        </Animated.View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#0A84FF" />
+        </View>
       )}
 
-      <Animated.View style={[styles.listContainer, listContainerStyle]}>
+      <View style={styles.listContainer}>
         <FlatList
+          key={searchResults.length > 0 ? "search" : "users"}
           ref={flatListRef}
           data={searchResults.length > 0 ? searchResults : users}
           keyExtractor={(item, index) =>
@@ -349,17 +289,8 @@ const SearchUser: React.FC = () => {
           initialNumToRender={10}
           maxToRenderPerBatch={10}
           windowSize={10}
-          onScroll={({ nativeEvent }) => {
-            const scrollY = nativeEvent.contentOffset.y;
-            if (scrollY > 10) {
-              searchBarOpacity.value = withTiming(0.8, { duration: 200 });
-            } else {
-              searchBarOpacity.value = withTiming(1, { duration: 200 });
-            }
-          }}
-          scrollEventThrottle={16}
         />
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -370,92 +301,78 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
   },
   header: {
-    paddingHorizontal: 20,
-    justifyContent: "flex-end",
-    zIndex: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "700",
     color: "#FFFFFF",
-    marginBottom: 4,
   },
   searchBarWrapper: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    zIndex: 100,
+    paddingBottom: 12,
   },
   searchBarBlur: {
-    borderRadius: 20,
+    borderRadius: 12,
     overflow: "hidden",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(30, 30, 30, 0.7)",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 12 : 6,
-    height: 50,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: "#FFFFFF",
-    fontWeight: "500",
+    height: 42,
   },
   clearButton: {
-    padding: 6,
+    padding: 4,
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
+    padding: 20,
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    zIndex: 100,
   },
   listContainer: {
     flex: 1,
+    marginBottom: 45,
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   listHeaderContainer: {
-    paddingVertical: 12,
+    paddingVertical: 8,
     marginBottom: 4,
   },
   listHeaderText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#999",
-    marginLeft: 4,
-  },
-  userCardContainer: {
-    marginVertical: 6,
+    color: "#8E8E93",
   },
   userCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 30, 30, 0.6)",
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: "rgba(30, 30, 30, 0.4)",
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 4,
   },
   userCardOnline: {
-    borderLeftWidth: 3,
+    borderLeftWidth: 2,
     borderLeftColor: "#30D158",
   },
   avatarContainer: {
     position: "relative",
-    marginRight: 16,
+    marginRight: 12,
   },
   avatar: {
     width: AVATAR_SIZE,
@@ -471,73 +388,45 @@ const styles = StyleSheet.create({
     height: ONLINE_INDICATOR_SIZE,
     borderRadius: ONLINE_INDICATOR_SIZE / 2,
     backgroundColor: "#30D158",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#121212",
-    shadowColor: "#30D158",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
   },
   userInfo: {
     flex: 1,
     justifyContent: "center",
   },
   userName: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "600",
     color: "#FFFFFF",
-    marginBottom: 6,
+    marginBottom: 2,
   },
   typingContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  typingDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#30D158",
-    marginRight: 3,
-    opacity: 1,
-    transform: [{ scale: 1 }],
-    animation: "bounce 1.4s infinite ease-in-out",
-  },
-  typingDotDelay1: {
-    animationDelay: "-1.1s",
-  },
-  typingDotDelay2: {
-    animationDelay: "-0.8s",
-  },
   typingText: {
     fontSize: 13,
     color: "#30D158",
     fontWeight: "500",
-    marginLeft: 4,
   },
   lastMessage: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#8E8E93",
-    fontWeight: "400",
-  },
-  messageButton: {
-    padding: 10,
-    backgroundColor: "rgba(10, 132, 255, 0.1)",
-    borderRadius: 12,
-    marginLeft: 8,
   },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 80,
+    paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     color: "#8E8E93",
     marginTop: 16,
   },
   emptySubText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#636366",
     marginTop: 8,
     textAlign: "center",

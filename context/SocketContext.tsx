@@ -32,6 +32,7 @@ export interface Message {
   timestamp?: string;
   fileurl?: string;
   createdat: string;
+  participants: number[];
 }
 
 interface ChatContextType {
