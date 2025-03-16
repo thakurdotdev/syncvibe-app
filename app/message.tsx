@@ -281,7 +281,7 @@ const ChatWithUser = () => {
           <Image
             source={{ uri: currentChat?.otherUser?.profilepic }}
             style={styles.messageBubbleAvatar}
-            defaultSource={require("@/assets/images/icon.png")}
+            defaultSource={require("../assets/images/icon.png")}
           />
         )}
 
@@ -422,7 +422,7 @@ const ChatWithUser = () => {
             <Image
               source={{ uri: currentChat?.otherUser?.profilepic }}
               style={styles.avatar}
-              defaultSource={require("@/assets/images/icon.png")}
+              defaultSource={require("../assets/images/icon.png")}
             />
             {isOnline && <View style={styles.onlineIndicator} />}
           </View>
