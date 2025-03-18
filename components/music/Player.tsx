@@ -34,6 +34,7 @@ import TrackPlayer, {
 } from "react-native-track-player";
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
+import PlayerDrawer from "./PlayerDrawer";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
@@ -101,6 +102,7 @@ export default function Player() {
   const insets = useSafeAreaInsets();
   const playbackState = usePlaybackState();
   const isPlaying = playbackState.state === State.Playing;
+  const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
   const handlePlayPauseSong = async () => {
     if (isPlaying) {
@@ -113,11 +115,7 @@ export default function Player() {
   const pathname = usePathname();
 
   // Determine active tab based on pathname
-  const isHomeActive =
-    pathname.includes("/home") ||
-    pathname === "/search" ||
-    pathname === "/profile" ||
-    pathname === "/playlist";
+  const isHomeActive = pathname.includes("/home");
 
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -338,7 +336,12 @@ export default function Player() {
                 <Ionicons name="chevron-down" size={24} color="white" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Now Playing</Text>
-              <TouchableOpacity style={styles.headerButton}>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => {
+                  setPlayerDrawerOpen(true);
+                }}
+              >
                 <Ionicons name="ellipsis-horizontal" size={20} color="white" />
               </TouchableOpacity>
             </View>
@@ -397,12 +400,19 @@ export default function Player() {
     </Animated.View>
   );
 
-  if (!currentSong) return null;
+  if (!currentSong || !isHomeActive) return null;
 
   return (
     <>
       {renderExpandedPlayer()}
       {renderMiniPlayer()}
+      {playerDrawerOpen && (
+        <PlayerDrawer
+          isOpen={playerDrawerOpen}
+          onClose={() => setPlayerDrawerOpen(false)}
+          closePlayer={closePlayer}
+        />
+      )}
     </>
   );
 }

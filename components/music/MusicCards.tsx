@@ -1,3 +1,4 @@
+import { useGroupMusic } from "@/context/GroupMusicContext";
 import { usePlayer, usePlayerState } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import { Ionicons } from "@expo/vector-icons";
@@ -500,4 +501,53 @@ const styles = StyleSheet.create({
     backgroundColor: "#1DB954",
     marginHorizontal: 24,
   },
+});
+
+export const GroupSongControls = memo(() => {
+  const isDragging = useRef(false);
+  const { position, duration } = useProgress();
+  const { handleSeek } = useGroupMusic();
+
+  const progress = useSharedValue(position);
+  const min = useSharedValue(0);
+  const max = useSharedValue(duration);
+
+  useEffect(() => {
+    progress.value = withTiming(position);
+    max.value = withTiming(duration);
+  }, [position, duration]);
+
+  return (
+    <View className="w-full py-4">
+      <View className="flex-row items-center">
+        <Slider
+          style={styles.slider}
+          progress={progress}
+          minimumValue={min}
+          maximumValue={max}
+          onSlidingStart={() => {
+            isDragging.current = true;
+          }}
+          onValueChange={(value) => {
+            progress.value = value;
+          }}
+          onSlidingComplete={(value) => {
+            handleSeek(value);
+            isDragging.current = false;
+          }}
+          thumbWidth={12}
+          containerStyle={styles.sliderContainer}
+          theme={{
+            minimumTrackTintColor: "#fff",
+            maximumTrackTintColor: "rgba(99, 102, 241, 0.2)",
+            bubbleBackgroundColor: "#6366f1",
+          }}
+        />
+      </View>
+      <View className="flex-row justify-between">
+        <Text style={styles.timeText}>{formatTime(position)}</Text>
+        <Text style={styles.timeText}>{formatTime(duration)}</Text>
+      </View>
+    </View>
+  );
 });

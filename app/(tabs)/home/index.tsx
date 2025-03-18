@@ -9,7 +9,9 @@ import { SONG_URL } from "@/constants";
 import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
 import useApi from "@/utils/hooks/useApi";
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -37,7 +39,6 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
   const [recommendations, setRecommendations] = useState([]);
-  const [reccLoading, setReccLoading] = useState(false);
 
   const scrollY = new Animated.Value(0);
 
@@ -76,7 +77,7 @@ export default function HomeScreen() {
   const getRecommendations = useCallback(async () => {
     try {
       if (!user?.userid) return;
-      setReccLoading(true);
+
       const response = await api.get("/api/music/recommendations");
 
       if (response.status === 200) {
@@ -85,7 +86,6 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Error fetching recommendations:", error);
     } finally {
-      setReccLoading(false);
     }
   }, [user?.userid]);
 
@@ -122,6 +122,24 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-black">
+      <View className="p-4">
+        <View
+          className="flex-row items-center bg-white/10 rounded-full px-4 h-12"
+          style={{ overflow: "hidden" }}
+          onTouchEnd={() => router.push("/search")}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Search for songs"
+        >
+          <Ionicons name="search" size={20} color="#9CA3AF" />
+          <Text
+            className="flex-1 h-12 px-3 text-gray-400 flex justify-center py-3"
+            numberOfLines={1}
+          >
+            Search for songs...
+          </Text>
+        </View>
+      </View>
       <Animated.ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -131,13 +149,7 @@ export default function HomeScreen() {
         )}
         scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#1DB954"
-            colors={["#1DB954"]}
-            progressBackgroundColor="#000000"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <View className="p-4 mb-20">

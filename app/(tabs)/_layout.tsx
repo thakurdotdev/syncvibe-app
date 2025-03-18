@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Tabs, usePathname } from "expo-router";
 import React, { useEffect } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -90,7 +91,7 @@ export default function TabLayout() {
 
   // Determine active tab based on pathname
   const isHomeActive = pathname.includes("/home");
-  const isSearchActive = pathname.includes("/search");
+  const isSearchActive = pathname.includes("/group-music");
   const isProfileActive = pathname.includes("/profile");
   const isPlaylistActive = pathname.includes("/playlist");
   const isChatActive = pathname.includes("/chat");
@@ -131,14 +132,14 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="search/index"
+          name="group-music/index"
           options={{
-            title: "Search",
+            title: "Group Music",
             tabBarButton: (props) => (
               <AnimatedTabButton
-                onPress={() => router.push("/search")}
-                label="Search"
-                iconName="search"
+                onPress={() => router.push("/group-music")}
+                label="Group Music"
+                iconName="musical-notes"
                 isFocused={isSearchActive}
               />
             ),

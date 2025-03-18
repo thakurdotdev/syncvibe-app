@@ -11,6 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import TrackPlayer from "react-native-track-player";
 import "../global.css";
 import { PlaybackService } from "../service";
+import { GroupMusicProvider } from "@/context/GroupMusicContext";
 
 TrackPlayer.registerPlaybackService(() => PlaybackService);
 
@@ -20,11 +21,13 @@ function RootLayout() {
       <UserProvider>
         <ChatProvider>
           <MusicProvider>
-            <SafeAreaProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
-            </SafeAreaProvider>
+            <GroupMusicProvider>
+              <SafeAreaProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </SafeAreaProvider>
+            </GroupMusicProvider>
           </MusicProvider>
         </ChatProvider>
       </UserProvider>
@@ -71,6 +74,12 @@ function RootLayoutNav() {
             navigationBarColor: "#000000",
             title: "Playlist",
             presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="search"
+          options={{
+            headerShown: false,
           }}
         />
         <Stack.Screen
