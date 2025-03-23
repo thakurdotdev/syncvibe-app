@@ -1,4 +1,5 @@
 import LoginScreen from "@/app/login";
+import LoginModal from "@/components/LoginModal";
 import { PlaylistCard } from "@/components/music/MusicCards";
 import { usePlaylist } from "@/context/MusicContext";
 import { useUser } from "@/context/UserContext";
@@ -49,9 +50,7 @@ const PlaylistScreen = () => {
     </View>
   );
 
-  return !user?.userid ? (
-    <LoginScreen />
-  ) : (
+  return (
     <SafeAreaView className="flex-1 bg-black relative">
       <Animated.FlatList
         data={playlistPairs}
@@ -70,6 +69,7 @@ const PlaylistScreen = () => {
           );
         }}
       />
+      {!user && <LoginModal />}
     </SafeAreaView>
   );
 };

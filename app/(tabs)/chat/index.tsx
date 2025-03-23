@@ -19,7 +19,7 @@ import { useChat } from "@/context/SocketContext";
 import useApi from "@/utils/hooks/useApi";
 import { useDebounce } from "@/utils/hooks/useDebounce";
 import { useUser } from "@/context/UserContext";
-import LoginScreen from "@/app/login";
+import LoginModal from "@/components/LoginModal";
 
 const AVATAR_SIZE = 40;
 const ONLINE_INDICATOR_SIZE = 10;
@@ -225,9 +225,7 @@ const SearchUser: React.FC = () => {
     </View>
   );
 
-  return !user?.userid ? (
-    <LoginScreen />
-  ) : (
+  return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
@@ -292,6 +290,7 @@ const SearchUser: React.FC = () => {
           windowSize={10}
         />
       </View>
+      {!user && <LoginModal />}
     </SafeAreaView>
   );
 };

@@ -1,7 +1,7 @@
 import LoginScreen from "@/app/login";
+import LoginModal from "@/components/LoginModal";
 import { useUser } from "@/context/UserContext";
 import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
-import useApi from "@/utils/hooks/useApi";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
@@ -16,7 +16,7 @@ import {
   ShieldCheckIcon,
 } from "lucide-react-native";
 import { MotiView } from "moti";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -159,9 +159,7 @@ export default function ProfileScreen() {
     );
   }
 
-  return !user?.userid ? (
-    <LoginScreen />
-  ) : (
+  return (
     <View className="flex-1 bg-black">
       <ScrollView
         className="flex-1"
@@ -215,9 +213,12 @@ export default function ProfileScreen() {
                   />
                 )}
               </View>
-              <Text className="text-gray-400 text-base mt-0.5">
-                @{user?.username}
-              </Text>
+              {user?.username && (
+                <Text className="text-gray-400 text-base mt-0.5">
+                  @{user?.username}
+                </Text>
+              )}
+
               {user?.bio && (
                 <Text className="text-gray-300 text-center mt-3 px-8 max-w-md">
                   {user.bio}
@@ -284,6 +285,7 @@ export default function ProfileScreen() {
           </ProfileSection>
         </View>
       </ScrollView>
+      {!user && <LoginModal />}
     </View>
   );
 }

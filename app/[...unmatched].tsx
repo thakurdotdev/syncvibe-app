@@ -1,22 +1,47 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Redirect } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
-export default function NotFoundScreen() {
+export default function UnmatchedRoute() {
+  const [showRedirect, setShowRedirect] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowRedirect(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <View className="flex-1 bg-black justify-center items-center p-4">
-      <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
-      <Text className="text-white text-2xl font-bold mt-4">Page Not Found</Text>
-      <Text className="text-gray-400 text-center mt-2 mb-8">
-        The page you're looking for doesn't exist or has been moved.
-      </Text>
-      <TouchableOpacity
-        onPress={() => router.replace("/(tabs)/home")}
-        className="bg-blue-500 px-6 py-3 rounded-lg flex-row items-center"
-      >
-        <Ionicons name="home" size={20} color="white" />
-        <Text className="text-white font-semibold ml-2">Go to Home</Text>
-      </TouchableOpacity>
+    <View style={styles.container}>
+      <Text style={styles.title}>Page not found</Text>
+      <Text style={styles.subtitle}>Redirecting you to home...</Text>
+
+      <ActivityIndicator size={"small"} color={"#fff"} />
+
+      {showRedirect && <Redirect href="/(tabs)/home" />}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#000",
+    padding: 20,
+  },
+  title: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  subtitle: {
+    color: "#aaa",
+    fontSize: 16,
+    marginBottom: 30,
+  },
+});

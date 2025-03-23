@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -41,6 +41,10 @@ function RootLayout() {
 }
 
 function RootLayoutNav() {
+  const pathname = usePathname();
+
+  console.log(pathname);
+
   const { incomingCall, isInCall } = useVideoCall();
   return (
     <>
@@ -143,6 +147,13 @@ function RootLayoutNav() {
             presentation: "modal",
           }}
         />
+        <Stack.Screen
+          name="oauthredirect"
+          options={{
+            headerShown: false,
+          }}
+        />
+
         <Stack.Screen
           name="[...unmatched]"
           options={{

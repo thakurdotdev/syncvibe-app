@@ -1,12 +1,16 @@
+import LoginModal from "@/components/LoginModal";
 import { GroupSongControls } from "@/components/music/MusicCards";
 import { Drawer } from "@/components/ui/drawer";
 import { useGroupMusic } from "@/context/GroupMusicContext";
+import { useUser } from "@/context/UserContext";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Image,
   Text,
@@ -14,6 +18,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const { height, width } = Dimensions.get("window");
 
 export default function GroupMusicMobile() {
   const {
@@ -34,11 +42,14 @@ export default function GroupMusicMobile() {
     selectSong,
     handlePlayPause,
   } = useGroupMusic();
+  const { user } = useUser();
+  const router = useRouter();
 
   const [newGroupName, setNewGroupName] = useState("");
   const [groupId, setGroupId] = useState("");
   const [tabIndex, setTabIndex] = useState(0);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(!user); // Show login modal if user is null
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
@@ -54,12 +65,8 @@ export default function GroupMusicMobile() {
   };
 
   return (
-    <LinearGradient
-      colors={["#0000", "#111827"]}
-      style={{ flex: 1, backgroundColor: "#000" }}
-    >
-      {/* Header */}
-      <View
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+      <SafeAreaView
         style={{
           paddingHorizontal: 20,
           paddingVertical: 16,
@@ -70,7 +77,8 @@ export default function GroupMusicMobile() {
           borderBottomColor: "#111",
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {/* Rest of your existing header content */}
+        <View style={{ flexDirection: "row", alignItems: "center", zIndex: 1 }}>
           <Ionicons name="musical-notes-outline" size={24} color="#fff" />
           <Text
             style={{
@@ -84,11 +92,11 @@ export default function GroupMusicMobile() {
           </Text>
         </View>
         {currentGroup && (
-          <View style={{ flexDirection: "row" }}>
+          <View style={{ flexDirection: "row", zIndex: 1 }}>
             <TouchableOpacity
               onPress={() => setShowSearchModal(true)}
               style={{
-                backgroundColor: "#111",
+                backgroundColor: "rgba(17,17,17,0.7)",
                 padding: 10,
                 borderRadius: 12,
                 marginRight: 30,
@@ -101,7 +109,7 @@ export default function GroupMusicMobile() {
             <TouchableOpacity
               onPress={leaveGroup}
               style={{
-                backgroundColor: "#111",
+                backgroundColor: "rgba(17,17,17,0.7)",
                 padding: 10,
                 borderRadius: 12,
               }}
@@ -110,7 +118,15 @@ export default function GroupMusicMobile() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </SafeAreaView>
+
+      {/* Login Modal - Display if user is null */}
+      {!user && (
+        <LoginModal
+          title="You need to be signed in to use Group Music features. Please sign in
+              to continue."
+        />
+      )}
 
       {/* Main Content */}
       {!currentGroup ? (
@@ -132,7 +148,7 @@ export default function GroupMusicMobile() {
               textAlign: "center",
             }}
           >
-            Join the rhythm
+            Sync Your Vibe with Friends
           </Text>
           <Text
             style={{
@@ -144,8 +160,8 @@ export default function GroupMusicMobile() {
               lineHeight: 22,
             }}
           >
-            Create or join a group to start listening to music together with
-            friends in real-time.
+            Create a group to listen to music together. Invite your friends to
+            join and start playing music for everyone in the group.
           </Text>
           <TouchableOpacity
             onPress={() => {
@@ -769,6 +785,6 @@ export default function GroupMusicMobile() {
           </View>
         </Drawer>
       )}
-    </LinearGradient>
+    </View>
   );
 }

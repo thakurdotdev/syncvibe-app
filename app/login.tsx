@@ -87,10 +87,14 @@ const LoginScreen = () => {
 
       const token = backendResponse.data.token;
       await AsyncStorage.setItem("token", token);
-      router.replace("/(tabs)/home");
 
       // Get user profile and navigate to home screen
       await getProfile();
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Now navigate after profile is loaded
+      router.replace("/");
     } catch (error: any) {
       console.error("Google sign-in error:", error);
       setError(`Authentication failed: ${error.message}`);

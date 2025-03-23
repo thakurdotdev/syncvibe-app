@@ -10,6 +10,7 @@ import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
 import useApi from "@/utils/hooks/useApi";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -20,8 +21,10 @@ import {
   StatusBar,
   Text,
   View,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getGreeting } from "@/utils/getGreeting";
 
 interface HomePageData {
   trending: Song[];
@@ -41,6 +44,14 @@ export default function HomeScreen() {
   const [recommendations, setRecommendations] = useState([]);
 
   const scrollY = new Animated.Value(0);
+
+  // Calculated animations for header background gradient
+  const headerHeight = 350; // Gradient header height
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, headerHeight * 0.6, headerHeight],
+    outputRange: [1, 0.5, 0],
+    extrapolate: "clamp",
+  });
 
   // Memoize API requests to prevent unnecessary renders
   const fetchData = useCallback(async () => {
@@ -85,7 +96,6 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
-    } finally {
     }
   }, [user?.userid]);
 
@@ -111,7 +121,11 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-black">
-        <StatusBar barStyle="light-content" backgroundColor="black" />
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="transparent"
+          translucent
+        />
         <ActivityIndicator size="large" color="#1DB954" />
         <Text className="text-white font-medium mt-4">
           Loading your music...
@@ -121,78 +135,187 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
-      <View className="p-4">
-        <View
-          className="flex-row items-center bg-white/10 rounded-full px-4 h-12"
-          style={{ overflow: "hidden" }}
-          onTouchEnd={() => router.push("/search")}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Search for songs"
+    <View className="flex-1 bg-black">
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
+      <SafeAreaView className="flex-1">
+        <Animated.View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: headerHeight,
+            opacity: headerOpacity,
+            zIndex: 0,
+          }}
         >
-          <Ionicons name="search" size={20} color="#9CA3AF" />
-          <Text
-            className="flex-1 h-12 px-3 text-gray-400 flex justify-center py-3"
-            numberOfLines={1}
+          <LinearGradient
+            colors={["#42353A", "#092B31", "#121212"]}
+            start={{ x: 0.1, y: 0.1 }}
+            end={{ x: 0.8, y: 0.85 }} // End slightly higher to allow for organic fade
+            style={{
+              height: "100%",
+              width: "100%",
+            }}
+          />
+
+          <View
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 120, // Increased height for better fade effect
+            }}
           >
-            Search for songs...
-          </Text>
+            {Array.from({ length: 15 }).map((_, i) => {
+              const width = 30 + Math.random() * 100;
+              const left = i * (100 / 15) + (Math.random() * 20 - 10);
+              const height = 30 + Math.random() * 90;
+              const opacity = 0.3 + Math.random() * 0.7; // Varied opacity
+
+              return (
+                <View
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    bottom: -10, // Slightly below to avoid any gap
+                    left: `${left}%`,
+                    width,
+                    height,
+                    backgroundColor: "#121212",
+                    opacity,
+                    borderTopLeftRadius: 25 + Math.random() * 40,
+                    borderTopRightRadius: 25 + Math.random() * 40,
+                  }}
+                />
+              );
+            })}
+
+            <LinearGradient
+              colors={[
+                "rgba(18,18,18,0)",
+                "rgba(18,18,18,0.5)",
+                "rgba(18,18,18,0.9)",
+              ]}
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 100,
+              }}
+            />
+            <LinearGradient
+              colors={[
+                "rgba(18,18,18,0)",
+                "rgba(18,18,18,0.7)",
+                "rgba(18,18,18,1)",
+              ]}
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 70,
+              }}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Content that appears on top of the gradient */}
+        <View style={{ zIndex: 1 }}>
+          {/* Search Bar */}
+          <View className="px-4 pt-4">
+            <TouchableOpacity
+              className="flex-row items-center bg-white/15 rounded-full px-4 h-12"
+              onPress={() => router.push("/search")}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Search for songs"
+            >
+              <Ionicons name="search" size={20} color="#ffffff" />
+              <Text
+                className="flex-1 h-12 px-3 text-gray-300 flex justify-center py-3"
+                numberOfLines={1}
+              >
+                Search for songs...
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Greeting */}
+          <View className="px-4 pt-2 pb-4">
+            <Text className="text-white text-2xl font-bold">
+              {getGreeting()}
+            </Text>
+          </View>
         </View>
-      </View>
-      <Animated.ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true },
-        )}
-        scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        <View className="p-4 mb-20">
-          {error ? (
-            <View className="py-4 my-2 rounded-xl bg-gray-900 items-center">
-              <Text className="text-white text-center">{error}</Text>
-            </View>
-          ) : null}
 
-          {recommendations.length > 0 && (
-            <RecommendationGrid
-              recommendations={recommendations}
-              title="Made For You"
-            />
+        <Animated.ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true },
           )}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          <View className="px-4 mb-20">
+            {error ? (
+              <View className="py-4 my-2 rounded-xl bg-gray-900 items-center">
+                <Text className="text-white text-center">{error}</Text>
+              </View>
+            ) : null}
 
-          {trendingSongs.length > 0 && (
-            <TrendingSongs songs={trendingSongs} title="Trending Now" />
-          )}
+            {recommendations.length > 0 && (
+              <RecommendationGrid
+                recommendations={recommendations}
+                title="Made For You"
+              />
+            )}
 
-          {homePageData?.playlists && homePageData.playlists.length > 0 && (
-            <PlaylistsGrid
-              playlists={homePageData.playlists}
-              title="Popular Playlists"
-            />
-          )}
+            {trendingSongs.length > 0 && (
+              <TrendingSongs songs={trendingSongs} title="Trending Now" />
+            )}
 
-          {homePageData?.charts && homePageData.charts.length > 0 && (
-            <PlaylistsGrid playlists={homePageData.charts} title="Top Charts" />
-          )}
+            {homePageData?.playlists && homePageData.playlists.length > 0 && (
+              <PlaylistsGrid
+                playlists={homePageData.playlists}
+                title="Popular Playlists"
+              />
+            )}
 
-          {homePageData?.albums && homePageData.albums.length > 0 && (
-            <AlbumsGrid albums={homePageData.albums} title="New Albums" />
-          )}
+            {homePageData?.charts && homePageData.charts.length > 0 && (
+              <PlaylistsGrid
+                playlists={homePageData.charts}
+                title="Top Charts"
+              />
+            )}
 
-          {homePageData?.artists && homePageData.artists.length > 0 && (
-            <ArtistGrid
-              artists={homePageData.artists}
-              title="Artists You'll Love"
-            />
-          )}
-        </View>
-      </Animated.ScrollView>
-    </SafeAreaView>
+            {homePageData?.albums && homePageData.albums.length > 0 && (
+              <AlbumsGrid albums={homePageData.albums} title="New Albums" />
+            )}
+
+            {homePageData?.artists && homePageData.artists.length > 0 && (
+              <ArtistGrid
+                artists={homePageData.artists}
+                title="Artists You'll Love"
+              />
+            )}
+          </View>
+        </Animated.ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
+
+// Helper function to get greeting based on time of day

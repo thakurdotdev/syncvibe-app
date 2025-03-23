@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SearchMusic() {
   const { playSong } = usePlayer();
@@ -115,7 +116,7 @@ export default function SearchMusic() {
   );
 
   return (
-    <View className="flex-1 bg-black">
+    <SafeAreaView className="flex-1 bg-black">
       <View className="p-4">
         <View className="flex-row items-center">
           <TouchableOpacity
@@ -181,6 +182,6 @@ export default function SearchMusic() {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
