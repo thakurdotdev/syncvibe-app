@@ -272,10 +272,11 @@ export default function Player() {
         styles.miniPlayerContainer,
         miniPlayerStyle,
         {
-          bottom: isHomeActive ? 60 : 10,
+          bottom: isHomeActive ? 70 : 10,
         },
       ]}
     >
+      <ProgressBar />
       <TouchableOpacity
         style={styles.miniPlayerContent}
         onPress={openPlayer}
@@ -317,7 +318,6 @@ export default function Player() {
           <Ionicons name="play-skip-forward" size={22} color="white" />
         </TouchableOpacity>
       </TouchableOpacity>
-      <ProgressBar />
     </Animated.View>
   );
 

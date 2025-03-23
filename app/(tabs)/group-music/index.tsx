@@ -2,13 +2,13 @@ import { GroupSongControls } from "@/components/music/MusicCards";
 import { Drawer } from "@/components/ui/drawer";
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import React, { useRef, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Image,
-  SafeAreaView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -39,7 +39,6 @@ export default function GroupMusicMobile() {
   const [groupId, setGroupId] = useState("");
   const [tabIndex, setTabIndex] = useState(0);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const searchInputRef = useRef(null);
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
@@ -55,7 +54,10 @@ export default function GroupMusicMobile() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+    <LinearGradient
+      colors={["#0000", "#111827"]}
+      style={{ flex: 1, backgroundColor: "#000" }}
+    >
       {/* Header */}
       <View
         style={{
@@ -179,7 +181,11 @@ export default function GroupMusicMobile() {
         <View style={{ flex: 1 }}>
           {/* Group Info */}
           <View
-            style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}
+            style={{
+              paddingHorizontal: 20,
+              paddingTop: 20,
+              paddingBottom: 12,
+            }}
           >
             <View
               style={{
@@ -260,7 +266,11 @@ export default function GroupMusicMobile() {
                     }}
                   >
                     <Text
-                      style={{ color: "#fff", fontWeight: "500", fontSize: 16 }}
+                      style={{
+                        color: "#fff",
+                        fontWeight: "500",
+                        fontSize: 16,
+                      }}
                       numberOfLines={1}
                     >
                       {currentSong.name}
@@ -309,7 +319,7 @@ export default function GroupMusicMobile() {
                   elevation: 2,
                 }}
               >
-                <Feather name="music" size={28} />
+                <Feather name="music" size={28} color={"#ffffff"} />
                 <Text
                   style={{
                     color: "#fff",
@@ -567,8 +577,8 @@ export default function GroupMusicMobile() {
         <Drawer
           isOpen={showSearchModal}
           onClose={() => setShowSearchModal(false)}
-          drawerHeight={500}
           drawerStyle={{ backgroundColor: "#000" }}
+          drawerHeight={500}
         >
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1, padding: 20 }}>
@@ -597,7 +607,6 @@ export default function GroupMusicMobile() {
                 >
                   <Feather name="search" size={18} color="#888" />
                   <TextInput
-                    ref={searchInputRef}
                     style={{
                       flex: 1,
                       color: "#fff",
@@ -671,7 +680,11 @@ export default function GroupMusicMobile() {
                           {item.name}
                         </Text>
                         <Text
-                          style={{ color: "#888", fontSize: 13, marginTop: 4 }}
+                          style={{
+                            color: "#888",
+                            fontSize: 13,
+                            marginTop: 4,
+                          }}
                           numberOfLines={1}
                         >
                           {item.artist_map?.primary_artists?.[0]?.name ||
@@ -756,6 +769,6 @@ export default function GroupMusicMobile() {
           </View>
         </Drawer>
       )}
-    </SafeAreaView>
+    </LinearGradient>
   );
 }

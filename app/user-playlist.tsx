@@ -36,7 +36,7 @@ type PlaylistData = {
   description: string;
   userId: number;
   createdat: string;
-  image: Array<{ link: string }> | string;
+  image: { link: string }[] | string;
   songs: PlaylistSong[];
 };
 

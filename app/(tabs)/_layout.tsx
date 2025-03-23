@@ -1,86 +1,61 @@
-import { Ionicons } from "@expo/vector-icons";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Tabs, usePathname } from "expo-router";
+import {
+  Home,
+  ListMusic,
+  LucideProps,
+  MessageCircle,
+  Music,
+  User,
+} from "lucide-react-native";
 import React, { useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View, Text, Keyboard, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
-  interpolate,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-enum iconEnum {
-  home = "home",
-  search = "search",
-  person = "person",
-  "musical-notes" = "musical-notes",
-  "chatbubbles-outline" = "chatbubbles-outline",
-}
-
-const AnimatedTabButton = ({
+const TabButton = ({
   isFocused,
   onPress,
   label,
-  iconName,
+  icon: Icon,
 }: {
   isFocused: boolean;
   onPress: () => void;
   label: string;
-  iconName: keyof typeof iconEnum;
+  icon: React.ComponentType<LucideProps>;
 }) => {
-  const scale = useSharedValue(1);
+  const color = isFocused ? "#ffffff" : "#8a8a8a";
 
-  const opacity = useSharedValue(isFocused ? 1 : 0.7);
-
-  useEffect(() => {
-    scale.value = withSpring(isFocused ? 1.1 : 1, { damping: 10 });
-
-    opacity.value = withTiming(isFocused ? 1 : 0.7, { duration: 200 });
-  }, [isFocused]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
-
-  const labelStyle = useAnimatedStyle(() => {
-    // Reduce or remove the Y-offset to keep the text more visible
-    const yOffset = interpolate(opacity.value, [0.7, 1], [2, 0]);
-
-    return {
-      opacity: opacity.value,
-      transform: [{ translateY: yOffset }],
-    };
-  });
-
-  const iconColor = isFocused ? "#1DB954" : "#666";
+  const textStyle = {
+    color,
+    fontWeight: isFocused ? ("600" as const) : ("400" as const),
+    marginTop: 6,
+    fontSize: 12,
+  };
 
   return (
     <Pressable
       onPress={onPress}
       className="flex-1 items-center justify-center"
-      style={{ paddingVertical: 8 }}
+      style={{ paddingVertical: 10 }}
     >
-      <Animated.View
-        style={animatedStyle}
-        className="items-center justify-center"
-      >
-        <Ionicons name={iconName} size={24} color={iconColor} />
-        <Animated.Text
-          style={labelStyle}
-          className="text-xs font-medium mt-1"
+      <View className="items-center justify-center">
+        <Icon size={22} color={color} />
+
+        <Text
+          style={textStyle}
+          className="text-xs"
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          <Text style={{ color: isFocused ? "#1DB954" : iconColor }}>
-            {label}
-          </Text>
-        </Animated.Text>
-      </Animated.View>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 };
@@ -88,13 +63,46 @@ const AnimatedTabButton = ({
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const translateY = useSharedValue(0);
 
   // Determine active tab based on pathname
   const isHomeActive = pathname.includes("/home");
-  const isSearchActive = pathname.includes("/group-music");
+  const isGroupMusicActive = pathname.includes("/group-music");
   const isProfileActive = pathname.includes("/profile");
   const isPlaylistActive = pathname.includes("/playlist");
   const isChatActive = pathname.includes("/chat");
+
+  // Handle keyboard events to show/hide tab bar
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (event) => {
+        // Get keyboard height
+        const keyboardHeight = event.endCoordinates.height;
+        // Move the tab bar down (hide it behind the keyboard)
+        translateY.value = withTiming(keyboardHeight, { duration: 250 });
+      },
+    );
+
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        // Move the tab bar back to original position
+        translateY.value = withTiming(0, { duration: 250 });
+      },
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const animatedTabBarStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
 
   return (
     <View className="flex-1 bg-black">
@@ -103,91 +111,103 @@ export default function TabLayout() {
           headerShown: false,
           animation: "none",
           tabBarStyle: {
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 70 + insets.bottom,
-            paddingBottom: insets.bottom,
-            elevation: 0,
-            shadowOpacity: 0,
-            borderTopWidth: 0,
-            backgroundColor: "black",
+            display: "none", // Hide the default tab bar
           },
-          tabBarShowLabel: false,
         }}
       >
         <Tabs.Screen
           name="home/index"
           options={{
             title: "Home",
-            tabBarButton: (props) => (
-              <AnimatedTabButton
-                onPress={() => router.push("/home")}
-                label="Home"
-                iconName="home"
-                isFocused={isHomeActive}
-              />
-            ),
           }}
         />
         <Tabs.Screen
           name="group-music/index"
           options={{
             title: "Group Music",
-            tabBarButton: (props) => (
-              <AnimatedTabButton
-                onPress={() => router.push("/group-music")}
-                label="Group Music"
-                iconName="musical-notes"
-                isFocused={isSearchActive}
-              />
-            ),
           }}
         />
         <Tabs.Screen
           name="playlist/index"
           options={{
             title: "Playlist",
-            tabBarButton: (props) => (
-              <AnimatedTabButton
-                onPress={() => router.push("/playlist")}
-                label="Playlist"
-                iconName="musical-notes"
-                isFocused={isPlaylistActive}
-              />
-            ),
           }}
         />
         <Tabs.Screen
           name="chat/index"
           options={{
             title: "Message",
-            tabBarButton: (props) => (
-              <AnimatedTabButton
-                onPress={() => router.push("/chat")}
-                label="Message"
-                iconName="chatbubbles-outline"
-                isFocused={isChatActive}
-              />
-            ),
           }}
         />
         <Tabs.Screen
           name="profile/index"
           options={{
             title: "Profile",
-            tabBarButton: (props) => (
-              <AnimatedTabButton
-                onPress={() => router.push("/profile")}
-                label="Profile"
-                iconName="person"
-                isFocused={isProfileActive}
-              />
-            ),
           }}
         />
       </Tabs>
+
+      {/* Custom tab bar with keyboard handling */}
+      <Animated.View
+        style={[
+          animatedTabBarStyle,
+          {
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 75 + insets.bottom,
+            paddingBottom: insets.bottom,
+            backgroundColor: "black",
+            borderTopWidth: 0,
+            zIndex: 1000,
+          },
+        ]}
+      >
+        <BlurView
+          intensity={20}
+          tint="dark"
+          className="absolute top-0 left-0 right-0 bottom-0"
+        >
+          <LinearGradient
+            colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
+            className="flex-1 border-t border-gray-800/30"
+          />
+        </BlurView>
+
+        <View className="flex-row h-full">
+          <TabButton
+            onPress={() => router.push("/home")}
+            label="Home"
+            icon={Home}
+            isFocused={isHomeActive}
+          />
+          <TabButton
+            onPress={() => router.push("/group-music")}
+            label="Group"
+            icon={Music}
+            isFocused={isGroupMusicActive}
+          />
+          <TabButton
+            onPress={() => router.push("/playlist")}
+            label="Playlist"
+            icon={ListMusic}
+            isFocused={isPlaylistActive}
+          />
+          <TabButton
+            onPress={() => router.push("/chat")}
+            label="Chat"
+            icon={MessageCircle}
+            isFocused={isChatActive}
+          />
+          <TabButton
+            onPress={() => router.push("/profile")}
+            label="Profile"
+            icon={User}
+            isFocused={isProfileActive}
+          />
+        </View>
+      </Animated.View>
     </View>
   );
 }

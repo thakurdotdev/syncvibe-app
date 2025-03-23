@@ -4,6 +4,11 @@ import { Song } from "@/types/song";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
+  ForwardIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+} from "lucide-react-native";
+import {
   memo,
   default as React,
   useCallback,
@@ -404,32 +409,25 @@ export const SongControls = memo(() => {
 
       {/* Control buttons */}
       <View style={styles.controls}>
-        <TouchableOpacity
-          style={styles.sideButton}
-          onPress={handlePrevSong}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="play-skip-back" size={24} color="#374151" />
+        <TouchableOpacity onPress={handlePrevSong} activeOpacity={0.7}>
+          <SkipBackIcon size={24} color="#ffffff" />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.playButton}
           onPress={handlePlayPause}
           activeOpacity={0.7}
+          className="mx-5"
         >
           <Ionicons
             name={isPlaying ? "pause" : "play"}
             size={28}
-            color="white"
+            color="#374151"
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.sideButton}
-          onPress={handleNextSong}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="play-skip-forward" size={24} color="#374151" />
+        <TouchableOpacity onPress={handleNextSong} activeOpacity={0.7}>
+          <SkipForwardIcon color={"#ffffff"} />
         </TouchableOpacity>
       </View>
     </View>
@@ -457,7 +455,7 @@ export const ProgressBar = memo(() => {
         thumbWidth={0}
         sliderHeight={2}
         theme={{
-          minimumTrackTintColor: "#1DB954",
+          minimumTrackTintColor: "#ffffff",
           maximumTrackTintColor: "#6b7280",
         }}
       />
@@ -498,8 +496,9 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1DB954",
+    backgroundColor: "#ffffff",
     marginHorizontal: 24,
+    color: "#000000",
   },
 });
 

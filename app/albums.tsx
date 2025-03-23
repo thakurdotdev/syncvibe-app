@@ -33,10 +33,10 @@ interface AlbumData {
   name: string;
   year: string;
   songcount: number;
-  image: Array<{ link: string }>;
+  image: { link: string }[];
   songs: Song[];
   artist_map?: {
-    artists?: Array<{ name: string }>;
+    artists?: { name: string }[];
   };
 }
 

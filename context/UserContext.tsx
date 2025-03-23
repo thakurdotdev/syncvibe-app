@@ -1,3 +1,5 @@
+import { followersType } from "@/app/followers";
+import { followingType } from "@/app/followings";
 import { User } from "@/types/user";
 import useApi from "@/utils/hooks/useApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,6 +23,8 @@ interface UserContextType {
   musicConfig: Record<string, any>;
   setMusicConfig: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   logout: () => Promise<void>;
+  followers: followersType[];
+  following: followingType[];
 }
 
 const UserContext = createContext<UserContextType | null>(null);
@@ -41,6 +45,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [musicConfig, setMusicConfig] = useState<Record<string, any>>({});
   const [selectedLanguages, setSelectedLanguages] = useState<string>("hindi");
+  const [followers, setFollowers] = useState<followersType[]>([]);
+  const [following, setFollowing] = useState<followingType[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -85,6 +91,24 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const fetchFollowData = useCallback(async () => {
+    try {
+      const response = await api.get(`/api/user/followlist/${user?.userid}`);
+      if (response.status === 200) {
+        setFollowers(response.data.followers);
+        setFollowing(response.data.following);
+      }
+    } catch (error) {
+      console.error("Error fetching follow data:", error);
+    }
+  }, [user?.userid]);
+
+  useEffect(() => {
+    if (user?.userid) {
+      fetchFollowData();
+    }
+  }, [user?.userid, fetchFollowData]);
+
   const logout = useCallback(async () => {
     try {
       await AsyncStorage.clear();
@@ -107,8 +131,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       logout,
       selectedLanguages,
       setSelectedLanguages,
+      followers,
+      following,
     }),
-    [user, loading, musicConfig, logout, selectedLanguages],
+    [
+      user,
+      loading,
+      musicConfig,
+      logout,
+      selectedLanguages,
+      followers,
+      following,
+    ],
   );
 
   return (

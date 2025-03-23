@@ -2,24 +2,23 @@ import { API_URL } from "@/constants";
 import { useUser } from "@/context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { Prompt } from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
+import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import { MotiView } from "moti";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MotiView } from "moti";
-import { BlurView } from "expo-blur";
 
 // Complete auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -88,10 +87,10 @@ const LoginScreen = () => {
 
       const token = backendResponse.data.token;
       await AsyncStorage.setItem("token", token);
+      router.replace("/(tabs)/home");
 
       // Get user profile and navigate to home screen
       await getProfile();
-      router.push("/(tabs)/home");
     } catch (error: any) {
       console.error("Google sign-in error:", error);
       setError(`Authentication failed: ${error.message}`);

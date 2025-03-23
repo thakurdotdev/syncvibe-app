@@ -1,5 +1,6 @@
 import LoginScreen from "@/app/login";
 import { useUser } from "@/context/UserContext";
+import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
 import useApi from "@/utils/hooks/useApi";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -117,10 +118,7 @@ const MenuItem = ({
 );
 
 export default function ProfileScreen() {
-  const api = useApi();
-  const { user, logout, getProfile, loading } = useUser();
-  const [followers, setFollowers] = useState([]);
-  const [following, setFollowing] = useState([]);
+  const { user, logout, getProfile, loading, followers, following } = useUser();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -133,24 +131,6 @@ export default function ProfileScreen() {
 
     getUser();
   }, [user, getProfile]);
-
-  const fetchFollowData = useCallback(async () => {
-    try {
-      const response = await api.get(`/api/user/followlist/${user?.userid}`);
-      if (response.status === 200) {
-        setFollowers(response.data.followers);
-        setFollowing(response.data.following);
-      }
-    } catch (error) {
-      console.error("Error fetching follow data:", error);
-    }
-  }, [user?.userid]);
-
-  useEffect(() => {
-    if (user?.userid) {
-      fetchFollowData();
-    }
-  }, [user?.userid, fetchFollowData]);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -206,7 +186,7 @@ export default function ProfileScreen() {
               <View className="w-28 h-28 rounded-full bg-blue-500/10 justify-center items-center">
                 <View className="w-24 h-24 rounded-full bg-gray-800/60 overflow-hidden border-2 border-blue-500/50 shadow-lg shadow-blue-500/20">
                   <Image
-                    source={{ uri: user?.profilepic }}
+                    source={{ uri: getProfileCloudinaryUrl(user?.profilepic) }}
                     className="w-full h-full"
                     resizeMode="cover"
                   />
@@ -254,7 +234,7 @@ export default function ProfileScreen() {
               icon={<Ionicons name="people" size={24} color="#10b981" />}
               label="Following"
               value={following.length}
-              onPress={() => router.push("/following")}
+              onPress={() => router.push("/followings")}
             />
             <StatButton
               icon={<Ionicons name="people" size={24} color="#10b981" />}

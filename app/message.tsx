@@ -1,7 +1,10 @@
+import ImageGallery from "@/components/ImageGallery";
+import StartCall from "@/components/video/StartCall";
 import { Message, useChat } from "@/context/SocketContext";
 import { useUser } from "@/context/UserContext";
 import useApi from "@/utils/hooks/useApi";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -9,15 +12,14 @@ import {
   FlatList,
   Image,
   Keyboard,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
 
 // Constants for styling
 const AVATAR_SIZE = 40;
@@ -64,6 +66,8 @@ const ChatWithUser = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [inputHeight, setInputHeight] = useState(50);
+  const [showGallery, setShowGallery] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Refs
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -249,6 +253,12 @@ const ChatWithUser = () => {
     return result;
   }, [messages]);
 
+  const getChatImages = useCallback(() => {
+    return messages.filter((msg) => msg.fileurl).map((msg) => msg.fileurl);
+  }, [messages]);
+
+  const chatImages = getChatImages();
+
   const renderItem = ({ item, index }: { item: any; index: number }) => {
     if (item.type === "date") {
       return (
@@ -311,6 +321,11 @@ const ChatWithUser = () => {
               <TouchableOpacity
                 style={styles.imageContainer}
                 activeOpacity={0.9}
+                onPress={() => {
+                  const imageIndex = chatImages.indexOf(item.fileurl);
+                  setSelectedImageIndex(imageIndex);
+                  setShowGallery(true);
+                }}
               >
                 <Image
                   source={{ uri: item.fileurl }}
@@ -430,6 +445,8 @@ const ChatWithUser = () => {
               </View>
             )}
           </View>
+
+          <StartCall />
         </View>
       </View>
 
@@ -513,6 +530,13 @@ const ChatWithUser = () => {
           </TouchableOpacity>
         </View>
       </View>
+      {showGallery && chatImages.length > 0 && (
+        <ImageGallery
+          images={chatImages}
+          initialIndex={selectedImageIndex}
+          onClose={() => setShowGallery(false)}
+        />
+      )}
     </SafeAreaView>
   );
 };

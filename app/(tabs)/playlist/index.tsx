@@ -1,5 +1,7 @@
+import LoginScreen from "@/app/login";
 import { PlaylistCard } from "@/components/music/MusicCards";
 import { usePlaylist } from "@/context/MusicContext";
+import { useUser } from "@/context/UserContext";
 import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import Animated, {
@@ -16,6 +18,7 @@ const LoadingState = () => (
 );
 
 const PlaylistScreen = () => {
+  const { user } = useUser();
   const { userPlaylist, getPlaylists } = usePlaylist();
   const [loading, setLoading] = useState(false);
   const scrollY = useSharedValue(0);
@@ -46,7 +49,9 @@ const PlaylistScreen = () => {
     </View>
   );
 
-  return (
+  return !user?.userid ? (
+    <LoginScreen />
+  ) : (
     <SafeAreaView className="flex-1 bg-black relative">
       <Animated.FlatList
         data={playlistPairs}

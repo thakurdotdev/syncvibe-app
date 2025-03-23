@@ -18,6 +18,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useChat } from "@/context/SocketContext";
 import useApi from "@/utils/hooks/useApi";
 import { useDebounce } from "@/utils/hooks/useDebounce";
+import { useUser } from "@/context/UserContext";
+import LoginScreen from "@/app/login";
 
 const AVATAR_SIZE = 40;
 const ONLINE_INDICATOR_SIZE = 10;
@@ -30,6 +32,7 @@ interface User {
 }
 
 const SearchUser: React.FC = () => {
+  const { user } = useUser();
   const api = useApi();
   const {
     users,
@@ -222,7 +225,9 @@ const SearchUser: React.FC = () => {
     </View>
   );
 
-  return (
+  return !user?.userid ? (
+    <LoginScreen />
+  ) : (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
