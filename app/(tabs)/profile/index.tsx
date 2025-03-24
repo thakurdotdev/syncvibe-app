@@ -1,4 +1,3 @@
-import LoginScreen from "@/app/login";
 import LoginModal from "@/components/LoginModal";
 import { useUser } from "@/context/UserContext";
 import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
@@ -15,7 +14,6 @@ import {
   Music2Icon,
   ShieldCheckIcon,
 } from "lucide-react-native";
-import { MotiView } from "moti";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
@@ -43,12 +41,7 @@ interface ProfileSectionProps {
 
 // Improved ProfileSection with subtle animation and cleaner design
 const ProfileSection = ({ title, icon, children }: ProfileSectionProps) => (
-  <MotiView
-    from={{ opacity: 0, translateY: 10 }}
-    animate={{ opacity: 1, translateY: 0 }}
-    transition={{ type: "timing", duration: 500 }}
-    className="mb-5 overflow-hidden rounded-2xl"
-  >
+  <View className="mb-5 overflow-hidden rounded-2xl">
     <BlurView
       intensity={20}
       tint="dark"
@@ -65,7 +58,7 @@ const ProfileSection = ({ title, icon, children }: ProfileSectionProps) => (
         {children}
       </LinearGradient>
     </BlurView>
-  </MotiView>
+  </View>
 );
 
 // Enhanced StatButton with improved visual feedback
@@ -174,12 +167,7 @@ export default function ProfileScreen() {
           className="pt-6 pb-12 px-5"
         >
           <View className="items-center">
-            <MotiView
-              from={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "timing", duration: 700 }}
-              className="relative"
-            >
+            <View className="relative">
               {/* Profile Image with Glow Effect */}
               <View className="w-28 h-28 rounded-full bg-blue-500/10 justify-center items-center">
                 <View className="w-24 h-24 rounded-full bg-gray-800/60 overflow-hidden border-2 border-blue-500/50 shadow-lg shadow-blue-500/20">
@@ -197,7 +185,7 @@ export default function ProfileScreen() {
               >
                 <Feather name="camera" size={18} color="white" />
               </TouchableOpacity>
-            </MotiView>
+            </View>
 
             <View className="mt-4 items-center">
               <View className="flex-row items-center">

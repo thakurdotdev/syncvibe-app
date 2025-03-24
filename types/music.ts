@@ -14,7 +14,7 @@ export interface PlaybackState {
 
 export interface PlaylistState {
   playlist: Song[];
-  userPlaylist: Song[];
+  userPlaylist: any[];
 }
 
 export interface SleepTimerState {

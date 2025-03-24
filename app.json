@@ -55,8 +55,7 @@
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
-      "expo-notifications",
-      "expo-auth-session"
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

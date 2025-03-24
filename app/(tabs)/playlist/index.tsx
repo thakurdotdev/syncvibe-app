@@ -38,7 +38,7 @@ const PlaylistScreen = () => {
   if (loading) return <LoadingState />;
 
   const renderRow = ({ item }: { item: any[] }) => (
-    <View className="flex-row justify-center px-3 mb-4 w-full">
+    <View className="flex-row justify-center px-3 mb-4 w-full gap-5">
       <View className="flex-1">
         <PlaylistCard playlist={item[0]} isUser={true} />
       </View>

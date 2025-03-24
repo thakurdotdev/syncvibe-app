@@ -1,3 +1,5 @@
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, Tabs, usePathname } from "expo-router";
 import {
   Home,
@@ -7,16 +9,10 @@ import {
   Music,
   User,
 } from "lucide-react-native";
-import React, { useEffect } from "react";
-import { Pressable, View, Text, Keyboard, Platform } from "react-native";
+import React from "react";
+import { Pressable, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 
 const TabButton = ({
   isFocused,
@@ -63,7 +59,6 @@ const TabButton = ({
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
-  const translateY = useSharedValue(0);
 
   // Determine active tab based on pathname
   const isHomeActive = pathname.includes("/home");
@@ -72,47 +67,12 @@ export default function TabLayout() {
   const isPlaylistActive = pathname.includes("/playlist");
   const isChatActive = pathname.includes("/chat");
 
-  // Handle keyboard events to show/hide tab bar
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      (event) => {
-        // Get keyboard height
-        const keyboardHeight = event.endCoordinates.height;
-        // Move the tab bar down (hide it behind the keyboard)
-        translateY.value = withTiming(keyboardHeight, { duration: 250 });
-      },
-    );
-
-    const hideSubscription = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => {
-        // Move the tab bar back to original position
-        translateY.value = withTiming(0, { duration: 250 });
-      },
-    );
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
-  const animatedTabBarStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
-  });
-
   return (
     <View className="flex-1 bg-black">
       <Tabs
         screenOptions={{
           headerShown: false,
           animation: "none",
-          tabBarStyle: {
-            display: "none", // Hide the default tab bar
-          },
         }}
       >
         <Tabs.Screen
@@ -150,7 +110,6 @@ export default function TabLayout() {
       {/* Custom tab bar with keyboard handling */}
       <Animated.View
         style={[
-          animatedTabBarStyle,
           {
             position: "absolute",
             bottom: 0,

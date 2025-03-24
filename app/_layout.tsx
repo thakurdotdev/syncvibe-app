@@ -1,4 +1,4 @@
-import { Stack, usePathname } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -26,11 +26,9 @@ function RootLayout() {
           <VideoCallProvider>
             <MusicProvider>
               <GroupMusicProvider>
-                <SafeAreaProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </SafeAreaProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
               </GroupMusicProvider>
             </MusicProvider>
           </VideoCallProvider>
@@ -41,10 +39,6 @@ function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const pathname = usePathname();
-
-  console.log(pathname);
-
   const { incomingCall, isInCall } = useVideoCall();
   return (
     <>
@@ -52,7 +46,7 @@ function RootLayoutNav() {
       <Stack
         screenOptions={{
           animation: "none",
-          presentation: "modal",
+          presentation: "containedTransparentModal",
           headerStyle: {
             backgroundColor: "#000",
           },
@@ -83,7 +77,6 @@ function RootLayoutNav() {
           options={{
             navigationBarColor: "#000000",
             title: "Playlist",
-            presentation: "modal",
           }}
         />
         <Stack.Screen
@@ -97,7 +90,6 @@ function RootLayoutNav() {
           options={{
             navigationBarColor: "#000000",
             title: "Album",
-            presentation: "modal",
           }}
         />
         <Stack.Screen
@@ -105,7 +97,6 @@ function RootLayoutNav() {
           options={{
             navigationBarColor: "#000000",
             title: "Artist",
-            presentation: "modal",
           }}
         />
         <Stack.Screen
@@ -113,7 +104,6 @@ function RootLayoutNav() {
           options={{
             navigationBarColor: "#000000",
             title: "User Playlist",
-            presentation: "modal",
           }}
         />
         <Stack.Screen
@@ -121,7 +111,6 @@ function RootLayoutNav() {
           options={{
             headerShown: false,
             title: "Message",
-            presentation: "modal",
           }}
         />
         <Stack.Screen
@@ -129,7 +118,6 @@ function RootLayoutNav() {
           options={{
             navigationBarColor: "#000000",
             title: "Followers",
-            presentation: "modal",
           }}
         />
         <Stack.Screen
@@ -137,14 +125,12 @@ function RootLayoutNav() {
           options={{
             navigationBarColor: "#000000",
             title: "Followings",
-            presentation: "modal",
           }}
         />
         <Stack.Screen
           name="music-language"
           options={{
             title: "Update Language Preferences",
-            presentation: "modal",
           }}
         />
         <Stack.Screen

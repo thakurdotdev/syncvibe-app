@@ -5,10 +5,12 @@ import {
   Ionicons,
   MaterialIcons,
 } from "@expo/vector-icons";
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import { Drawer } from "../ui/drawer";
 import { router } from "expo-router";
+import { Song } from "@/types/song";
+import AddToPlaylist from "./AddToPlaylist";
 
 enum paths {
   artist = "/artist",
@@ -19,10 +21,16 @@ interface PlayerDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   closePlayer?: () => void;
+  currentSong?: Song;
 }
 
-const PlayerDrawer = ({ isOpen, onClose, closePlayer }: PlayerDrawerProps) => {
-  const { currentSong } = usePlayerState();
+const PlayerDrawer = ({
+  isOpen,
+  onClose,
+  closePlayer,
+  currentSong,
+}: PlayerDrawerProps) => {
+  const [playlistModal, setPlaylistModal] = useState(false);
   const artistName = useMemo(
     () =>
       currentSong?.artist_map?.primary_artists?.slice(0, 2)?.map((artist) => {
@@ -79,7 +87,10 @@ const PlayerDrawer = ({ isOpen, onClose, closePlayer }: PlayerDrawerProps) => {
         {/* Options */}
         <View className="flex gap-4">
           {/* Add to Playlist */}
-          <TouchableOpacity className="flex-row items-center">
+          <TouchableOpacity
+            className="flex-row items-center"
+            onPress={() => setPlaylistModal(true)}
+          >
             <View className="w-10 items-center">
               <MaterialIcons name="playlist-add" size={26} color="#FFFFFF" />
             </View>
@@ -148,6 +159,13 @@ const PlayerDrawer = ({ isOpen, onClose, closePlayer }: PlayerDrawerProps) => {
           </TouchableOpacity>
         </View>
       </View>
+      {playlistModal && (
+        <AddToPlaylist
+          dialogOpen={playlistModal}
+          setDialogOpen={() => setPlaylistModal(false)}
+          song={currentSong}
+        />
+      )}
     </Drawer>
   );
 };

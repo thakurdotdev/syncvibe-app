@@ -15,6 +15,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Slider } from "react-native-awesome-slider";
@@ -25,6 +26,9 @@ import TrackPlayer, {
   usePlaybackState,
   useProgress,
 } from "react-native-track-player";
+import PlayerDrawer from "./PlayerDrawer";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface SongCardProps {
   song: Song;
@@ -56,13 +60,15 @@ const formatTime = (time: number) => {
 interface CardContainerProps {
   children: React.ReactNode;
   onPress: () => void | Promise<void>;
-  width?: number;
+  onLongPress?: () => void | Promise<void>;
+  width?: number | string;
 }
 
 const CardContainer = ({
   children,
   onPress,
   width = 160,
+  onLongPress,
 }: CardContainerProps) => (
   <Pressable
     style={{
@@ -80,6 +86,7 @@ const CardContainer = ({
     onPress={onPress}
     android_ripple={{ color: "rgba(255, 255, 255, 0.1)", borderless: false }}
     hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+    onLongPress={onLongPress}
   >
     {children}
   </Pressable>
@@ -99,21 +106,20 @@ export const SongCard = memo(({ song }: SongCardProps) => {
           playSong(song);
         }
       }}
-      android_ripple={{
-        color: "rgba(255, 255, 255, 0.1)",
-        borderless: false,
-      }}
-      hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-      className="flex-row items-center bg-white/10 rounded-md p-2 mb-2"
+      className="flex-row items-center rounded-xl mb-2 overflow-hidden"
       key={song.id}
     >
-      <View className="flex-1 flex-row items-center">
+      <BlurView intensity={20} tint="dark" className="absolute inset-0" />
+      <LinearGradient
+        colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
+        className="w-full flex-row border border-gray-800/30 rounded-xl p-2"
+      >
         <Image
           source={{ uri: song.image[0]?.link }}
-          className="w-12 h-12"
+          className="w-12 h-12 rounded-md"
           alt="Song cover"
         />
-        <View className="flex-1 px-4">
+        <View className="flex-1 px-4 justify-center">
           <Text className="text-white font-semibold" numberOfLines={1}>
             {song.name}
           </Text>
@@ -121,7 +127,16 @@ export const SongCard = memo(({ song }: SongCardProps) => {
             {song.subtitle || song.artist_map?.artists?.[0]?.name}
           </Text>
         </View>
-      </View>
+        {isCurrentSong && (
+          <View className="justify-center pr-2">
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={24}
+              color="rgb(34, 197, 94)"
+            />
+          </View>
+        )}
+      </LinearGradient>
     </Pressable>
   );
 });
@@ -190,7 +205,11 @@ export const PlaylistCard = memo(
       : playlist.image;
 
     return (
-      <CardContainer onPress={handlePress} key={playlist.id}>
+      <CardContainer
+        onPress={handlePress}
+        key={playlist.id}
+        width={isUser ? `calc(50%)` : 160}
+      >
         <View style={{ padding: 12, gap: 8 }}>
           <CardImage uri={imageUrl} alt={`Playlist: ${playlist.name}`} />
           <View style={{ gap: 4, paddingHorizontal: 4 }}>
@@ -219,6 +238,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   const { handlePlayPauseSong, playSong } = usePlayer();
   const { currentSong, isPlaying } = usePlayerState();
   const isCurrentSong = currentSong?.id === song.id;
+  const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
   const imageUrl = song.image?.[2]?.link || song.image?.[1]?.link;
   const artistName =
@@ -232,8 +252,16 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
     }
   }, [isCurrentSong, handlePlayPauseSong, playSong, song]);
 
+  const handleLongPress = useCallback(() => {
+    setPlayerDrawerOpen(true);
+  }, []);
+
   return (
-    <CardContainer width={160} onPress={handlePress}>
+    <CardContainer
+      width={160}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+    >
       <View style={{ padding: 12, gap: 8 }}>
         <CardImage uri={imageUrl} alt={`Song: ${song.name}`} />
         <View
@@ -463,45 +491,6 @@ export const ProgressBar = memo(() => {
   );
 });
 
-const styles = StyleSheet.create({
-  timeText: {
-    fontSize: 12,
-    color: "#6b7280",
-    width: 40,
-    textAlign: "center",
-  },
-  slider: {
-    flex: 1,
-    height: 40,
-  },
-  sliderContainer: {
-    borderRadius: 8,
-  },
-  controls: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sideButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-  },
-  playButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    marginHorizontal: 24,
-    color: "#000000",
-  },
-});
-
 export const GroupSongControls = memo(() => {
   const isDragging = useRef(false);
   const { position, duration } = useProgress();
@@ -549,4 +538,43 @@ export const GroupSongControls = memo(() => {
       </View>
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  timeText: {
+    fontSize: 12,
+    color: "#6b7280",
+    width: 40,
+    textAlign: "center",
+  },
+  slider: {
+    flex: 1,
+    height: 40,
+  },
+  sliderContainer: {
+    borderRadius: 8,
+  },
+  controls: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sideButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
+  },
+  playButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    marginHorizontal: 24,
+    color: "#000000",
+  },
 });

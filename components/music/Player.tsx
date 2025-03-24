@@ -35,6 +35,12 @@ import TrackPlayer, {
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 import PlayerDrawer from "./PlayerDrawer";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  blendColors,
+  darkenColor,
+  extractImageColors,
+} from "@/utils/getImageColors";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
@@ -103,6 +109,27 @@ export default function Player() {
   const playbackState = usePlaybackState();
   const isPlaying = playbackState.state === State.Playing;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
+  const [albumColors, setAlbumColors] = useState({
+    primary: "#42353A",
+    secondary: "#092B31",
+    background: "#121212",
+    isLight: false,
+  });
+
+  useEffect(() => {
+    async function getColors() {
+      if (currentSong?.image?.[2]?.link) {
+        try {
+          const colors = await extractImageColors(currentSong.image[2].link);
+          setAlbumColors(colors);
+        } catch (error) {
+          console.error("Failed to extract image colors:", error);
+        }
+      }
+    }
+
+    getColors();
+  }, [currentSong?.id]);
 
   const handlePlayPauseSong = async () => {
     if (isPlaying) {
@@ -326,6 +353,42 @@ export default function Player() {
       <View
         style={[styles.expandedPlayerBackground, { paddingTop: insets.top }]}
       >
+        <Animated.View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: "100%",
+            zIndex: 0,
+          }}
+        >
+          <LinearGradient
+            colors={[
+              darkenColor(albumColors.primary, 0.1),
+              albumColors.secondary,
+              blendColors(albumColors.secondary, "#000000", 0.7),
+              "#080808",
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{
+              height: "100%",
+              width: "100%",
+            }}
+          />
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.15)", // Very subtle dark overlay
+            }}
+          />
+        </Animated.View>
         <PanGestureHandler onGestureEvent={gestureHandler}>
           <Animated.View>
             <View style={styles.header}>
@@ -411,6 +474,7 @@ export default function Player() {
           isOpen={playerDrawerOpen}
           onClose={() => setPlayerDrawerOpen(false)}
           closePlayer={closePlayer}
+          currentSong={currentSong}
         />
       )}
     </>

@@ -251,7 +251,7 @@ export default function HomeScreen() {
 
           {/* Greeting */}
           <View className="px-4 pt-2 pb-4">
-            <Text className="text-white text-2xl font-bold">
+            <Text className="text-white text-lg font-bold">
               {getGreeting()}
             </Text>
           </View>
