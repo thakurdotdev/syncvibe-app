@@ -3,27 +3,15 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Dimensions,
-} from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-
-const { width } = Dimensions.get("window");
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const LoginModal = ({ title }: { title?: string }) => {
   const router = useRouter();
 
   return (
     <View style={styles.container}>
-      <BlurView intensity={65} tint="dark" style={styles.blurContainer}>
-        <Animated.View
-          entering={FadeInDown.duration(500).springify()}
-          style={styles.modalContent}
-        >
+      <BlurView intensity={10} tint="dark" style={styles.blurContainer}>
+        <View style={styles.modalContent}>
           <LinearGradient
             colors={["#111827", "#0f172a"]}
             start={{ x: 0, y: 0 }}
@@ -33,10 +21,7 @@ const LoginModal = ({ title }: { title?: string }) => {
             <View style={styles.glassmorphicAccent} />
             <View style={styles.glassmorphicAccent2} />
 
-            <Animated.View
-              entering={FadeIn.delay(200).duration(700)}
-              style={styles.iconContainer}
-            >
+            <View style={styles.iconContainer}>
               <LinearGradient
                 colors={["#3b82f6", "#6366f1"]}
                 style={styles.iconBackground}
@@ -45,28 +30,17 @@ const LoginModal = ({ title }: { title?: string }) => {
               >
                 <Ionicons name="lock-closed" size={30} color="#fff" />
               </LinearGradient>
-            </Animated.View>
+            </View>
 
-            <Animated.Text
-              entering={FadeIn.delay(300).duration(700)}
-              style={styles.title}
-            >
-              Sign in Required
-            </Animated.Text>
+            <Text style={styles.title}>Sign in Required</Text>
 
-            <Animated.Text
-              entering={FadeIn.delay(400).duration(700)}
-              style={styles.description}
-            >
+            <Text style={styles.description}>
               {title
                 ? title
                 : "You need to be signed in to use this feature. Sign in to continue."}
-            </Animated.Text>
+            </Text>
 
-            <Animated.View
-              entering={FadeIn.delay(500).duration(700)}
-              style={styles.buttonContainer}
-            >
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={styles.signInButton}
                 onPress={() => router.push("/login")}
@@ -95,9 +69,9 @@ const LoginModal = ({ title }: { title?: string }) => {
               >
                 <Text style={styles.backButtonText}>Go Back</Text>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
       </BlurView>
     </View>
   );
@@ -120,7 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "rgba(0,0,0,0.9)",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
     width: "100%",

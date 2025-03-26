@@ -3,19 +3,23 @@ import { Song } from "@/types/song";
 import useApi from "@/utils/hooks/useApi";
 import { MaterialIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Image,
-  Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import SwipeableModal from "../common/SwipeableModal";
 
 export interface Playlist {
   id: string;
@@ -49,6 +53,47 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
   );
   const [addingSuccess, setAddingSuccess] = useState(false);
 
+  // Animation value for success indicator
+  const successOpacity = new Animated.Value(0);
+
+  // Add state for tracking FlatList scroll position
+  const [isListAtTop, setIsListAtTop] = useState(true);
+
+  // Reset form state when dialog closes
+  useEffect(() => {
+    if (!dialogOpen) {
+      setSearchQuery("");
+      setSelectedPlaylistId(null);
+      setAddingSuccess(false);
+    }
+  }, [dialogOpen]);
+
+  // Animated success appearance
+  useEffect(() => {
+    if (addingSuccess) {
+      Animated.sequence([
+        Animated.timing(successOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1000),
+        Animated.timing(successOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Close dialog after animation completes
+        setDialogOpen(false);
+        setAddingSuccess(false);
+        setSelectedPlaylistId(null);
+      });
+    } else {
+      successOpacity.setValue(0);
+    }
+  }, [addingSuccess]);
+
   // Filtered playlists based on search
   const filteredPlaylists = userPlaylist.filter((playlist) =>
     playlist.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -67,13 +112,12 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
       );
 
       if (response.status === 200) {
-        // Assuming you have a method to fetch playlists
         await getPlaylists();
         setNewPlaylistDialog(false);
         setNewPlaylistName("");
       }
-    } catch (error) {
-      // Handle error (you might want to use a toast library for React Native)
+    } catch (error: any) {
+      Alert.alert(error.response?.data.message || "Failed to create playlist");
       console.error("Failed to create playlist", error);
     } finally {
       setLoading(false);
@@ -82,7 +126,7 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
 
   // Add song to playlist
   const handleAddToPlaylist = async (playlistId: string) => {
-    if (!playlistId || !song) return;
+    if (!playlistId || !song || addingSong) return;
 
     setSelectedPlaylistId(playlistId);
     setAddingSong(true);
@@ -100,14 +144,12 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
 
       if (response.status === 201) {
         setAddingSuccess(true);
-        setTimeout(() => {
-          setDialogOpen(false);
-          setAddingSuccess(false);
-          setSelectedPlaylistId(null);
-        }, 1500);
         await getPlaylists();
       }
-    } catch (error) {
+    } catch (error: any) {
+      Alert.alert(
+        error.response?.data.message || "Failed to add song to playlist",
+      );
       console.error("Failed to add song to playlist", error);
       setSelectedPlaylistId(null);
     } finally {
@@ -116,66 +158,94 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
   };
 
   const getImageUrl = (images: any[]) => {
-    if (images.length > 0) {
-      return images[1].link;
+    if (images && images.length > 0) {
+      return images[1]?.link || images[0]?.link;
     }
     return "";
   };
 
+  // Handle FlatList scroll events
+  const handleFlatListScroll = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setIsListAtTop(offsetY <= 0);
+  };
+
   // Render playlist item
-  const renderPlaylistItem = ({ item }: { item: Playlist }) => (
-    <TouchableOpacity
-      onPress={() => !addingSong && handleAddToPlaylist(item.id)}
-      style={[
-        styles.playlistItem,
-        selectedPlaylistId === item.id && styles.selectedPlaylistItem,
-        addingSong &&
-          selectedPlaylistId !== item.id &&
-          styles.disabledPlaylistItem,
-      ]}
-    >
-      <Image
-        source={
-          item.image
-            ? { uri: getImageUrl(item.image) }
-            : require("../../assets/icon.jpg")
-        }
-        style={styles.playlistImage}
-      />
-      <View style={styles.playlistTextContainer}>
-        <Text style={styles.playlistName}>{item.name}</Text>
-        <Text style={styles.playlistSongCount}>
-          {item.songCount || 0} songs
-        </Text>
-      </View>
-      {selectedPlaylistId === item.id && (
-        <View style={styles.addingIndicator}>
-          {addingSuccess ? (
-            <MaterialIcons name="check" size={24} color="white" />
-          ) : (
-            <ActivityIndicator size="small" color="white" />
-          )}
+  const renderPlaylistItem = ({ item }: { item: Playlist }) => {
+    const isSelected = selectedPlaylistId === item.id;
+    const isDisabled = addingSong && !isSelected;
+
+    return (
+      <TouchableOpacity
+        onPress={() => !addingSong && handleAddToPlaylist(item.id)}
+        style={[
+          styles.playlistItem,
+          isSelected && styles.selectedPlaylistItem,
+          isDisabled && styles.disabledPlaylistItem,
+        ]}
+        activeOpacity={isDisabled ? 1 : 0.7}
+      >
+        <Image
+          source={
+            item.image && getImageUrl(item.image)
+              ? { uri: getImageUrl(item.image) }
+              : require("../../assets/icon.jpg")
+          }
+          style={styles.playlistImage}
+        />
+        <View style={styles.playlistTextContainer}>
+          <Text style={styles.playlistName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.playlistSongCount}>
+            {item.songCount || 0} {item.songCount === 1 ? "song" : "songs"}
+          </Text>
         </View>
-      )}
-    </TouchableOpacity>
-  );
+        {isSelected && (
+          <View style={styles.addingIndicatorContainer}>
+            {addingSuccess ? (
+              <Animated.View
+                style={[
+                  styles.addingSuccessIndicator,
+                  { opacity: successOpacity },
+                ]}
+              >
+                <MaterialIcons name="check" size={20} color="white" />
+              </Animated.View>
+            ) : (
+              <ActivityIndicator size="small" color="white" />
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <Modal
-      transparent={true}
-      visible={dialogOpen}
-      animationType="slide"
-      onRequestClose={() => setDialogOpen(false)}
-    >
-      <BlurView
-        intensity={50}
-        style={[styles.modalOverlay, { paddingTop: insets.top }]}
+    <>
+      <SwipeableModal
+        isVisible={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        backgroundColor="#121214"
+        backdropOpacity={0.7}
+        scrollable={true}
+        useScrollView={false}
+        maxHeight="90%"
+        onScroll={handleFlatListScroll}
       >
-        <View style={styles.modalContainer}>
+        <View className="p-4">
           {/* Header */}
           <View style={styles.header}>
-            <MaterialIcons name="playlist-add" size={24} color="white" />
+            <MaterialIcons name="playlist-add" size={24} color="#fff" />
             <Text style={styles.headerTitle}>Add to Playlist</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setDialogOpen(false)}
+            >
+              <MaterialIcons name="close" size={22} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
 
           {/* Search Input */}
@@ -183,19 +253,22 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
             <MaterialIcons
               name="search"
               size={20}
-              color="#888"
+              color="#9ca3af"
               style={styles.searchIcon}
             />
             <TextInput
               placeholder="Search playlists..."
-              placeholderTextColor="#888"
+              placeholderTextColor="#9ca3af"
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={styles.searchInput}
             />
             {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <MaterialIcons name="close" size={20} color="#888" />
+              <TouchableOpacity
+                onPress={() => setSearchQuery("")}
+                style={styles.clearButton}
+              >
+                <MaterialIcons name="close" size={18} color="#9ca3af" />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -205,8 +278,9 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
             style={styles.createPlaylistButton}
             onPress={() => setNewPlaylistDialog(true)}
             disabled={loading}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="add" size={24} color="white" />
+            <MaterialIcons name="add" size={22} color="white" />
             <Text style={styles.createPlaylistButtonText}>
               Create New Playlist
             </Text>
@@ -214,11 +288,10 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
 
           {/* Playlists List */}
           {loading ? (
-            <ActivityIndicator
-              size="large"
-              color="#fff"
-              style={styles.loadingIndicator}
-            />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8b5cf6" />
+              <Text style={styles.loadingText}>Loading playlists...</Text>
+            </View>
           ) : (
             <FlatList
               data={filteredPlaylists}
@@ -226,120 +299,154 @@ const AddToPlaylist: React.FC<AddToPlaylistProps> = ({
               keyExtractor={(item) => item.id}
               ListEmptyComponent={
                 <View style={styles.emptyState}>
-                  <MaterialIcons name="music-note" size={48} color="#888" />
+                  <MaterialIcons name="queue-music" size={48} color="#9ca3af" />
                   <Text style={styles.emptyStateText}>
                     {searchQuery
                       ? "No matching playlists found"
-                      : "No playlists found. Create one to get started!"}
+                      : "No playlists yet. Create one to get started!"}
                   </Text>
                 </View>
               }
               contentContainerStyle={styles.playlistList}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleFlatListScroll}
+              scrollEventThrottle={16}
+              nestedScrollEnabled={true}
             />
           )}
         </View>
 
         {/* New Playlist Modal */}
-        <Modal
-          transparent={true}
-          visible={newPlaylistDialog}
-          animationType="slide"
-          onRequestClose={() => setNewPlaylistDialog(false)}
-        >
-          <BlurView intensity={50} style={styles.modalOverlay}>
-            <View style={styles.newPlaylistContainer}>
-              <Text style={styles.newPlaylistTitle}>Create New Playlist</Text>
-              <TextInput
-                placeholder="Enter playlist name"
-                placeholderTextColor="#888"
-                value={newPlaylistName}
-                onChangeText={setNewPlaylistName}
-                style={styles.newPlaylistInput}
-              />
-              <View style={styles.newPlaylistButtonContainer}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setNewPlaylistDialog(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.createButton,
-                    (!newPlaylistName.trim() || loading) &&
-                      styles.disabledButton,
-                  ]}
-                  onPress={handleCreatePlaylist}
-                  disabled={!newPlaylistName.trim() || loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <Text style={styles.createButtonText}>Create</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </BlurView>
-        </Modal>
-      </BlurView>
-    </Modal>
+      </SwipeableModal>
+      <SwipeableModal
+        isVisible={newPlaylistDialog}
+        onClose={() => setNewPlaylistDialog(false)}
+        backgroundColor="transparent"
+        backdropOpacity={0.4}
+        maxHeight="auto"
+      >
+        <View style={styles.newPlaylistContainer}>
+          <Text style={styles.newPlaylistTitle}>Create New Playlist</Text>
+
+          <TextInput
+            placeholder="Enter playlist name"
+            placeholderTextColor="#9ca3af"
+            value={newPlaylistName}
+            onChangeText={setNewPlaylistName}
+            style={styles.newPlaylistInput}
+            autoFocus
+            selectionColor="#8b5cf6"
+          />
+
+          <View style={styles.newPlaylistButtonContainer}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                setNewPlaylistDialog(false);
+                setNewPlaylistName("");
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.createButton,
+                (!newPlaylistName.trim() || loading) && styles.disabledButton,
+              ]}
+              onPress={handleCreatePlaylist}
+              disabled={!newPlaylistName.trim() || loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.createButtonText}>Create</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SwipeableModal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    justifyContent: "flex-end",
-  },
-  modalContainer: {
-    backgroundColor: "#1E1E1E",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
-    maxHeight: "90%",
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   headerTitle: {
     color: "white",
     fontSize: 20,
-    fontWeight: "bold",
-    marginLeft: 8,
+    fontWeight: "700",
+    marginLeft: 10,
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+    borderRadius: 20,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2C2C2C",
-    borderRadius: 10,
+    backgroundColor: "#27272a",
+    borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 16,
+    height: 50,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
     color: "white",
-    height: 48,
+    height: 50,
+    fontSize: 16,
+  },
+  clearButton: {
+    padding: 4,
   },
   createPlaylistButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#3A3A3A",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: "#4c1d95",
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 20,
   },
   createPlaylistButtonText: {
     color: "white",
-    fontWeight: "bold",
+    fontWeight: "600",
     marginLeft: 8,
+    fontSize: 16,
+  },
+  songInfoContainer: {
+    backgroundColor: "#27272a",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+  },
+  songInfoLabel: {
+    color: "#9ca3af",
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  songDetails: {
+    flexDirection: "column",
+  },
+  songTitle: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  songArtist: {
+    color: "#d1d5db",
+    fontSize: 14,
+    marginTop: 2,
   },
   playlistList: {
     paddingBottom: 16,
@@ -347,41 +454,63 @@ const styles = StyleSheet.create({
   playlistItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2C2C2C",
-    borderRadius: 10,
+    backgroundColor: "#27272a",
+    borderRadius: 12,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   selectedPlaylistItem: {
-    backgroundColor: "#3A3A3A",
+    backgroundColor: "#3a3a45",
+    borderWidth: 1,
+    borderColor: "#8b5cf6",
   },
   disabledPlaylistItem: {
     opacity: 0.5,
   },
   playlistImage: {
-    width: 48,
-    height: 48,
+    width: 52,
+    height: 52,
     borderRadius: 8,
-    marginRight: 12,
+    marginRight: 14,
   },
   playlistTextContainer: {
     flex: 1,
   },
   playlistName: {
     color: "white",
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontSize: 16,
   },
   playlistSongCount: {
-    color: "#888",
-    fontSize: 12,
+    color: "#9ca3af",
+    fontSize: 14,
+    marginTop: 2,
   },
-  addingIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "green",
+  addingIndicatorContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#4c1d95",
     justifyContent: "center",
     alignItems: "center",
+  },
+  addingSuccessIndicator: {
+    position: "absolute",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#059669",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#d1d5db",
   },
   loadingIndicator: {
     marginVertical: 20,
@@ -389,59 +518,67 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 50,
+    paddingVertical: 40,
   },
   emptyStateText: {
-    color: "#888",
-    marginTop: 12,
+    color: "#9ca3af",
+    marginTop: 16,
     textAlign: "center",
+    fontSize: 16,
+  },
+  blurContainer: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 16,
   },
   newPlaylistContainer: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 20,
+    backgroundColor: "#18181b",
+    borderRadius: 16,
     padding: 20,
-    margin: 20,
   },
   newPlaylistTitle: {
     color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 20,
     textAlign: "center",
   },
   newPlaylistInput: {
-    backgroundColor: "#2C2C2C",
+    backgroundColor: "#27272a",
     color: "white",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    fontSize: 16,
   },
   newPlaylistButtonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 12,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: "#3A3A3A",
-    borderRadius: 10,
-    padding: 12,
-    marginRight: 8,
+    backgroundColor: "#3f3f46",
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
   },
   cancelButtonText: {
     color: "white",
-    textAlign: "center",
+    fontWeight: "500",
+    fontSize: 16,
   },
   createButton: {
     flex: 1,
-    backgroundColor: "#4A4A4A",
-    borderRadius: 10,
-    padding: 12,
-    marginLeft: 8,
+    backgroundColor: "#8b5cf6",
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
   },
   createButtonText: {
     color: "white",
-    textAlign: "center",
-    fontWeight: "bold",
+    fontWeight: "600",
+    fontSize: 16,
   },
   disabledButton: {
     opacity: 0.5,

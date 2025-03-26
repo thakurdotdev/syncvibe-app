@@ -29,6 +29,7 @@ import TrackPlayer, {
 import PlayerDrawer from "./PlayerDrawer";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import NewPlayerDrawer from "./NewPlayerDrawer";
 
 interface SongCardProps {
   song: Song;
@@ -61,7 +62,7 @@ interface CardContainerProps {
   children: React.ReactNode;
   onPress: () => void | Promise<void>;
   onLongPress?: () => void | Promise<void>;
-  width?: number | string;
+  width?: number | `${number}%`;
 }
 
 const CardContainer = ({
@@ -208,7 +209,7 @@ export const PlaylistCard = memo(
       <CardContainer
         onPress={handlePress}
         key={playlist.id}
-        width={isUser ? `calc(50%)` : 160}
+        width={isUser ? "100%" : 160}
       >
         <View style={{ padding: 12, gap: 8 }}>
           <CardImage uri={imageUrl} alt={`Playlist: ${playlist.name}`} />
@@ -257,84 +258,94 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   }, []);
 
   return (
-    <CardContainer
-      width={160}
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-    >
-      <View style={{ padding: 12, gap: 8 }}>
-        <CardImage uri={imageUrl} alt={`Song: ${song.name}`} />
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.2)",
-            borderRadius: 6,
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: isCurrentSong ? 1 : 0,
-          }}
-        >
-          <View
-            style={{
-              padding: 8,
-              borderRadius: 50,
-              backgroundColor: isCurrentSong
-                ? "rgb(34, 197, 94)"
-                : "rgba(0, 0, 0, 0.5)",
-            }}
-          >
-            <Ionicons
-              name={isCurrentSong && isPlaying ? "pause" : "play"}
-              size={24}
-              color="white"
-            />
-          </View>
-        </View>
-
-        {isCurrentSong && (
+    <>
+      <CardContainer
+        width={160}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+      >
+        <View style={{ padding: 12, gap: 8 }}>
+          <CardImage uri={imageUrl} alt={`Song: ${song.name}`} />
           <View
             style={{
               position: "absolute",
-              top: 8,
-              right: 8,
-              height: 24,
-              width: 24,
-              borderRadius: 12,
-              backgroundColor: "rgb(34, 197, 94)",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.2)",
+              borderRadius: 6,
               alignItems: "center",
               justifyContent: "center",
+              opacity: isCurrentSong ? 1 : 0,
             }}
           >
-            <Ionicons
-              name={isPlaying ? "musical-note" : "pause"}
-              size={12}
-              color="white"
-            />
+            <View
+              style={{
+                padding: 8,
+                borderRadius: 50,
+                backgroundColor: isCurrentSong
+                  ? "rgb(34, 197, 94)"
+                  : "rgba(0, 0, 0, 0.5)",
+              }}
+            >
+              <Ionicons
+                name={isCurrentSong && isPlaying ? "pause" : "play"}
+                size={24}
+                color="white"
+              />
+            </View>
           </View>
-        )}
 
-        <View style={{ paddingHorizontal: 4 }}>
-          <Text
-            style={{ color: "white", fontWeight: "500", fontSize: 14 }}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {song.name}
-          </Text>
-          <Text
-            style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {artistName}
-          </Text>
+          {isCurrentSong && (
+            <View
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                height: 24,
+                width: 24,
+                borderRadius: 12,
+                backgroundColor: "rgb(34, 197, 94)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name={isPlaying ? "musical-note" : "pause"}
+                size={12}
+                color="white"
+              />
+            </View>
+          )}
+
+          <View style={{ paddingHorizontal: 4 }}>
+            <Text
+              style={{ color: "white", fontWeight: "500", fontSize: 14 }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {song.name}
+            </Text>
+            <Text
+              style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {artistName}
+            </Text>
+          </View>
         </View>
-      </View>
-    </CardContainer>
+      </CardContainer>
+
+      {playerDrawerOpen && (
+        <NewPlayerDrawer
+          isVisible={playerDrawerOpen}
+          onClose={() => setPlayerDrawerOpen(false)}
+          song={song}
+        />
+      )}
+    </>
   );
 });
 

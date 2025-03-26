@@ -20,6 +20,7 @@ import useApi from "@/utils/hooks/useApi";
 import { useDebounce } from "@/utils/hooks/useDebounce";
 import { useUser } from "@/context/UserContext";
 import LoginModal from "@/components/LoginModal";
+import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
 
 const AVATAR_SIZE = 40;
 const ONLINE_INDICATOR_SIZE = 10;
@@ -173,7 +174,10 @@ const SearchUser: React.FC = () => {
           activeOpacity={0.7}
         >
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: user?.profilepic }} style={styles.avatar} />
+            <Image
+              source={{ uri: getProfileCloudinaryUrl(user?.profilepic) }}
+              style={styles.avatar}
+            />
             {isOnline && <View style={styles.onlineIndicator} />}
           </View>
 

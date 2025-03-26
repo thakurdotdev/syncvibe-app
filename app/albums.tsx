@@ -181,7 +181,7 @@ export default function AlbumScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Animated.FlatList
         data={albumData.songs}
         renderItem={({ item, index }) => <SongCard song={item} />}
@@ -292,7 +292,7 @@ export default function AlbumScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "SyncVibe",
     "slug": "syncvibe",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.jpg",
     "scheme": "syncvibe",
@@ -20,6 +20,12 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.thakurdotdev.syncvibe",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -55,7 +61,15 @@
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SyncVibe to access your camera to capture and share moments."
+        }
+      ],
+      "expo-media-library",
+      "expo-system-ui"
     ],
     "experiments": {
       "typedRoutes": true

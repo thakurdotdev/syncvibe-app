@@ -163,7 +163,7 @@ export default function PlaylistScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Animated.FlatList
         data={playlistData?.songs}
         renderItem={({ item, index }) => <SongCard song={item} />}
@@ -253,7 +253,7 @@ export default function PlaylistScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

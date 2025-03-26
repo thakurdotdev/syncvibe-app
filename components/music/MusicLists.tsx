@@ -1,6 +1,13 @@
 import { Song } from "@/types/song";
 import React, { memo } from "react";
-import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   AlbumCard,
   ArtistCard,
@@ -8,6 +15,7 @@ import {
   PlaylistCard,
   SongCard,
 } from "./MusicCards";
+import { RefreshCcwIcon } from "lucide-react-native";
 
 interface AlbumsGridProps {
   albums: any[];
@@ -55,22 +63,41 @@ export const SimilarSongs = memo(
   ({
     recommendations,
     loading,
+    fetchRecommendations,
   }: {
     recommendations: Song[];
     loading: boolean;
+    fetchRecommendations: () => void;
   }) => {
     if (loading) {
       return (
-        <View className="items-center justify-center py-10">
-          <ActivityIndicator size="large" color="#fff" />
+        <View className="items-center justify-center py-12">
+          <ActivityIndicator size="large" color="white" />
+          <Text className="text-white text-lg font-medium mt-4">
+            Finding similar vibes...
+          </Text>
         </View>
       );
     }
 
     if (recommendations.length === 0) {
       return (
-        <View className="items-center justify-center py-10">
-          <Text className="text-white text-lg">No similar songs found</Text>
+        <View className="items-center justify-center py-12 px-4">
+          <Text className="text-white text-lg font-medium mb-3">
+            No similar songs found
+          </Text>
+          <Text className="text-gray-400 text-sm mb-4 text-center">
+            We couldn't find any similar songs at the moment. Try again later.
+          </Text>
+          <TouchableOpacity
+            onPress={fetchRecommendations}
+            className="bg-slate-300 px-6 py-3 rounded-full flex-row items-center"
+          >
+            <View className="flex-row items-center justify-center gap-2">
+              <RefreshCcwIcon size={16} color="#1e293b" />
+              <Text className="text-slate-800 font-medium">Try Again</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -81,7 +108,7 @@ export const SimilarSongs = memo(
         renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 50 }}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         scrollEnabled={true}
         bounces={true}
       />

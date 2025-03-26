@@ -8,10 +8,11 @@ import {
 import { SONG_URL } from "@/constants";
 import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
+import { getGreeting } from "@/utils/getGreeting";
 import useApi from "@/utils/hooks/useApi";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -20,11 +21,10 @@ import {
   RefreshControl,
   StatusBar,
   Text,
-  View,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getGreeting } from "@/utils/getGreeting";
 
 interface HomePageData {
   trending: Song[];
@@ -61,7 +61,7 @@ export default function HomeScreen() {
         `${SONG_URL}/modules?lang=${selectedLanguages}`,
         {
           headers: {
-            "Cache-Control": "max-age=3600",
+            "Cache-Control": "no-cache",
           },
         },
       );
@@ -163,69 +163,6 @@ export default function HomeScreen() {
               width: "100%",
             }}
           />
-
-          <View
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 120, // Increased height for better fade effect
-            }}
-          >
-            {Array.from({ length: 15 }).map((_, i) => {
-              const width = 30 + Math.random() * 100;
-              const left = i * (100 / 15) + (Math.random() * 20 - 10);
-              const height = 30 + Math.random() * 90;
-              const opacity = 0.3 + Math.random() * 0.7; // Varied opacity
-
-              return (
-                <View
-                  key={i}
-                  style={{
-                    position: "absolute",
-                    bottom: -10, // Slightly below to avoid any gap
-                    left: `${left}%`,
-                    width,
-                    height,
-                    backgroundColor: "#121212",
-                    opacity,
-                    borderTopLeftRadius: 25 + Math.random() * 40,
-                    borderTopRightRadius: 25 + Math.random() * 40,
-                  }}
-                />
-              );
-            })}
-
-            <LinearGradient
-              colors={[
-                "rgba(18,18,18,0)",
-                "rgba(18,18,18,0.5)",
-                "rgba(18,18,18,0.9)",
-              ]}
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 100,
-              }}
-            />
-            <LinearGradient
-              colors={[
-                "rgba(18,18,18,0)",
-                "rgba(18,18,18,0.7)",
-                "rgba(18,18,18,1)",
-              ]}
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 70,
-              }}
-            />
-          </View>
         </Animated.View>
 
         {/* Content that appears on top of the gradient */}

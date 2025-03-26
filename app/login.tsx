@@ -7,7 +7,6 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { MotiView } from "moti";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -88,13 +87,7 @@ const LoginScreen = () => {
       const token = backendResponse.data.token;
       await AsyncStorage.setItem("token", token);
 
-      // Get user profile and navigate to home screen
       await getProfile();
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Now navigate after profile is loaded
-      router.replace("/");
     } catch (error: any) {
       console.error("Google sign-in error:", error);
       setError(`Authentication failed: ${error.message}`);
@@ -125,12 +118,7 @@ const LoginScreen = () => {
         ]}
       >
         {/* Logo and app title */}
-        <MotiView
-          from={{ opacity: 0, translateY: -20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 800 }}
-          style={styles.logoContainer}
-        >
+        <View style={styles.logoContainer}>
           <View style={styles.logoWrapper}>
             <BlurView intensity={40} tint="dark" style={styles.logoBlur}>
               <Image
@@ -141,23 +129,14 @@ const LoginScreen = () => {
             </BlurView>
           </View>
 
-          <MotiView
-            from={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ type: "timing", duration: 800, delay: 200 }}
-          >
+          <View>
             <Text style={styles.appTitle}>Welcome to SyncVibe</Text>
             <Text style={styles.appSubtitle}>Sign in to discover music</Text>
-          </MotiView>
-        </MotiView>
+          </View>
+        </View>
 
         {/* Login button */}
-        <MotiView
-          from={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "timing", duration: 800, delay: 400 }}
-          style={styles.buttonContainer}
-        >
+        <View style={styles.buttonContainer}>
           <BlurView
             intensity={20}
             tint="dark"
@@ -189,24 +168,14 @@ const LoginScreen = () => {
           </BlurView>
 
           {error ? (
-            <MotiView
-              from={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              transition={{ type: "timing", duration: 300 }}
-              style={styles.errorContainer}
-            >
+            <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
-            </MotiView>
+            </View>
           ) : null}
-        </MotiView>
+        </View>
 
         {/* Footer */}
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ type: "timing", duration: 800, delay: 600 }}
-          style={styles.footer}
-        >
+        <View style={styles.footer}>
           <Text style={styles.footerText}>
             By continuing, you agree to our{" "}
             <Text
@@ -231,7 +200,7 @@ const LoginScreen = () => {
               Privacy Policy
             </Text>
           </Text>
-        </MotiView>
+        </View>
       </View>
     </View>
   );

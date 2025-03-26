@@ -3,6 +3,7 @@ import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
 import { usePathname } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -35,12 +36,6 @@ import TrackPlayer, {
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 import PlayerDrawer from "./PlayerDrawer";
-import { LinearGradient } from "expo-linear-gradient";
-import {
-  blendColors,
-  darkenColor,
-  extractImageColors,
-} from "@/utils/getImageColors";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
@@ -85,16 +80,22 @@ const RecommendationsTab = React.memo(
   ({
     recommendations,
     loading,
+    fetchRecommendations,
   }: {
     recommendations: Song[];
     loading: boolean;
+    fetchRecommendations: () => void;
   }) => (
     <Animated.View
       entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
       exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
       style={styles.tabContentContainer}
     >
-      <SimilarSongs recommendations={recommendations} loading={loading} />
+      <SimilarSongs
+        recommendations={recommendations}
+        loading={loading}
+        fetchRecommendations={fetchRecommendations}
+      />
     </Animated.View>
   ),
 );
@@ -109,27 +110,6 @@ export default function Player() {
   const playbackState = usePlaybackState();
   const isPlaying = playbackState.state === State.Playing;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
-  const [albumColors, setAlbumColors] = useState({
-    primary: "#42353A",
-    secondary: "#092B31",
-    background: "#121212",
-    isLight: false,
-  });
-
-  useEffect(() => {
-    async function getColors() {
-      if (currentSong?.image?.[2]?.link) {
-        try {
-          const colors = await extractImageColors(currentSong.image[2].link);
-          setAlbumColors(colors);
-        } catch (error) {
-          console.error("Failed to extract image colors:", error);
-        }
-      }
-    }
-
-    getColors();
-  }, [currentSong?.id]);
 
   const handlePlayPauseSong = async () => {
     if (isPlaying) {
@@ -360,32 +340,17 @@ export default function Player() {
             left: 0,
             right: 0,
             bottom: 0,
-            height: "100%",
+            height: 150,
             zIndex: 0,
           }}
         >
           <LinearGradient
-            colors={[
-              darkenColor(albumColors.primary, 0.1),
-              albumColors.secondary,
-              blendColors(albumColors.secondary, "#000000", 0.7),
-              "#080808",
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
+            colors={["#42353A", "#092B31", "#121212"]}
+            start={{ x: 0.1, y: 0.1 }}
+            end={{ x: 0.8, y: 0.85 }} // End slightly higher to allow for organic fade
             style={{
               height: "100%",
               width: "100%",
-            }}
-          />
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.15)", // Very subtle dark overlay
             }}
           />
         </Animated.View>
@@ -456,6 +421,7 @@ export default function Player() {
             <RecommendationsTab
               recommendations={recommendations}
               loading={loading}
+              fetchRecommendations={getRecommendations}
             />
           )}
         </View>

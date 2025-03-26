@@ -3,11 +3,10 @@ import { GroupSongControls } from "@/components/music/MusicCards";
 import { Drawer } from "@/components/ui/drawer";
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { useUser } from "@/context/UserContext";
-import { blendColors, extractImageColors } from "@/utils/getImageColors";
+import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,8 +20,6 @@ import {
 } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const { height, width } = Dimensions.get("window");
 
 export default function GroupMusicMobile() {
   const {
@@ -44,35 +41,11 @@ export default function GroupMusicMobile() {
     handlePlayPause,
   } = useGroupMusic();
   const { user } = useUser();
-  const router = useRouter();
 
   const [newGroupName, setNewGroupName] = useState("");
   const [groupId, setGroupId] = useState("");
   const [tabIndex, setTabIndex] = useState(0);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(!user); // Show login modal if user is null
-
-  const [albumColors, setAlbumColors] = useState({
-    primary: "#42353A",
-    secondary: "#092B31",
-    background: "#121212",
-    isLight: false,
-  });
-
-  useEffect(() => {
-    async function getColors() {
-      if (currentSong?.image?.[2]?.link) {
-        try {
-          const colors = await extractImageColors(currentSong.image[2].link);
-          setAlbumColors(colors);
-        } catch (error) {
-          console.error("Failed to extract image colors:", error);
-        }
-      }
-    }
-
-    getColors();
-  }, [currentSong?.id]);
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
@@ -101,52 +74,12 @@ export default function GroupMusicMobile() {
         }}
       >
         <LinearGradient
-          colors={[
-            albumColors.primary,
-            blendColors(albumColors.primary, albumColors.secondary, 0.5),
-            albumColors.secondary,
-            blendColors(albumColors.secondary, "#000000", 0.7),
-            "#080808",
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
+          colors={["#42353A", "#092B31", "#121212"]}
+          start={{ x: 0.1, y: 0.1 }}
+          end={{ x: 0.8, y: 0.85 }} // End slightly higher to allow for organic fade
           style={{
-            height: 500,
+            height: "100%",
             width: "100%",
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.15)", // Very subtle dark overlay
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            opacity: 0.03, // Very subtle
-            // You can add a background pattern image here for noise texture
-            // backgroundImage: `url(${noisePattern})`, // If using web
-          }}
-        />
-
-        {/* Bottom fade for controls */}
-        <LinearGradient
-          colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.4)", "rgba(0,0,0,0.7)"]}
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 250, // Adjust based on your controls area
           }}
         />
       </Animated.View>
@@ -462,7 +395,9 @@ export default function GroupMusicMobile() {
                 >
                   <Image
                     source={{
-                      uri: item.profilePic || "https://via.placeholder.com/40",
+                      uri:
+                        getProfileCloudinaryUrl(item.profilePic) ||
+                        "https://via.placeholder.com/40",
                     }}
                     style={{
                       width: 40,

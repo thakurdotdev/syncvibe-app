@@ -11,6 +11,8 @@ import {
 } from "react";
 import { io, Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
+import { Platform } from "react-native";
+import * as Notifications from "expo-notifications";
 
 export interface ChatUser {
   chatid: string;
@@ -96,9 +98,37 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     [],
   );
 
+  useEffect(() => {
+    (async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        console.log("Notification permissions not granted");
+      }
+
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+    })();
+  }, []);
+
   const showNotification = (message: Message) => {
-    // Implement Expo notification logic here
-    console.log(`${message?.senderName} sent you a message`);
+    // Show notification if the chat is not currently open
+    if (!currentChat || currentChat?.otherUser.userid !== message.senderid) {
+      if (Platform.OS !== "web") {
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: `New message from ${message.senderName}`,
+            body: message?.content ? message.content : "Sent an attachment",
+          },
+          trigger: null, // Show the notification immediately
+          identifier: message.chatid,
+        });
+      }
+    }
   };
 
   const handleMessageReceived = useCallback((messageData: Message) => {
@@ -204,11 +234,6 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         onlineUserIds.reduce((acc, id) => ({ ...acc, [id]: true }), {}),
       );
     });
-
-    // Notification handling
-    // if (Platform.OS !== "web") {
-    //   // Implement Expo notification permission request if needed
-    // }
 
     newSocket.on("message-received", handleMessageReceived);
 

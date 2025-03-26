@@ -47,9 +47,23 @@ export const setupPlayer = async (): Promise<boolean> => {
           Capability.Play,
           Capability.Pause,
           Capability.SkipToNext,
+          Capability.SkipToPrevious,
+          Capability.Stop,
+          Capability.SeekTo,
+        ],
+        notificationCapabilities: [
+          Capability.Play,
+          Capability.Pause,
+          Capability.SkipToNext,
+          Capability.SkipToPrevious,
+          Capability.Stop,
+          Capability.SeekTo,
+          Capability.PlayFromSearch,
         ],
         android: {
-          appKilledPlaybackBehavior: AppKilledPlaybackBehavior.ContinuePlayback,
+          appKilledPlaybackBehavior:
+            AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+          alwaysPauseOnInterruption: true,
         },
       });
 
