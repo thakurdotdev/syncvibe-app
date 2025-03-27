@@ -24,6 +24,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { convertToHttps } from "@/utils/getHttpsUrls";
 
 type PlaylistSong = {
   id: string;
@@ -143,7 +144,7 @@ export default function UserPlaylistDetails() {
     };
   });
 
-  const getBgUrl = useCallback(() => {
+  const getBgUrl = useMemo(() => {
     if (!playlistData?.image) return "";
     return Array.isArray(playlistData.image)
       ? playlistData.image[2]?.link
@@ -184,7 +185,7 @@ export default function UserPlaylistDetails() {
                 style={[styles.headerGradient, { height: headerHeight }]}
               >
                 <Image
-                  source={{ uri: getBgUrl() }}
+                  source={{ uri: convertToHttps(getBgUrl) }}
                   style={[styles.backgroundImage, { height: headerHeight }]}
                   blurRadius={30}
                 />
@@ -192,7 +193,7 @@ export default function UserPlaylistDetails() {
                   <View style={styles.headerContent}>
                     <Animated.View style={imageAnimatedStyle}>
                       <Image
-                        source={{ uri: getBgUrl() }}
+                        source={{ uri: convertToHttps(getBgUrl) }}
                         style={[
                           styles.playlistImage,
                           { width: imageSize, height: imageSize },
