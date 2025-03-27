@@ -1,3 +1,4 @@
+import { PlayMode } from "@/context/MusicContext";
 import { Song } from "./song";
 
 export interface TimeState {
@@ -10,6 +11,7 @@ export interface PlaybackState {
   isPlaying: boolean;
   volume: number;
   isLoading: boolean;
+  playMode: PlayMode;
 }
 
 export interface PlaylistState {
@@ -45,6 +47,9 @@ export interface PlayerControls {
   addToQueue: (songs: Song | Song[]) => void;
   handleNextSong: () => void;
   handlePrevSong: () => void;
+  setPlayMode: (mode: PlayMode) => void;
+  clearQueue: () => void;
+  removeFromQueue: (songId: string) => void;
 }
 
 export interface PlaylistContextValue extends PlaylistState {

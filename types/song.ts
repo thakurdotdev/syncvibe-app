@@ -9,7 +9,7 @@ export interface Artist {
   url: string;
   role: string;
   type: string;
-  image: ImageQuality[];
+  image: ImageQuality[] | ImageQuality;
 }
 
 export interface ArtistMap {

@@ -26,6 +26,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { convertToHttps } from "@/utils/getHttpsUrls";
 
 interface PlaylistData {
   id: string;
@@ -188,7 +189,7 @@ export default function PlaylistScreen() {
                 style={[styles.headerGradient, { height: headerHeight }]}
               >
                 <Image
-                  source={{ uri: playlistData?.image }}
+                  source={{ uri: convertToHttps(playlistData?.image) }}
                   style={[styles.backgroundImage, { height: headerHeight }]}
                   blurRadius={30}
                 />
@@ -196,7 +197,7 @@ export default function PlaylistScreen() {
                   <View style={styles.headerContent}>
                     <Animated.View style={imageAnimatedStyle}>
                       <Image
-                        source={{ uri: playlistData?.image }}
+                        source={{ uri: convertToHttps(playlistData?.image) }}
                         style={[
                           styles.playlistImage,
                           { width: imageSize, height: imageSize },

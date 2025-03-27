@@ -25,6 +25,14 @@ import TrackPlayer, {
 import { useUser } from "./UserContext";
 import useApi from "@/utils/hooks/useApi";
 
+const PLAY_MODES = {
+  REPEAT_OFF: "REPEAT_OFF",
+  REPEAT_PLAYLIST: "REPEAT_PLAYLIST",
+  REPEAT_TRACK: "REPEAT_TRACK",
+} as const;
+
+export type PlayMode = (typeof PLAY_MODES)[keyof typeof PLAY_MODES];
+
 const PlayerControlsContext = createContext<PlayerControls | undefined>(
   undefined,
 );
@@ -58,16 +66,20 @@ const playbackReducer = (
 
 const playlistReducer = (
   state: PlaylistState,
-  action: { type: string; payload: Song[] },
+  action: { type: string; payload?: any },
 ): PlaylistState => {
   switch (action.type) {
     case "SET_PLAYLIST":
-      return {
-        ...state,
-        playlist: action.payload,
-      };
+      return { ...state, playlist: action.payload };
     case "SET_USER_PLAYLIST":
       return { ...state, userPlaylist: action.payload };
+    case "REMOVE_FROM_PLAYLIST":
+      return {
+        ...state,
+        playlist: state.playlist.filter((song) => song.id !== action.payload),
+      };
+    case "CLEAR_PLAYLIST":
+      return { ...state, playlist: [] };
     default:
       return state;
   }
@@ -123,6 +135,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     isPlaying: false,
     volume: 1,
     isLoading: false,
+    playMode: PLAY_MODES.REPEAT_OFF,
   });
 
   const [playbackState, playbackDispatch] = useReducer(playbackReducer, {
@@ -130,6 +143,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     isPlaying: false,
     volume: 1,
     isLoading: false,
+    playMode: PLAY_MODES.REPEAT_OFF,
   });
 
   const [playlistState, playlistDispatch] = useReducer(playlistReducer, {
@@ -212,6 +226,12 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                     type: "SET_CURRENT_SONG",
                     payload: currentSong,
                   });
+
+                  // Remove the current song from playlist after playing
+                  playlistDispatch({
+                    type: "REMOVE_FROM_PLAYLIST",
+                    payload: track.id,
+                  });
                 }
               }
             }
@@ -226,10 +246,20 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.PlaybackQueueEnded:
-            // Queue ended, reset playlist or loop depending on your app's needs
-            if (playlistState.playlist.length > 0) {
-              // Optional: loop through playlist again
-              controls.playSong(playlistState.playlist[0]);
+            switch (playbackState.playMode) {
+              case PLAY_MODES.REPEAT_OFF:
+                controls.stopSong();
+                break;
+              case PLAY_MODES.REPEAT_PLAYLIST:
+                if (playlistState.playlist.length > 0) {
+                  controls.playSong(playlistState.playlist[0]);
+                }
+                break;
+              case PLAY_MODES.REPEAT_TRACK:
+                if (playbackState.currentSong) {
+                  controls.playSong(playbackState.currentSong);
+                }
+                break;
             }
             break;
 
@@ -276,48 +306,17 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         try {
           playbackDispatch({ type: "SET_LOADING", payload: true });
 
-          // Reset the queue
           await TrackPlayer.reset();
-
-          // Convert Song to TrackPlayer format with streaming options
           const track = convertSongToTrack(song);
 
-          // Add and play the selected track
           await TrackPlayer.add([track]);
           await TrackPlayer.play();
 
-          // Update player state
           playbackDispatch({ type: "SET_CURRENT_SONG", payload: song });
           playbackDispatch({ type: "SET_PLAYING", payload: true });
-
-          // If we have a playlist, add the rest of the tracks
-          if (playlistState.playlist.length > 1) {
-            const currentIndex = playlistState.playlist.findIndex(
-              (s) => s.id === song.id,
-            );
-            if (currentIndex >= 0) {
-              // Add tracks after the current one
-              const nextTracks = playlistState.playlist
-                .slice(currentIndex + 1)
-                .map(convertSongToTrack);
-
-              // Add tracks before the current one (to complete the cycle)
-              const previousTracks = playlistState.playlist
-                .slice(0, currentIndex)
-                .map(convertSongToTrack);
-
-              if (nextTracks.length > 0) {
-                await TrackPlayer.add(nextTracks);
-              }
-              if (previousTracks.length > 0) {
-                await TrackPlayer.add(previousTracks);
-              }
-            }
-          }
-
           playbackDispatch({ type: "SET_LOADING", payload: false });
         } catch (error) {
-          console.error("Error playing song:", error);
+          console.error("Song play error:", error);
           playbackDispatch({ type: "SET_LOADING", payload: false });
         }
       },
@@ -330,7 +329,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           }
           playbackDispatch({ type: "STOP_SONG" });
         } catch (error) {
-          console.error("Error stopping song:", error);
+          console.error("Stop song error:", error);
         }
       },
 
@@ -370,28 +369,64 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         });
       },
 
+      setPlayMode: (mode: PlayMode) => {
+        playbackDispatch({ type: "SET_PLAY_MODE", payload: mode });
+      },
+
+      clearQueue: () => {
+        playlistDispatch({ type: "CLEAR_PLAYLIST" });
+        controls.stopSong();
+      },
+
       addToQueue: async (songs: Song | Song[]) => {
-        const currentPlaylist = playlistState.playlist || [];
         const newSongs = Array.isArray(songs) ? songs : [songs];
-        const existingIds = new Set(currentPlaylist.map((song) => song.id));
-        const uniqueNewSongs = newSongs.filter(
-          (song) => !existingIds.has(song.id),
+
+        // Filter out the currently playing song if it exists
+        const currentSongId = playbackState.currentSong?.id;
+        const filteredNewSongs = newSongs.filter(
+          (song) => song.id !== currentSongId,
+        );
+
+        // Filter out songs already in the playlist
+        const uniqueNewSongs = filteredNewSongs.filter(
+          (song) => !playlistState.playlist.some((s) => s.id === song.id),
         );
 
         if (uniqueNewSongs.length > 0) {
-          const updatedPlaylist = [...currentPlaylist, ...uniqueNewSongs];
           playlistDispatch({
             type: "SET_PLAYLIST",
-            payload: updatedPlaylist,
+            payload: [...playlistState.playlist, ...uniqueNewSongs],
           });
 
-          if (trackPlayerInitialized.current && playbackState.currentSong) {
+          if (trackPlayerInitialized.current) {
             try {
               const tracksToAdd = uniqueNewSongs.map(convertSongToTrack);
               await TrackPlayer.add(tracksToAdd);
             } catch (error) {
-              console.error("Error adding to queue:", error);
+              console.error("Queue addition error:", error);
             }
+          }
+        }
+      },
+
+      removeFromQueue: async (songId: string) => {
+        playlistDispatch({ type: "REMOVE_FROM_PLAYLIST", payload: songId });
+        if (trackPlayerInitialized.current) {
+          try {
+            const currentSongId = playbackState.currentSong?.id;
+            if (currentSongId === songId) {
+              await TrackPlayer.stop();
+              playbackDispatch({ type: "STOP_SONG" });
+            }
+            const currentQueue = await TrackPlayer.getQueue();
+            const songIndex = currentQueue.findIndex(
+              (song) => song.id === songId,
+            );
+            if (songIndex >= 0) {
+              await TrackPlayer.remove(songIndex);
+            }
+          } catch (error) {
+            console.error("Queue removal error:", error);
           }
         }
       },
@@ -400,16 +435,38 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         if (!trackPlayerInitialized.current) return;
 
         try {
-          const queue = await TrackPlayer.getQueue();
-          const currentIndex = await TrackPlayer.getActiveTrackIndex();
+          // Get current song ID
+          const currentSongId = playbackState.currentSong?.id;
 
-          if (queue.length > 1 && currentIndex !== null) {
-            await TrackPlayer.skipToNext();
-          } else if (playlistState.playlist.length > 0) {
-            controls.playSong(playlistState.playlist[0]);
+          // Create a working copy of the current playlist
+          let updatedPlaylist = [...playlistState.playlist];
+
+          // If there's a current song, remove it from our working copy
+          if (currentSongId) {
+            updatedPlaylist = updatedPlaylist.filter(
+              (song) => song.id !== currentSongId,
+            );
+          }
+
+          // Now get the next song from our modified playlist
+          const nextSong =
+            updatedPlaylist.length > 0 ? updatedPlaylist[0] : null;
+
+          // Update the playlist state with our modified playlist
+          playlistDispatch({
+            type: "SET_PLAYLIST",
+            payload: updatedPlaylist,
+          });
+
+          // Play the next song or stop if there are no more songs
+          if (nextSong) {
+            controls.playSong(nextSong);
+          } else {
+            await TrackPlayer.stop();
+            playbackDispatch({ type: "STOP_SONG" });
           }
         } catch (error) {
-          console.error("Error skipping to next song:", error);
+          console.error("Next song error:", error);
         }
       },
 

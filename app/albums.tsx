@@ -27,6 +27,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { convertToHttps } from "@/utils/getHttpsUrls";
 
 interface AlbumData {
   id: string;
@@ -206,7 +207,7 @@ export default function AlbumScreen() {
                 style={[styles.headerGradient, { height: headerHeight }]}
               >
                 <Image
-                  source={{ uri: albumCoverUrl }}
+                  source={{ uri: convertToHttps(albumCoverUrl) }}
                   style={[styles.backgroundImage, { height: headerHeight }]}
                   blurRadius={25}
                 />
@@ -216,7 +217,7 @@ export default function AlbumScreen() {
                       style={[styles.albumCoverContainer, imageAnimatedStyle]}
                     >
                       <Image
-                        source={{ uri: albumCoverUrl }}
+                        source={{ uri: convertToHttps(albumCoverUrl) }}
                         style={[
                           styles.albumCover,
                           { width: imageSize, height: imageSize },

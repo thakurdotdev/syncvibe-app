@@ -1,6 +1,6 @@
+import SwipeableModal from "@/components/common/SwipeableModal";
 import LoginModal from "@/components/LoginModal";
 import { GroupSongControls } from "@/components/music/MusicCards";
-import { Drawer } from "@/components/ui/drawer";
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { useUser } from "@/context/UserContext";
 import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
@@ -434,11 +434,10 @@ export default function GroupMusicMobile() {
 
       {/* Group Modal */}
       {isGroupModalOpen && (
-        <Drawer
-          isOpen={isGroupModalOpen}
+        <SwipeableModal
+          isVisible={isGroupModalOpen}
           onClose={() => setIsGroupModalOpen(false)}
-          drawerHeight={500}
-          drawerStyle={{ backgroundColor: "#000" }}
+          maxHeight={Dimensions.get("window").height * 0.8}
         >
           <View style={{ flex: 1, padding: 20, marginBottom: 100 }}>
             <Text
@@ -602,16 +601,16 @@ export default function GroupMusicMobile() {
               <Text style={{ color: "#888", textAlign: "center" }}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </Drawer>
+        </SwipeableModal>
       )}
 
       {/* Search Modal */}
       {showSearchModal && (
-        <Drawer
-          isOpen={showSearchModal}
+        <SwipeableModal
+          isVisible={showSearchModal}
           onClose={() => setShowSearchModal(false)}
-          drawerStyle={{ backgroundColor: "#000" }}
-          drawerHeight={500}
+          maxHeight={Dimensions.get("window").height * 0.8}
+          scrollable={true}
         >
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1, padding: 20 }}>
@@ -800,7 +799,7 @@ export default function GroupMusicMobile() {
               )}
             </View>
           </View>
-        </Drawer>
+        </SwipeableModal>
       )}
     </View>
   );

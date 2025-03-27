@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Animated,
   Dimensions,
@@ -13,7 +13,7 @@ import {
   NativeScrollEvent,
 } from "react-native";
 
-const { height } = Dimensions.get("window");
+const { height, width } = Dimensions.get("window");
 
 interface SwipeableModalProps {
   isVisible: boolean;
@@ -42,154 +42,156 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
   useScrollView = false,
   onScroll,
 }) => {
-  const [modalVisible, setModalVisible] = useState(isVisible);
+  const [modalVisible, setModalVisible] = useState(false);
   const [isAtScrollTop, setIsAtScrollTop] = useState(true);
-  const panY = useRef(new Animated.Value(0)).current;
-  const translateY = panY.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [0, 0, 1],
-  });
+
+  // Use Animated.Value for both position and backdrop opacity
+  const animatedValue = useRef(new Animated.Value(0)).current;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // Consistent close animation method
+  const closeModal = useCallback(() => {
+    Animated.timing(animatedValue, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setModalVisible(false);
+      onClose();
+    });
+  }, [onClose, animatedValue]);
+
+  // Interpolate animations
+  const translateY = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [height, 0],
+  });
+
+  const backdropOpacityAnim = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, backdropOpacity],
+  });
+
+  // Effect to handle modal visibility and animations
   useEffect(() => {
     if (isVisible) {
       setModalVisible(true);
-      Animated.spring(panY, {
-        toValue: 0,
+      Animated.spring(animatedValue, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
         useNativeDriver: true,
       }).start();
-    } else {
-      const timer = setTimeout(() => {
-        setModalVisible(false);
-      }, 300);
-      return () => clearTimeout(timer);
+    } else if (modalVisible) {
+      closeModal();
     }
-  }, [isVisible]);
+  }, [isVisible, modalVisible, animatedValue, closeModal]);
 
-  const resetPositionAnim = Animated.timing(panY, {
-    toValue: 0,
-    duration: 300,
-    useNativeDriver: true,
-  });
-
-  const closeAnim = Animated.timing(panY, {
-    toValue: height,
-    duration: 300,
-    useNativeDriver: true,
-  });
-
-  // Update the handleScroll function to be more reliable
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    // Only update isAtScrollTop if the offset has actually changed
-    if ((offsetY <= 0 && !isAtScrollTop) || (offsetY > 0 && isAtScrollTop)) {
+  // Optimized scroll handling
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
       setIsAtScrollTop(offsetY <= 0);
-    }
 
-    // Pass the scroll event to the parent component if needed
-    if (onScroll) {
-      onScroll(event);
-    }
-  };
-
-  // Adjust panResponder to work better with nested scrolling
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      // Only allow modal swiping if we're at the top of the scroll content
-      // or if the gesture is primarily horizontal
-      const isVerticalSwipe =
-        Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-
-      // For FlatList content, we rely on the isAtScrollTop state
-      if (
-        scrollable &&
-        !isAtScrollTop &&
-        isVerticalSwipe &&
-        gestureState.dy < 0
-      ) {
-        return false; // Moving up when not at top, let the FlatList handle it
-      }
-
-      // Allow swipe down when at top of scroll content
-      if (isVerticalSwipe && gestureState.dy > 0) {
-        return isAtScrollTop || gestureState.dy > 10; // Add a small threshold for pull-down
-      }
-
-      return isVerticalSwipe;
+      onScroll?.(event);
     },
-    onPanResponderMove: (_, gestureState) => {
-      if (gestureState.dy > 0) {
-        panY.setValue(gestureState.dy);
-      }
+    [onScroll],
+  );
+
+  // Optimized pan responder
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const isVerticalSwipe =
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+
+        // Refined swipe conditions
+        if (scrollable) {
+          if (!isAtScrollTop && isVerticalSwipe && gestureState.dy < 0) {
+            return false; // Prevent swipe when scrolling up
+          }
+
+          return isVerticalSwipe && (isAtScrollTop || gestureState.dy > 10);
+        }
+
+        return isVerticalSwipe;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          // Optionally map gesture to a fraction of the actual movement
+          const mappedValue = Math.min(gestureState.dy / height, 1);
+          animatedValue.setValue(1 - mappedValue);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > height * 0.3) {
+          closeModal();
+        } else {
+          Animated.spring(animatedValue, {
+            toValue: 1,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    }),
+  ).current;
+
+  // Memoized content wrapper
+  const ContentWrapper = useCallback(
+    (content: React.ReactNode) => {
+      if (!scrollable || !useScrollView) return content;
+
+      return (
+        <ScrollView
+          ref={scrollViewRef}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {content}
+        </ScrollView>
+      );
     },
-    onPanResponderRelease: (_, gestureState) => {
-      if (gestureState.dy > 100) {
-        closeAnim.start(() => handleCloseModal());
-      } else {
-        resetPositionAnim.start();
-      }
-    },
-  });
+    [scrollable, useScrollView, handleScroll],
+  );
 
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    onClose();
-  };
-
-  const backdropStyle = {
-    backgroundColor: `rgba(0, 0, 0, ${backdropOpacity})`,
-  };
-
-  const containerStyle = {
-    backgroundColor,
-    maxHeight,
-  };
-
-  if (!modalVisible) {
-    return null;
-  }
-
-  // Wrapper for the content based on whether it's scrollable
-  const contentWrapper = (content: React.ReactNode) => {
-    // If the content isn't scrollable or we're explicitly told not to use ScrollView,
-    // return the content directly. This is useful for FlatLists which are already scrollable.
-    if (!scrollable || !useScrollView) return content;
-
-    // Only wrap in ScrollView when explicitly asked to do so
-    return (
-      <ScrollView
-        ref={scrollViewRef}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {content}
-      </ScrollView>
-    );
-  };
+  // Bail out early if not visible
+  if (!modalVisible) return null;
 
   return (
     <Modal
-      visible={modalVisible}
+      visible={true}
       transparent={true}
-      animationType="slide"
-      onRequestClose={handleCloseModal}
+      animationType="fade"
+      onRequestClose={closeModal}
     >
-      <View style={styles.modalContainer}>
+      <Animated.View
+        style={[
+          styles.modalContainer,
+          {
+            backgroundColor: `rgba(0, 0, 0, ${backdropOpacityAnim})`,
+          },
+        ]}
+      >
         <TouchableOpacity
-          style={[styles.backdropTouchable, backdropStyle]}
+          style={styles.backdropTouchable}
           activeOpacity={1}
-          onPress={handleCloseModal}
+          onPress={closeModal}
         />
         <Animated.View
           style={[
             styles.drawerContainer,
-            containerStyle,
-            { transform: [{ translateY }] },
+            {
+              backgroundColor,
+              maxHeight,
+              transform: [{ translateY }],
+            },
             style,
           ]}
           {...(scrollable && !useScrollView ? {} : panResponder.panHandlers)}
@@ -199,9 +201,9 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
               <View style={styles.handle} />
             </View>
           )}
-          {contentWrapper(children)}
+          {ContentWrapper(children)}
         </Animated.View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 };
@@ -210,6 +212,11 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: "flex-end",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   backdropTouchable: {
     position: "absolute",
@@ -223,6 +230,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingBottom: 30,
     width: "100%",
+    position: "absolute",
+    bottom: 0,
   },
   handleContainer: {
     alignItems: "center",
@@ -244,4 +253,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SwipeableModal;
+export default React.memo(SwipeableModal);

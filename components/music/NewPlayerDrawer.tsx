@@ -11,6 +11,7 @@ import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import SwipeableModal from "../common/SwipeableModal";
 import AddToPlaylist from "./AddToPlaylist";
+import { toast } from "@/context/ToastContext";
 
 interface PlayerDrawerProps {
   isVisible: boolean;
@@ -41,6 +42,7 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
 
   const handleAddToQueue = () => {
     addToQueue(song);
+    toast("Added to Queue");
     onClose();
   };
 

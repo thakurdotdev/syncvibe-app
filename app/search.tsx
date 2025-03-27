@@ -1,3 +1,4 @@
+import { SongCard } from "@/components/music/MusicCards";
 import { usePlayer } from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import { searchSongs } from "@/utils/api/getSongs";
@@ -131,6 +132,7 @@ export default function SearchMusic() {
             onChangeText={handleSearch}
             returnKeyType="search"
             autoCapitalize="none"
+            autoFocus
           />
           {searchQuery ? (
             <TouchableOpacity
@@ -166,10 +168,10 @@ export default function SearchMusic() {
       ) : (
         <FlatList
           data={songs}
-          renderItem={renderSongItem}
+          renderItem={({ item }) => <SongCard song={item} />}
           keyExtractor={(item) => item.id}
           className="flex-1"
-          contentContainerStyle={{ paddingVertical: 8 }}
+          contentContainerStyle={{ padding: 15 }}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => (
             <View className="h-px bg-zinc-900 mx-4" />

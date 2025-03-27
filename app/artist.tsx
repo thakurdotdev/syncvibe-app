@@ -27,6 +27,7 @@ import Animated, {
   Extrapolate,
   Extrapolation,
 } from "react-native-reanimated";
+import { convertToHttps } from "@/utils/getHttpsUrls";
 
 interface ImageData {
   link: string;
@@ -207,7 +208,7 @@ export default function ArtistScreen() {
                 style={[styles.headerGradient, { height: headerHeight }]}
               >
                 <Image
-                  source={{ uri: bgUrl }}
+                  source={{ uri: convertToHttps(bgUrl) }}
                   style={[styles.backgroundImage, { height: headerHeight }]}
                   blurRadius={40}
                 />
@@ -215,7 +216,7 @@ export default function ArtistScreen() {
                   <View style={styles.headerContent}>
                     <Animated.View style={imageAnimatedStyle}>
                       <Image
-                        source={{ uri: bgUrl }}
+                        source={{ uri: convertToHttps(bgUrl) }}
                         style={[
                           styles.artistImage,
                           {

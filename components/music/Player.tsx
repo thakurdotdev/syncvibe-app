@@ -1,6 +1,7 @@
 import { SONG_URL } from "@/constants";
 import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
 import { Song } from "@/types/song";
+import { ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,7 +36,7 @@ import TrackPlayer, {
 } from "react-native-track-player";
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
-import PlayerDrawer from "./PlayerDrawer";
+import NewPlayerDrawer from "./NewPlayerDrawer";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
@@ -101,7 +102,7 @@ const RecommendationsTab = React.memo(
 );
 
 export default function Player() {
-  const { addToPlaylist, handleNextSong } = usePlayer();
+  const { addToQueue, handleNextSong, setPlayMode } = usePlayer();
   const { currentSong } = usePlayerState();
   const { playlist } = usePlaylist();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -133,7 +134,7 @@ export default function Player() {
   const miniPlayerOpacity = useSharedValue(1);
 
   const getRecommendations = useCallback(async () => {
-    if (!currentSong?.id) return;
+    if (!currentSong?.id || playlist.length > 2) return;
 
     try {
       setLoading(true);
@@ -141,9 +142,24 @@ export default function Player() {
         `${SONG_URL}/song/recommend?id=${currentSong.id}`,
       );
       if (response.data?.data) {
-        setRecommendations(response.data.data);
-        if (playlist.length < 2 && response.data.data.length > 0) {
-          addToPlaylist(response.data.data[0]);
+        const newRecommendations = response.data.data?.map(
+          ensureHttpsForSongUrls,
+        );
+        setRecommendations(newRecommendations);
+        if (playlist.length < 2 && newRecommendations.length > 0) {
+          const filteredRecommendations = newRecommendations.filter(
+            (rec: Song) =>
+              rec.id !== currentSong.id &&
+              !playlist.some((item) => item.id === rec.id),
+          );
+
+          if (filteredRecommendations.length > 0) {
+            const randomIndex = Math.floor(
+              Math.random() * filteredRecommendations.length,
+            );
+            const songToAdd = filteredRecommendations[randomIndex];
+            addToQueue(songToAdd);
+          }
         }
       }
     } catch (error) {
@@ -436,11 +452,10 @@ export default function Player() {
       {renderExpandedPlayer()}
       {renderMiniPlayer()}
       {playerDrawerOpen && (
-        <PlayerDrawer
-          isOpen={playerDrawerOpen}
+        <NewPlayerDrawer
+          isVisible={playerDrawerOpen}
           onClose={() => setPlayerDrawerOpen(false)}
-          closePlayer={closePlayer}
-          currentSong={currentSong}
+          song={currentSong}
         />
       )}
     </>
@@ -553,7 +568,7 @@ const styles = StyleSheet.create({
     bottom: -1,
     height: 3,
     width: "70%",
-    backgroundColor: "#1DB954",
+    backgroundColor: "#ffffff",
     borderRadius: 3,
   },
   contentContainer: {

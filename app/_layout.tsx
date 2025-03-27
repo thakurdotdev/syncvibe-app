@@ -9,9 +9,9 @@ import IncomingCallModal from "@/components/video/IncomingCall";
 import { GroupMusicProvider } from "@/context/GroupMusicContext";
 import { MusicProvider } from "@/context/MusicContext";
 import { ChatProvider } from "@/context/SocketContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { UserProvider } from "@/context/UserContext";
 import { useVideoCall, VideoCallProvider } from "@/context/VideoCallContext";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import TrackPlayer from "react-native-track-player";
 import "../global.css";
 import { PlaybackService } from "../service";
@@ -21,19 +21,21 @@ TrackPlayer.registerPlaybackService(() => PlaybackService);
 function RootLayout() {
   return (
     <ErrorBoundary>
-      <UserProvider>
-        <ChatProvider>
-          <VideoCallProvider>
-            <MusicProvider>
-              <GroupMusicProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <RootLayoutNav />
-                </GestureHandlerRootView>
-              </GroupMusicProvider>
-            </MusicProvider>
-          </VideoCallProvider>
-        </ChatProvider>
-      </UserProvider>
+      <ToastProvider>
+        <UserProvider>
+          <ChatProvider>
+            <VideoCallProvider>
+              <MusicProvider>
+                <GroupMusicProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </GroupMusicProvider>
+              </MusicProvider>
+            </VideoCallProvider>
+          </ChatProvider>
+        </UserProvider>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }
