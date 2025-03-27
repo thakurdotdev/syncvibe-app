@@ -1,13 +1,17 @@
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { usePlayer, usePlayerState } from "@/context/MusicContext";
 import { Song } from "@/types/song";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import {
-  ForwardIcon,
-  SkipBackIcon,
-  SkipForwardIcon,
-} from "lucide-react-native";
+  ensureHttpsForAlbumUrls,
+  ensureHttpsForArtistUrls,
+  ensureHttpsForPlaylistUrls,
+  ensureHttpsForSongUrls,
+} from "@/utils/getHttpsUrls";
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { SkipBackIcon, SkipForwardIcon } from "lucide-react-native";
 import {
   memo,
   default as React,
@@ -26,9 +30,6 @@ import TrackPlayer, {
   usePlaybackState,
   useProgress,
 } from "react-native-track-player";
-import PlayerDrawer from "./PlayerDrawer";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import NewPlayerDrawer from "./NewPlayerDrawer";
 
 interface SongCardProps {
@@ -92,23 +93,26 @@ const CardContainer = ({
     {children}
   </Pressable>
 );
-
 export const SongCard = memo(({ song }: SongCardProps) => {
   const { handlePlayPauseSong, playSong } = usePlayer();
   const { currentSong, isPlaying } = usePlayerState();
 
-  const isCurrentSong = currentSong?.id === song.id;
+  // Apply HTTPS conversion to the song object
+  const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
+
+  const isCurrentSong = currentSong?.id === securedSong.id;
+
   return (
     <Pressable
       onPress={() => {
         if (isCurrentSong) {
           handlePlayPauseSong();
         } else {
-          playSong(song);
+          playSong(securedSong);
         }
       }}
       className="flex-row items-center rounded-xl mb-2 overflow-hidden"
-      key={song.id}
+      key={securedSong.id}
     >
       <BlurView intensity={20} tint="dark" className="absolute inset-0" />
       <LinearGradient
@@ -116,16 +120,16 @@ export const SongCard = memo(({ song }: SongCardProps) => {
         className="w-full flex-row border border-gray-800/30 rounded-xl p-2"
       >
         <Image
-          source={{ uri: song.image[0]?.link }}
+          source={{ uri: securedSong.image[0]?.link }}
           className="w-12 h-12 rounded-md"
           alt="Song cover"
         />
         <View className="flex-1 px-4 justify-center">
           <Text className="text-white font-semibold" numberOfLines={1}>
-            {song.name}
+            {securedSong.name}
           </Text>
           <Text className="text-gray-400 text-sm" numberOfLines={1}>
-            {song.subtitle || song.artist_map?.artists?.[0]?.name}
+            {securedSong.subtitle || securedSong.artist_map?.artists?.[0]?.name}
           </Text>
         </View>
         {isCurrentSong && (
@@ -165,8 +169,12 @@ export const AlbumCard = memo(({ album }: AlbumCardProps) => {
 
   if (!album) return null;
 
-  const name = album.name || album.title || "";
-  const imageUrl = album.image?.[2]?.link || album.image?.[2]?.url;
+  // Apply HTTPS conversion to the album object
+  const securedAlbum = useMemo(() => ensureHttpsForAlbumUrls(album), [album]);
+
+  const name = securedAlbum.name || securedAlbum.title || "";
+  const imageUrl =
+    securedAlbum.image?.[2]?.link || securedAlbum.image?.[2]?.url;
 
   return (
     <CardContainer onPress={handlePress}>
@@ -200,26 +208,33 @@ export const PlaylistCard = memo(
 
     if (!playlist?.name || !playlist?.image) return null;
 
-    const subtitle = playlist.subtitle || playlist.description || "Playlist";
-    const imageUrl = Array.isArray(playlist.image)
-      ? playlist.image[2]?.link
-      : playlist.image;
+    // Apply HTTPS conversion to the playlist object
+    const securedPlaylist = useMemo(
+      () => ensureHttpsForPlaylistUrls(playlist),
+      [playlist],
+    );
+
+    const subtitle =
+      securedPlaylist.subtitle || securedPlaylist.description || "Playlist";
+    const imageUrl = Array.isArray(securedPlaylist.image)
+      ? securedPlaylist.image[2]?.link
+      : securedPlaylist.image;
 
     return (
       <CardContainer
         onPress={handlePress}
-        key={playlist.id}
+        key={securedPlaylist.id}
         width={isUser ? "100%" : 160}
       >
         <View style={{ padding: 12, gap: 8 }}>
-          <CardImage uri={imageUrl} alt={`Playlist: ${playlist.name}`} />
+          <CardImage uri={imageUrl} alt={`Playlist: ${securedPlaylist.name}`} />
           <View style={{ gap: 4, paddingHorizontal: 4 }}>
             <Text
               style={{ color: "white", fontWeight: "600", fontSize: 14 }}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {playlist.name}
+              {securedPlaylist.name}
             </Text>
             <Text
               style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
@@ -241,17 +256,22 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   const isCurrentSong = currentSong?.id === song.id;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
-  const imageUrl = song.image?.[2]?.link || song.image?.[1]?.link;
+  // Apply HTTPS conversion to the song object
+  const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
+
+  const imageUrl = securedSong.image?.[2]?.link || securedSong.image?.[1]?.link;
   const artistName =
-    song.subtitle || song.artist_map?.artists?.[0]?.name || "Unknown Artist";
+    securedSong.subtitle ||
+    securedSong.artist_map?.artists?.[0]?.name ||
+    "Unknown Artist";
 
   const handlePress = useCallback(() => {
     if (isCurrentSong) {
       handlePlayPauseSong();
     } else {
-      playSong(song);
+      playSong(securedSong);
     }
-  }, [isCurrentSong, handlePlayPauseSong, playSong, song]);
+  }, [isCurrentSong, handlePlayPauseSong, playSong, securedSong]);
 
   const handleLongPress = useCallback(() => {
     setPlayerDrawerOpen(true);
@@ -265,7 +285,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
         onLongPress={handleLongPress}
       >
         <View style={{ padding: 12, gap: 8 }}>
-          <CardImage uri={imageUrl} alt={`Song: ${song.name}`} />
+          <CardImage uri={imageUrl} alt={`Song: ${securedSong.name}`} />
           <View
             style={{
               position: "absolute",
@@ -325,7 +345,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {song.name}
+              {securedSong.name}
             </Text>
             <Text
               style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
@@ -342,7 +362,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
         <NewPlayerDrawer
           isVisible={playerDrawerOpen}
           onClose={() => setPlayerDrawerOpen(false)}
-          song={song}
+          song={securedSong}
         />
       )}
     </>
@@ -352,22 +372,31 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
 export const ArtistCard = memo(({ artist }: ArtistCardProps) => {
   if (!artist?.name || !artist?.image) return null;
 
+  // Apply HTTPS conversion to the artist object
+  const securedArtist = useMemo(
+    () => ensureHttpsForArtistUrls(artist),
+    [artist],
+  );
+
   const imageUrl = useMemo(
-    () => (Array.isArray(artist.image) ? artist.image[2]?.link : artist.image),
-    [artist.image],
+    () =>
+      Array.isArray(securedArtist.image)
+        ? securedArtist.image[2]?.link
+        : securedArtist.image,
+    [securedArtist.image],
   );
 
   const handlePress = useCallback(() => {
     router.push({
       pathname: "/artist",
-      params: { id: artist.id },
+      params: { id: securedArtist.id },
     });
-  }, [artist?.id]);
+  }, [securedArtist?.id]);
 
   return (
     <CardContainer onPress={handlePress}>
       <View style={{ padding: 12, gap: 8 }}>
-        <CardImage uri={imageUrl} alt={`Artist: ${artist.name}`} />
+        <CardImage uri={imageUrl} alt={`Artist: ${securedArtist.name}`} />
         <Text
           style={{
             color: "white",
@@ -378,7 +407,7 @@ export const ArtistCard = memo(({ artist }: ArtistCardProps) => {
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {artist.name}
+          {securedArtist.name}
         </Text>
       </View>
     </CardContainer>

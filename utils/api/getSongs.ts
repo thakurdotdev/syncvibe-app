@@ -1,11 +1,21 @@
 import { SONG_URL } from "@/constants";
+import { Song } from "@/types/song";
 import axios from "axios";
+import { ensureHttpsForSongUrls } from "../getHttpsUrls";
 
-export const searchSongs = async (query: string) => {
+/**
+ * Searches for songs based on a query string
+ * @param query - Search term
+ * @returns Array of songs
+ */
+export const searchSongs = async (query: string): Promise<Song[]> => {
   try {
-    const response = await axios.get(`${SONG_URL}/search/songs?q=${query}`);
-    return response.data?.data?.results || [];
-  } catch (error) {
+    const { data } = await axios.get(`${SONG_URL}/search/songs`, {
+      params: { q: query },
+    });
+
+    return (data?.data?.results || []).map(ensureHttpsForSongUrls);
+  } catch {
     return [];
   }
 };

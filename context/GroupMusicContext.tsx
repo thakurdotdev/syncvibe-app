@@ -1,5 +1,5 @@
+import { searchSongs } from "@/utils/api/getSongs";
 import { useDebounce } from "@/utils/hooks/useDebounce";
-import axios from "axios";
 import {
   createContext,
   ReactNode,
@@ -19,7 +19,6 @@ import { Song } from "../types/song";
 import { setupPlayer } from "../utils/playerSetup";
 import { useChat } from "./SocketContext";
 import { useUser } from "./UserContext";
-import { searchSongs } from "@/utils/api/getSongs";
 
 interface GroupMember {
   groupId: string;
