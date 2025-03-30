@@ -15,6 +15,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import TrackPlayer, {
   Event,
@@ -43,6 +44,30 @@ const PlayerStateContext = createContext<PlaybackContextValue | undefined>(
 const PlaylistContext = createContext<PlaylistContextValue | undefined>(
   undefined,
 );
+
+// Add the SleepTimer Context
+const SleepTimerContext = createContext<{
+  setSleepTimer: (minutes?: number, songs?: number) => void;
+  clearSleepTimer: () => void;
+  timeRemaining: number;
+  songsRemaining: number;
+  isActive: boolean;
+}>({
+  setSleepTimer: () => {},
+  clearSleepTimer: () => {},
+  timeRemaining: 0,
+  songsRemaining: 0,
+  isActive: false,
+});
+
+// Create a hook to use the SleepTimer context
+export const useSleepTimer = () => {
+  const context = useContext(SleepTimerContext);
+  if (!context) {
+    throw new Error("useSleepTimer must be used within the MusicProvider");
+  }
+  return context;
+};
 
 const playbackReducer = (
   state: PlaybackState,
@@ -138,6 +163,25 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     playMode: PLAY_MODES.REPEAT_OFF,
   });
 
+  // Add sleep timer state
+  const [sleepTimer, setSleepTimerState] = useState<{
+    timeoutId: NodeJS.Timeout | null;
+    endTime: number | null;
+    minutesTotal: number;
+    timeRemaining: number;
+    songsRemaining: number;
+    songsTotal: number;
+    isActive: boolean;
+  }>({
+    timeoutId: null,
+    endTime: null,
+    minutesTotal: 0,
+    timeRemaining: 0,
+    songsRemaining: 0,
+    songsTotal: 0,
+    isActive: false,
+  });
+
   const [playbackState, playbackDispatch] = useReducer(playbackReducer, {
     currentSong: null,
     isPlaying: false,
@@ -197,6 +241,9 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     };
   }, []);
 
+  // Add a reference to track songs played for the song-based sleep timer
+  const songCountRef = useRef(0);
+
   useTrackPlayerEvents(
     [
       Event.PlaybackState,
@@ -214,6 +261,21 @@ export function MusicProvider({ children }: PlayerProviderProps) {
       try {
         switch (event.type) {
           case Event.PlaybackActiveTrackChanged:
+            // Increment song count for sleep timer
+            if (event.index !== undefined && sleepTimer.songsRemaining > 0) {
+              songCountRef.current += 1;
+              setSleepTimerState((prev) => ({
+                ...prev,
+                songsRemaining: prev.songsTotal - songCountRef.current,
+              }));
+
+              // Check if we've reached the song limit
+              if (songCountRef.current >= sleepTimer.songsTotal) {
+                controls.stopSong();
+                clearSleepTimerState();
+              }
+            }
+
             if (event.index !== undefined) {
               const track = await TrackPlayer.getTrack(event.index);
               if (track) {
@@ -296,6 +358,47 @@ export function MusicProvider({ children }: PlayerProviderProps) {
       }
     },
   );
+
+  const clearSleepTimerState = () => {
+    if (sleepTimer.timeoutId) {
+      clearTimeout(sleepTimer.timeoutId);
+    }
+    songCountRef.current = 0;
+    setSleepTimerState({
+      timeoutId: null,
+      endTime: null,
+      minutesTotal: 0,
+      timeRemaining: 0,
+      songsRemaining: 0,
+      songsTotal: 0,
+      isActive: false,
+    });
+  };
+
+  useEffect(() => {
+    if (!sleepTimer.isActive || !sleepTimer.endTime) return;
+
+    const intervalId = setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.max(
+        0,
+        Math.floor((sleepTimer.endTime! - now) / 1000),
+      );
+
+      setSleepTimerState((prev) => ({
+        ...prev,
+        timeRemaining: remaining,
+      }));
+
+      // Check if time has expired
+      if (remaining <= 0 && sleepTimer.isActive) {
+        controls.stopSong();
+        clearSleepTimerState();
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [sleepTimer.isActive, sleepTimer.endTime]);
 
   // Player controls
   const controls: PlayerControls = useMemo(
@@ -487,8 +590,63 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           console.error("Error handling previous song:", error);
         }
       },
+
+      setSleepTimer: (minutes = 0, songs = 0) => {
+        if (sleepTimer.timeoutId) {
+          clearTimeout(sleepTimer.timeoutId);
+        }
+
+        // Reset song counter
+        songCountRef.current = 0;
+
+        // If both are 0, just clear the timer
+        if (minutes === 0 && songs === 0) {
+          clearSleepTimerState();
+          return;
+        }
+
+        // Set up the time-based timer
+        if (minutes > 0) {
+          const timeoutMs = minutes * 60 * 1000;
+          const endTime = Date.now() + timeoutMs;
+
+          const timeoutId = setTimeout(() => {
+            controls.stopSong();
+            clearSleepTimerState();
+          }, timeoutMs);
+
+          setSleepTimerState({
+            timeoutId,
+            endTime,
+            minutesTotal: minutes,
+            timeRemaining: minutes * 60,
+            songsRemaining: 0,
+            songsTotal: 0,
+            isActive: true,
+          });
+        }
+        // Set up the song-based timer
+        else if (songs > 0) {
+          setSleepTimerState({
+            timeoutId: null,
+            endTime: null,
+            minutesTotal: 0,
+            timeRemaining: 0,
+            songsRemaining: songs,
+            songsTotal: songs,
+            isActive: true,
+          });
+        }
+      },
+
+      clearSleepTimer: clearSleepTimerState,
     }),
-    [playbackState.currentSong, playlistState.playlist, getAudioUrl],
+    [
+      playbackState.currentSong,
+      playlistState.playlist,
+      getAudioUrl,
+      sleepTimer,
+    ],
   );
 
   const playbackValue: PlaybackContextValue = {
@@ -537,11 +695,23 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     },
   };
 
+  // Create sleep timer value object
+  const sleepTimerValue = {
+    setSleepTimer: (minutes?: number, songs?: number) =>
+      controls.setSleepTimer(minutes, songs),
+    clearSleepTimer: controls.clearSleepTimer,
+    timeRemaining: sleepTimer.timeRemaining,
+    songsRemaining: sleepTimer.songsRemaining,
+    isActive: sleepTimer.isActive,
+  };
+
   return (
     <PlayerControlsContext.Provider value={controls}>
       <PlayerStateContext.Provider value={playbackValue}>
         <PlaylistContext.Provider value={playlistValue}>
-          {children}
+          <SleepTimerContext.Provider value={sleepTimerValue}>
+            {children}
+          </SleepTimerContext.Provider>
         </PlaylistContext.Provider>
       </PlayerStateContext.Provider>
     </PlayerControlsContext.Provider>

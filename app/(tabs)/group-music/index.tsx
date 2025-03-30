@@ -41,7 +41,6 @@ export default function GroupMusicMobile() {
     handlePlayPause,
   } = useGroupMusic();
   const { user } = useUser();
-
   const [newGroupName, setNewGroupName] = useState("");
   const [groupId, setGroupId] = useState("");
   const [tabIndex, setTabIndex] = useState(0);

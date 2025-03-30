@@ -31,6 +31,7 @@ import TrackPlayer, {
   useProgress,
 } from "react-native-track-player";
 import NewPlayerDrawer from "./NewPlayerDrawer";
+import * as Haptics from "expo-haptics";
 
 interface SongCardProps {
   song: Song;
@@ -119,6 +120,7 @@ export const SongCard = memo(({ song }: SongCardProps) => {
 
   const handleLongPress = () => {
     setPlayerDrawerOpen(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   return (
@@ -201,9 +203,9 @@ export const AlbumCard = memo(({ album }: AlbumCardProps) => {
   const handlePress = useCallback(() => {
     router.push({
       pathname: "/albums",
-      params: { id: album.id },
+      params: { id: album.album_id || album?.id },
     });
-  }, [album?.id]);
+  }, [album.album_id || album?.id]);
 
   if (!album) return null;
 
@@ -297,7 +299,6 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   const playbackState = usePlaybackState();
   const isPlaying = playbackState.state === State.Playing;
 
-  // Apply HTTPS conversion to the song object
   const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
 
   const imageUrl = securedSong.image?.[2]?.link || securedSong.image?.[1]?.link;
@@ -319,6 +320,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   };
 
   const handleLongPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPlayerDrawerOpen(true);
   };
 
@@ -332,7 +334,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
         <BlurView intensity={20} tint="dark" className="absolute inset-0" />
         <LinearGradient
           colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
-          className="w-full flex-row border border-gray-800/30 rounded-xl p-2"
+          className="w-full flex-col border border-gray-800/30 rounded-xl p-2"
         >
           <CardImage uri={imageUrl} alt={`Song: ${securedSong.name}`} />
           <View
@@ -388,7 +390,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
             </View>
           )}
 
-          <View style={{ paddingHorizontal: 4 }}>
+          <View className="pt-1">
             <Text
               style={{ color: "white", fontWeight: "500", fontSize: 14 }}
               numberOfLines={1}

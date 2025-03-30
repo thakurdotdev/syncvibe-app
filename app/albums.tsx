@@ -2,24 +2,23 @@ import { SongCard } from "@/components/music/MusicCards";
 import { SONG_URL } from "@/constants";
 import { usePlayer } from "@/context/MusicContext";
 import { Song } from "@/types/song";
+import { convertToHttps, ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { useLocalSearchParams } from "expo-router";
-import { Music2Icon } from "lucide-react-native";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  Text,
-  View,
-  StyleSheet,
-  useWindowDimensions,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { Music2Icon } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -27,7 +26,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { convertToHttps } from "@/utils/getHttpsUrls";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface AlbumData {
   id: string;
@@ -67,32 +66,6 @@ export default function AlbumScreen() {
       fetchAlbumData();
     }
   }, [id, fetchAlbumData]);
-
-  const handlePlayAll = useCallback(() => {
-    if (albumData?.songs?.length) {
-      const songsWithAlbumInfo = albumData.songs.map((song) => ({
-        ...song,
-        isAlbum: true,
-        albumId: albumData.id,
-      }));
-      addToPlaylist(songsWithAlbumInfo);
-      playSong(songsWithAlbumInfo[0]);
-    }
-  }, [albumData, addToPlaylist, playSong]);
-
-  const handleShuffle = useCallback(() => {
-    if (albumData?.songs?.length) {
-      const shuffledSongs = [...albumData.songs]
-        .sort(() => Math.random() - 0.5)
-        .map((song) => ({
-          ...song,
-          isAlbum: true,
-          albumId: albumData.id,
-        }));
-      addToPlaylist(shuffledSongs);
-      playSong(shuffledSongs[0]);
-    }
-  }, [albumData, addToPlaylist, playSong]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -160,10 +133,41 @@ export default function AlbumScreen() {
     };
   });
 
+  const newSongs = useMemo(() => {
+    if (!albumData?.songs) return [];
+    return albumData?.songs?.map(ensureHttpsForSongUrls) || [];
+  }, [albumData?.songs, ensureHttpsForSongUrls]);
+
+  const handlePlayAll = () => {
+    if (newSongs?.length) {
+      const songsWithPlaylistInfo = newSongs.map((song) => ({
+        ...song,
+        isPlaylist: true,
+        playlistId: albumData?.id,
+      }));
+      addToPlaylist(songsWithPlaylistInfo);
+      playSong(songsWithPlaylistInfo[0]);
+    }
+  };
+
+  const handleShuffle = () => {
+    if (newSongs?.length) {
+      const shuffledSongs = [...newSongs]
+        .sort(() => Math.random() - 0.5)
+        .map((song) => ({
+          ...song,
+          isPlaylist: true,
+          playlistId: albumData?.id,
+        }));
+      addToPlaylist(shuffledSongs);
+      playSong(shuffledSongs[0]);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1DB954" />
+        <ActivityIndicator size="large" color="white" />
         <Text style={styles.loadingText}>Loading album...</Text>
       </SafeAreaView>
     );
@@ -184,7 +188,7 @@ export default function AlbumScreen() {
   return (
     <View style={styles.container}>
       <Animated.FlatList
-        data={albumData.songs}
+        data={newSongs}
         renderItem={({ item, index }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
@@ -272,8 +276,10 @@ export default function AlbumScreen() {
                 onPress={handlePlayAll}
                 disabled={!albumData?.songs?.length}
               >
-                <Ionicons name="play" size={22} color="white" />
-                <Text style={styles.buttonText}>Play All</Text>
+                <Ionicons name="play" size={22} color="black" />
+                <Text style={styles.buttonText} className="text-black">
+                  Play All
+                </Text>
               </Pressable>
 
               <Pressable
@@ -282,7 +288,9 @@ export default function AlbumScreen() {
                 disabled={!albumData?.songs?.length}
               >
                 <Ionicons name="shuffle" size={22} color="white" />
-                <Text style={styles.buttonText}>Shuffle</Text>
+                <Text style={styles.buttonText} className="text-white">
+                  Shuffle
+                </Text>
               </Pressable>
             </View>
 
@@ -430,13 +438,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   playButton: {
-    backgroundColor: "#1DB954", // Spotify green
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
   },
   shuffleButton: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   buttonText: {
-    color: "white",
+    // color: "white",
     fontSize: 16,
     fontWeight: "600",
   },

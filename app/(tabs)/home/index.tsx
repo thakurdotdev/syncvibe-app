@@ -45,15 +45,13 @@ export default function HomeScreen() {
 
   const scrollY = new Animated.Value(0);
 
-  // Calculated animations for header background gradient
-  const headerHeight = 350; // Gradient header height
+  const headerHeight = 350;
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, headerHeight * 0.6, headerHeight],
     outputRange: [1, 0.5, 0],
     extrapolate: "clamp",
   });
 
-  // Memoize API requests to prevent unnecessary renders
   const fetchData = useCallback(async () => {
     try {
       setError("");
@@ -85,7 +83,7 @@ export default function HomeScreen() {
     }
   }, [selectedLanguages]);
 
-  const getRecommendations = useCallback(async () => {
+  const getRecommendations = async () => {
     try {
       if (!user?.userid) return;
 
@@ -97,11 +95,12 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Error fetching recommendations:", error);
     }
-  }, [user?.userid]);
+  };
 
   useEffect(() => {
+    if (!user?.userid) return;
     getRecommendations();
-  }, [getRecommendations]);
+  }, [user?.userid]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -128,7 +127,7 @@ export default function HomeScreen() {
         />
         <ActivityIndicator size="large" color="#1DB954" />
         <Text className="text-white font-medium mt-4">
-          Loading your music...
+          Syncing your vibe with SyncVibe...
         </Text>
       </SafeAreaView>
     );

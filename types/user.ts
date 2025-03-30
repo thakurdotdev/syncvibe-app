@@ -12,4 +12,5 @@ export interface User {
   lastPasskeyLogin?: string;
   passKeyChallenge?: string;
   challengeExpiry?: string;
+  expoPushToken?: string;
 }

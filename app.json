@@ -20,6 +20,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.thakurdotdev.syncvibe",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
@@ -61,7 +62,13 @@
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default",
+          "enableBackgroundRemoteNotifications": true
+        }
+      ],
       [
         "expo-camera",
         {

@@ -1,4 +1,9 @@
-import { usePlayer } from "@/context/MusicContext";
+import {
+  usePlayer,
+  usePlayerState,
+  usePlaylist,
+  useSleepTimer,
+} from "@/context/MusicContext";
 import { Song } from "@/types/song";
 import {
   Feather,
@@ -12,6 +17,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import SwipeableModal from "../common/SwipeableModal";
 import AddToPlaylist from "./AddToPlaylist";
 import { toast } from "@/context/ToastContext";
+import SleepTimerModal from "../SleepTimerModal";
 
 interface PlayerDrawerProps {
   isVisible: boolean;
@@ -25,7 +31,11 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
   song,
 }) => {
   const [playlistModal, setPlaylistModal] = useState(false);
-  const { addToQueue } = usePlayer();
+  const { addToQueue, removeFromQueue } = usePlayer();
+  const { currentSong } = usePlayerState();
+  const { playlist } = usePlaylist();
+  const [sleepTimerModal, setSleepTimerModal] = useState(false);
+  const { isActive } = useSleepTimer();
 
   const artistName = song.artist_map?.artists || [
     { name: "Unknown Artist", id: null },
@@ -40,17 +50,23 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
     });
   };
 
-  const handleAddToQueue = () => {
-    addToQueue(song);
-    toast("Added to Queue");
-    onClose();
-  };
-
   const paths = {
     artist: "/artist",
     albums: "/albums",
   };
 
+  const isSongInQueue = playlist.some((item) => item.id === song.id);
+
+  const handleAddToQueue = () => {
+    if (isSongInQueue) {
+      removeFromQueue(song.id);
+      toast("Removed from Queue");
+    } else {
+      addToQueue(song);
+      toast("Added to Queue");
+    }
+    onClose();
+  };
   return (
     <>
       <SwipeableModal isVisible={isVisible} onClose={onClose}>
@@ -80,12 +96,19 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
         {/* Options */}
         <View style={styles.optionsContainer}>
           {/* Add to Queue */}
-          <TouchableOpacity style={styles.optionRow} onPress={handleAddToQueue}>
-            <View style={styles.iconContainer}>
-              <MaterialIcons name="queue-music" size={26} color="#FFFFFF" />
-            </View>
-            <Text style={styles.optionText}>Add to Queue</Text>
-          </TouchableOpacity>
+          {currentSong?.id !== song.id && (
+            <TouchableOpacity
+              style={styles.optionRow}
+              onPress={handleAddToQueue}
+            >
+              <View style={styles.iconContainer}>
+                <MaterialIcons name="queue-music" size={26} color="#FFFFFF" />
+              </View>
+              <Text style={styles.optionText}>
+                {isSongInQueue ? "Remove from Queue" : "Add to Queue"}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Add to Playlist */}
           <TouchableOpacity
@@ -96,14 +119,6 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
               <MaterialIcons name="playlist-add" size={26} color="#FFFFFF" />
             </View>
             <Text style={styles.optionText}>Add to Playlist</Text>
-          </TouchableOpacity>
-
-          {/* Add to Favorites */}
-          <TouchableOpacity style={styles.optionRow}>
-            <View style={styles.iconContainer}>
-              <MaterialIcons name="favorite-border" size={26} color="#FFFFFF" />
-            </View>
-            <Text style={styles.optionText}>Add to Favorites</Text>
           </TouchableOpacity>
 
           {/* View Artist */}
@@ -132,24 +147,29 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
             </TouchableOpacity>
           )}
 
-          {/* Share */}
-          <TouchableOpacity style={styles.optionRow}>
-            <View style={styles.iconContainer}>
-              <Feather name="share-2" size={24} color="#FFFFFF" />
-            </View>
-            <Text style={styles.optionText}>Share</Text>
-          </TouchableOpacity>
-
           {/* Divider */}
-          <View style={styles.divider} />
 
           {/* Sleep Timer */}
-          <TouchableOpacity style={styles.optionRow}>
-            <View style={styles.iconContainer}>
-              <FontAwesome name="clock-o" size={24} color="#FFFFFF" />
-            </View>
-            <Text style={styles.optionText}>Sleep Timer</Text>
-          </TouchableOpacity>
+          {currentSong && (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.optionRow}
+                onPress={() => setSleepTimerModal(true)}
+              >
+                <View style={styles.iconContainer}>
+                  <FontAwesome
+                    name="clock-o"
+                    size={24}
+                    color={isActive ? "#4ADE80" : "#FFFFFF"}
+                  />
+                </View>
+                <Text style={styles.optionText}>
+                  {isActive ? "Cancel Sleep Timer" : "Set Sleep Timer"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </SwipeableModal>
       {playlistModal && (
@@ -157,6 +177,12 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
           dialogOpen={playlistModal}
           setDialogOpen={() => setPlaylistModal(false)}
           song={song}
+        />
+      )}
+      {sleepTimerModal && (
+        <SleepTimerModal
+          isVisible={sleepTimerModal}
+          onClose={() => setSleepTimerModal(false)}
         />
       )}
     </>

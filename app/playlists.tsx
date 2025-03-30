@@ -26,7 +26,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { convertToHttps } from "@/utils/getHttpsUrls";
+import { convertToHttps, ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
 
 interface PlaylistData {
   id: string;
@@ -64,32 +64,6 @@ export default function PlaylistScreen() {
       fetchPlaylistData();
     }
   }, [id, fetchPlaylistData]);
-
-  const handlePlayAll = useCallback(() => {
-    if (playlistData?.songs?.length) {
-      const songsWithPlaylistInfo = playlistData.songs.map((song) => ({
-        ...song,
-        isPlaylist: true,
-        playlistId: playlistData.id,
-      }));
-      addToPlaylist(songsWithPlaylistInfo);
-      playSong(songsWithPlaylistInfo[0]);
-    }
-  }, [playlistData, addToPlaylist, playSong]);
-
-  const handleShuffle = useCallback(() => {
-    if (playlistData?.songs?.length) {
-      const shuffledSongs = [...playlistData.songs]
-        .sort(() => Math.random() - 0.5)
-        .map((song) => ({
-          ...song,
-          isPlaylist: true,
-          playlistId: playlistData.id,
-        }));
-      addToPlaylist(shuffledSongs);
-      playSong(shuffledSongs[0]);
-    }
-  }, [playlistData, addToPlaylist, playSong]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -154,11 +128,50 @@ export default function PlaylistScreen() {
     };
   });
 
+  const newSongs = useMemo(() => {
+    if (!playlistData?.songs) return [];
+    return playlistData?.songs?.map(ensureHttpsForSongUrls) || [];
+  }, [playlistData?.songs, ensureHttpsForSongUrls]);
+
+  const handlePlayAll = () => {
+    if (newSongs?.length) {
+      const songsWithPlaylistInfo = newSongs.map((song) => ({
+        ...song,
+        isPlaylist: true,
+        playlistId: playlistData?.id,
+      }));
+      addToPlaylist(songsWithPlaylistInfo);
+      playSong(songsWithPlaylistInfo[0]);
+    }
+  };
+
+  const handleShuffle = () => {
+    if (newSongs?.length) {
+      const shuffledSongs = [...newSongs]
+        .sort(() => Math.random() - 0.5)
+        .map((song) => ({
+          ...song,
+          isPlaylist: true,
+          playlistId: playlistData?.id,
+        }));
+      addToPlaylist(shuffledSongs);
+      playSong(shuffledSongs[0]);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1DB954" />
+        <ActivityIndicator size="large" color="white" />
         <Text style={styles.loadingText}>Loading playlist...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!playlistData) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Playlist not found</Text>
       </SafeAreaView>
     );
   }
@@ -166,8 +179,8 @@ export default function PlaylistScreen() {
   return (
     <View style={styles.container}>
       <Animated.FlatList
-        data={playlistData?.songs}
-        renderItem={({ item, index }) => <SongCard song={item} />}
+        data={newSongs}
+        renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -233,8 +246,10 @@ export default function PlaylistScreen() {
                 onPress={handlePlayAll}
                 disabled={!playlistData?.songs?.length}
               >
-                <Ionicons name="play" size={22} color="white" />
-                <Text style={styles.buttonText}>Play All</Text>
+                <Ionicons name="play" size={22} color="black" />
+                <Text style={styles.buttonText} className="text-black">
+                  Play All
+                </Text>
               </Pressable>
 
               <Pressable
@@ -243,7 +258,9 @@ export default function PlaylistScreen() {
                 disabled={!playlistData?.songs?.length}
               >
                 <Ionicons name="shuffle" size={22} color="white" />
-                <Text style={styles.buttonText}>Shuffle</Text>
+                <Text style={styles.buttonText} className="text-white">
+                  Shuffle
+                </Text>
               </Pressable>
             </View>
 
@@ -359,13 +376,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   playButton: {
-    backgroundColor: "#1DB954", // Spotify green
+    backgroundColor: "white", // Spotify green
   },
   shuffleButton: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   buttonText: {
-    color: "white",
+    // color: "white",
     fontSize: 16,
     fontWeight: "600",
   },

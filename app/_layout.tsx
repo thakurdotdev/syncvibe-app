@@ -15,6 +15,16 @@ import { useVideoCall, VideoCallProvider } from "@/context/VideoCallContext";
 import TrackPlayer from "react-native-track-player";
 import "../global.css";
 import { PlaybackService } from "../service";
+import * as Notifications from "expo-notifications";
+import { NotificationProvider } from "@/context/NotificationContext";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 TrackPlayer.registerPlaybackService(() => PlaybackService);
 
@@ -25,13 +35,15 @@ function RootLayout() {
         <UserProvider>
           <ChatProvider>
             <VideoCallProvider>
-              <MusicProvider>
-                <GroupMusicProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </GroupMusicProvider>
-              </MusicProvider>
+              <NotificationProvider>
+                <MusicProvider>
+                  <GroupMusicProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <RootLayoutNav />
+                    </GestureHandlerRootView>
+                  </GroupMusicProvider>
+                </MusicProvider>
+              </NotificationProvider>
             </VideoCallProvider>
           </ChatProvider>
         </UserProvider>

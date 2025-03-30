@@ -50,6 +50,8 @@ export interface PlayerControls {
   setPlayMode: (mode: PlayMode) => void;
   clearQueue: () => void;
   removeFromQueue: (songId: string) => void;
+  setSleepTimer: (minutes?: number, songs?: number) => void;
+  clearSleepTimer: () => void;
 }
 
 export interface PlaylistContextValue extends PlaylistState {

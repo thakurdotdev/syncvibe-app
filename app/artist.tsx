@@ -2,32 +2,30 @@ import { SongCard } from "@/components/music/MusicCards";
 import { SONG_URL } from "@/constants";
 import { usePlayer } from "@/context/MusicContext";
 import { Song } from "@/types/song";
+import { convertToHttps, ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  Text,
-  View,
-  StyleSheet,
-  useWindowDimensions,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import Animated, {
-  useSharedValue,
+  Extrapolation,
+  interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
-  interpolate,
-  Extrapolate,
-  Extrapolation,
+  useSharedValue,
 } from "react-native-reanimated";
-import { convertToHttps } from "@/utils/getHttpsUrls";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ImageData {
   link: string;
@@ -88,32 +86,6 @@ export default function ArtistScreen() {
     return count.toString();
   }, []);
 
-  const handlePlayTopSongs = useCallback(() => {
-    if (artistData?.top_songs?.length) {
-      const songsWithArtistInfo = artistData.top_songs.map((song) => ({
-        ...song,
-        isFromArtist: true,
-        artistId: artistData.id,
-      }));
-      addToPlaylist(songsWithArtistInfo);
-      playSong(songsWithArtistInfo[0]);
-    }
-  }, [artistData, addToPlaylist, playSong]);
-
-  const handleShuffleTopSongs = useCallback(() => {
-    if (artistData?.top_songs?.length) {
-      const shuffledSongs = [...artistData.top_songs]
-        .sort(() => Math.random() - 0.5)
-        .map((song) => ({
-          ...song,
-          isFromArtist: true,
-          artistId: artistData.id,
-        }));
-      addToPlaylist(shuffledSongs);
-      playSong(shuffledSongs[0]);
-    }
-  }, [artistData, addToPlaylist, playSong]);
-
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
@@ -173,11 +145,50 @@ export default function ArtistScreen() {
     ? artistData?.image[2]?.link
     : artistData?.image;
 
+  const newSongs = useMemo(() => {
+    if (!artistData?.top_songs) return [];
+    return artistData?.top_songs?.map(ensureHttpsForSongUrls) || [];
+  }, [artistData?.top_songs]);
+
+  const handlePlayAll = () => {
+    if (newSongs?.length) {
+      const songsWithPlaylistInfo = newSongs.map((song) => ({
+        ...song,
+        isPlaylist: true,
+        playlistId: artistData?.id,
+      }));
+      addToPlaylist(songsWithPlaylistInfo);
+      playSong(songsWithPlaylistInfo[0]);
+    }
+  };
+
+  const handleShuffle = () => {
+    if (newSongs?.length) {
+      const shuffledSongs = [...newSongs]
+        .sort(() => Math.random() - 0.5)
+        .map((song) => ({
+          ...song,
+          isPlaylist: true,
+          playlistId: artistData?.id,
+        }));
+      addToPlaylist(shuffledSongs);
+      playSong(shuffledSongs[0]);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1DB954" />
+        <ActivityIndicator size="large" color="white" />
         <Text style={styles.loadingText}>Loading artist...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!artistData) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>No artist data available</Text>
       </SafeAreaView>
     );
   }
@@ -185,7 +196,7 @@ export default function ArtistScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Animated.FlatList
-        data={artistData?.top_songs}
+        data={newSongs}
         renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
@@ -253,20 +264,24 @@ export default function ArtistScreen() {
             <View style={styles.actionsContainer}>
               <Pressable
                 style={[styles.button, styles.playButton]}
-                onPress={handlePlayTopSongs}
+                onPress={handlePlayAll}
                 disabled={!artistData?.top_songs?.length}
               >
-                <Ionicons name="play" size={22} color="white" />
-                <Text style={styles.buttonText}>Play Top Songs</Text>
+                <Ionicons name="play" size={22} color="black" />
+                <Text style={styles.buttonText} className="text-black">
+                  Play All
+                </Text>
               </Pressable>
 
               <Pressable
                 style={[styles.button, styles.shuffleButton]}
-                onPress={handleShuffleTopSongs}
+                onPress={handleShuffle}
                 disabled={!artistData?.top_songs?.length}
               >
                 <Ionicons name="shuffle" size={22} color="white" />
-                <Text style={styles.buttonText}>Shuffle</Text>
+                <Text style={styles.buttonText} className="text-white">
+                  Shuffle
+                </Text>
               </Pressable>
             </View>
 
@@ -381,13 +396,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   playButton: {
-    backgroundColor: "#1DB954", // Spotify green
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
   },
   shuffleButton: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   buttonText: {
-    color: "white",
+    // color: "white",
     fontSize: 16,
     fontWeight: "600",
   },

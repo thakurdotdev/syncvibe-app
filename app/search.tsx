@@ -8,7 +8,6 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StatusBar,
   Text,
   TextInput,
@@ -16,22 +15,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const formatDuration = (seconds: number) => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-};
-
-const formatPlayCount = (count: number) => {
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}M plays`;
-  } else if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}K plays`;
-  }
-  return `${count} plays`;
-};
-
 export default function SearchMusic() {
   const { playSong } = usePlayer();
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,58 +45,6 @@ export default function SearchMusic() {
   const handleSearch = (text: string) => {
     setSearchQuery(text);
     debouncedSearch(text);
-  };
-
-  const renderSongItem = ({ item }: { item: Song }) => {
-    const song = item as Song;
-
-    return (
-      <TouchableOpacity
-        className="mb-2.5 mx-4"
-        activeOpacity={0.6}
-        onPress={() => playSong(song)}
-      >
-        <View className="flex-row items-center py-2.5">
-          <View className="w-14 h-14 rounded-md overflow-hidden mr-3.5 shadow-sm">
-            <Image
-              source={{ uri: song.image[2]?.link || song.image[0]?.link }}
-              className="w-full h-full"
-              resizeMode="cover"
-            />
-          </View>
-
-          <View className="flex-1 pr-2">
-            <Text
-              className="text-white font-medium text-base mb-0.5"
-              numberOfLines={1}
-            >
-              {song.name}
-            </Text>
-            <Text className="text-gray-400 text-sm mb-1" numberOfLines={1}>
-              {song.subtitle}
-            </Text>
-            <View className="flex-row items-center">
-              <Ionicons name="play-circle-outline" size={13} color="#9CA3AF" />
-              <Text className="text-xs text-gray-500 ml-1">
-                {formatPlayCount(song.play_count)}
-              </Text>
-              <Text className="text-gray-600 mx-2">•</Text>
-              <Ionicons name="time-outline" size={13} color="#9CA3AF" />
-              <Text className="text-xs text-gray-500 ml-1">
-                {formatDuration(song.duration)}
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            className="p-2.5 rounded-full bg-white/10 hover:bg-white/15"
-            onPress={() => playSong(song)}
-          >
-            <Ionicons name="play" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   return (
