@@ -291,6 +291,7 @@ export const PlaylistCard = memo(
 );
 
 export const NewSongCard = memo(({ song }: SongCardProps) => {
+  if (!song.id) return null;
   const { playSong } = usePlayer();
   const { currentSong } = usePlayerState();
   const isCurrentSong = currentSong?.id === song.id;

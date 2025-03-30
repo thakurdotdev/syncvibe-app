@@ -86,7 +86,10 @@ export function NotificationProvider({
 
   useEffect(() => {
     if (expoPushToken) {
-      if (!user?.expoPushToken || user.expoPushToken !== expoPushToken)
+      if (
+        user &&
+        (!user?.expoPushToken || user.expoPushToken !== expoPushToken)
+      )
         setPushToken();
     }
   }, [expoPushToken, user]);

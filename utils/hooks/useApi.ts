@@ -7,6 +7,7 @@ const useApi = (): AxiosInstance => {
   const api = useMemo(() => {
     const instance = axios.create({
       baseURL: API_URL,
+      timeout: 15000, // 15 seconds timeout
     });
 
     instance.interceptors.request.use(

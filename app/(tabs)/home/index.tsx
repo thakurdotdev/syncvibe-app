@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Button,
   RefreshControl,
   StatusBar,
   Text,
@@ -34,6 +35,11 @@ interface HomePageData {
   artists: any[] | undefined;
 }
 
+interface Recommendations {
+  songs: Song[];
+  recentlyPlayed: Song[];
+}
+
 export default function HomeScreen() {
   const api = useApi();
   const { selectedLanguages, user } = useUser();
@@ -41,7 +47,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
-  const [recommendations, setRecommendations] = useState([]);
+  const [recommendations, setRecommendations] = useState<Recommendations>({
+    songs: [],
+    recentlyPlayed: [],
+  });
 
   const scrollY = new Animated.Value(0);
 
@@ -90,7 +99,12 @@ export default function HomeScreen() {
       const response = await api.get("/api/music/recommendations");
 
       if (response.status === 200) {
-        setRecommendations(response.data.songs);
+        const { songs, recentlyPlayed } = response.data.data;
+
+        setRecommendations({
+          songs: songs || [],
+          recentlyPlayed: recentlyPlayed || [],
+        });
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
@@ -212,13 +226,21 @@ export default function HomeScreen() {
               </View>
             ) : null}
 
-            {recommendations.length > 0 && (
+            {recommendations.recentlyPlayed.length > 0 && (
               <RecommendationGrid
-                recommendations={recommendations}
-                title="Made For You"
+                recommendations={recommendations.recentlyPlayed}
+                title="Recently Played"
+                showMore={true}
               />
             )}
 
+            {recommendations.songs.length > 0 && (
+              <RecommendationGrid
+                recommendations={recommendations.songs}
+                title="Mostly Listened Songs"
+                showMore={true}
+              />
+            )}
             {trendingSongs.length > 0 && (
               <TrendingSongs songs={trendingSongs} title="Trending Now" />
             )}

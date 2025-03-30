@@ -1,0 +1,618 @@
+import { SongCard } from "@/components/music/MusicCards";
+import { useUser } from "@/context/UserContext";
+import { Song } from "@/types/song";
+import useApi from "@/utils/hooks/useApi";
+import React, { useCallback, useEffect, useState, useRef } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+  RefreshControl,
+  Animated,
+  TextInput,
+  TouchableOpacity,
+  Dimensions,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import SwipeableModal from "@/components/common/SwipeableModal";
+import { Ionicons, Feather } from "@expo/vector-icons";
+
+const { width } = Dimensions.get("window");
+const ITEMS_PER_PAGE = 15;
+
+type SortOption = {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+};
+
+type SortOrder = "ASC" | "DESC";
+
+const sortOptions: SortOption[] = [
+  {
+    label: "Recently Played",
+    value: "lastPlayedAt",
+    icon: <Ionicons name="time-outline" size={20} color="white" />,
+  },
+  {
+    label: "Song Title",
+    value: "songName",
+    icon: <Ionicons name="text-outline" size={20} color="white" />,
+  },
+  {
+    label: "Most Played",
+    value: "playedCount",
+    icon: <Ionicons name="repeat-outline" size={20} color="white" />,
+  },
+  {
+    label: "Language",
+    value: "songLanguage",
+    icon: <Ionicons name="language-outline" size={20} color="white" />,
+  },
+];
+
+const SongHistory = () => {
+  const api = useApi();
+  const { user } = useUser();
+  const [songHistory, setSongHistory] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalSongs, setTotalSongs] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [sortBy, setSortBy] = useState("lastPlayedAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
+  const [isFiltering, setIsFiltering] = useState(false);
+
+  const searchInputRef = useRef<TextInput>(null);
+  const scrollY = new Animated.Value(0);
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce search input
+  useEffect(() => {
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      setIsFiltering(true);
+      setDebouncedSearchQuery(searchQuery);
+      setPage(1);
+    }, 500);
+
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Fetch songs with updated parameters when search or sort changes
+  useEffect(() => {
+    if (user?.userid) {
+      getHistorySongs(1, false);
+    }
+  }, [debouncedSearchQuery, sortBy, sortOrder, user?.userid]);
+
+  const getHistorySongs = useCallback(
+    async (pageNum = 1, append = false) => {
+      if (!user?.userid) return;
+
+      try {
+        if (!append && !isFiltering) {
+          setLoading(true);
+        }
+
+        if (append) {
+          setLoadingMore(true);
+        }
+
+        const response = await api.get("/api/music/latestHistory", {
+          params: {
+            page: pageNum,
+            limit: ITEMS_PER_PAGE,
+            searchQuery: debouncedSearchQuery,
+            sortBy,
+            sortOrder,
+          },
+        });
+
+        if (response.status === 200) {
+          const { songs, count } = response.data.data;
+
+          if (append) {
+            setSongHistory((prevSongs) => [...prevSongs, ...songs]);
+          } else {
+            setSongHistory(songs);
+          }
+
+          setTotalSongs(count);
+          setHasMore(pageNum * ITEMS_PER_PAGE < count);
+        }
+      } catch (error) {
+        console.error("Error fetching song history:", error);
+      } finally {
+        setLoading(false);
+        setIsFiltering(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+      }
+    },
+    [user?.userid, api, debouncedSearchQuery, sortBy, sortOrder, isFiltering],
+  );
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+
+    const nextPage = page + 1;
+    setPage(nextPage);
+    getHistorySongs(nextPage, true);
+  }, [page, loadingMore, hasMore, getHistorySongs]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    setPage(1);
+    getHistorySongs(1, false);
+  }, [getHistorySongs]);
+
+  const toggleSortOrder = useCallback(() => {
+    setIsFiltering(true);
+    setSortOrder((prevOrder) => (prevOrder === "ASC" ? "DESC" : "ASC"));
+  }, []);
+
+  const handleSortSelect = useCallback((option: string) => {
+    setIsFiltering(true);
+    setSortBy(option);
+    setShowSortModal(false);
+  }, []);
+
+  const toggleSearch = useCallback(() => {
+    setShowSearch((prev) => {
+      const newState = !prev;
+      if (!newState) {
+        // Reset search when hiding
+        setSearchQuery("");
+        setDebouncedSearchQuery("");
+      } else {
+        // Focus input when showing
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 100);
+      }
+      return newState;
+    });
+  }, []);
+
+  const renderHeader = () => {
+    const headerOpacity = scrollY.interpolate({
+      inputRange: [0, 80, 120],
+      outputRange: [1, 0.8, 0.8],
+      extrapolate: "clamp",
+    });
+
+    const searchScale = scrollY.interpolate({
+      inputRange: [0, 100],
+      outputRange: [1, 0.95],
+      extrapolate: "clamp",
+    });
+
+    return (
+      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
+        {!showSearch ? (
+          <>
+            <View>
+              <Text style={styles.headerTitle}>Your Listening History</Text>
+              <Text style={styles.headerSubtitle}>{totalSongs} tracks</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={toggleSearch}
+              >
+                <Feather name="search" size={22} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => setShowSortModal(true)}
+              >
+                <Feather name="sliders" size={22} color="white" />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <Animated.View
+            style={[
+              styles.searchContainer,
+              { transform: [{ scale: searchScale }] },
+            ]}
+          >
+            <Feather
+              name="search"
+              size={20}
+              color="#888"
+              style={styles.searchIcon}
+            />
+            <TextInput
+              ref={searchInputRef}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search songs..."
+              placeholderTextColor="#888"
+              style={styles.searchInput}
+              autoFocus
+            />
+            <TouchableOpacity onPress={toggleSearch}>
+              <Feather name="x" size={20} color="#888" />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+      </Animated.View>
+    );
+  };
+
+  const renderSortIndicator = () => {
+    if (!sortBy || sortBy === "lastPlayedAt") return null;
+
+    const currentSort = sortOptions.find((option) => option.value === sortBy);
+    if (!currentSort) return null;
+
+    return (
+      <View style={styles.sortIndicator}>
+        <Text style={styles.sortText}>
+          Sorted by: {currentSort.label}
+          {sortOrder === "ASC" ? " (A-Z)" : " (Z-A)"}
+        </Text>
+        <TouchableOpacity
+          style={styles.sortOrderButton}
+          onPress={toggleSortOrder}
+        >
+          <Feather
+            name={sortOrder === "ASC" ? "arrow-up" : "arrow-down"}
+            size={16}
+            color="white"
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="white" />
+      </View>
+    );
+  };
+
+  const renderEmptyState = () => {
+    if (loading) return null;
+
+    return (
+      <View style={styles.emptyContainer}>
+        {debouncedSearchQuery ? (
+          <Text style={styles.emptyText}>
+            No songs found matching "{debouncedSearchQuery}"
+          </Text>
+        ) : (
+          <Text style={styles.emptyText}>
+            You haven't listened to any songs yet.
+          </Text>
+        )}
+      </View>
+    );
+  };
+
+  if (loading && page === 1 && !isFiltering) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="white" />
+        <Text style={styles.loadingText}>Loading your music history...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {renderHeader()}
+      {renderSortIndicator()}
+
+      {isFiltering && (
+        <View style={styles.filteringIndicator}>
+          <ActivityIndicator
+            size="small"
+            color="white"
+            style={styles.filteringLoader}
+          />
+          <Text style={styles.filteringText}>Updating results...</Text>
+        </View>
+      )}
+
+      <FlatList
+        data={songHistory}
+        renderItem={({ item }) => <SongCard song={item} />}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.listContent,
+          isFiltering && styles.dimmedContent,
+        ]}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmptyState}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="white"
+            colors={["white"]}
+          />
+        }
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false },
+        )}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        windowSize={10}
+      />
+
+      {/* Sort Options Modal */}
+      <SwipeableModal
+        isVisible={showSortModal}
+        onClose={() => setShowSortModal(false)}
+        backgroundColor="#1E1E1E"
+        maxHeight="45%"
+      >
+        <View style={styles.sortModalContent}>
+          <Text style={styles.sortModalTitle}>Sort by</Text>
+
+          {sortOptions.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortOption,
+                sortBy === option.value && styles.sortOptionSelected,
+              ]}
+              onPress={() => handleSortSelect(option.value)}
+            >
+              <View style={styles.sortOptionIcon}>{option.icon}</View>
+              <Text
+                style={[
+                  styles.sortOptionText,
+                  sortBy === option.value && styles.sortOptionTextSelected,
+                ]}
+              >
+                {option.label}
+              </Text>
+
+              {sortBy === option.value && (
+                <TouchableOpacity
+                  style={styles.sortDirectionButton}
+                  onPress={toggleSortOrder}
+                >
+                  <Feather
+                    name={sortOrder === "ASC" ? "arrow-up" : "arrow-down"}
+                    size={20}
+                    color="white"
+                  />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          ))}
+
+          <TouchableOpacity
+            style={styles.closeModalButton}
+            onPress={() => setShowSortModal(false)}
+          >
+            <Text style={styles.closeModalButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </SwipeableModal>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#121212",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#121212",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: "white",
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
+    backgroundColor: "#121212",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headerTitle: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    color: "white",
+    opacity: 0.7,
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 8,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "#2A2A2A",
+    borderRadius: 8,
+    alignItems: "center",
+    paddingHorizontal: 10,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: "white",
+    fontSize: 16,
+    padding: 8,
+  },
+  sortIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  sortText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
+  },
+  sortOrderButton: {
+    padding: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    backgroundColor: "#121212",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    minHeight: 300,
+  },
+  emptyText: {
+    color: "white",
+    fontSize: 18,
+    textAlign: "center",
+    opacity: 0.7,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 120,
+  },
+  dimmedContent: {
+    opacity: 0.6,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    marginVertical: 8,
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: "center",
+  },
+  filteringIndicator: {
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    position: "absolute",
+    top: 100,
+    alignSelf: "center",
+    zIndex: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filteringLoader: {
+    marginRight: 8,
+  },
+  filteringText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  sortModalContent: {
+    padding: 20,
+  },
+  sortModalTitle: {
+    color: "white",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  sortOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  },
+  sortOptionSelected: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+  },
+  sortOptionIcon: {
+    width: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  sortOptionText: {
+    color: "white",
+    fontSize: 16,
+    flex: 1,
+  },
+  sortOptionTextSelected: {
+    color: "white",
+    fontWeight: "600",
+  },
+  sortDirectionButton: {
+    padding: 8,
+  },
+  closeModalButton: {
+    marginTop: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: 25,
+    padding: 14,
+    alignItems: "center",
+  },
+  closeModalButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});
+
+export default SongHistory;

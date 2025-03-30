@@ -16,6 +16,7 @@ import {
   SongCard,
 } from "./MusicCards";
 import { RefreshCcwIcon } from "lucide-react-native";
+import { router } from "expo-router";
 
 interface AlbumsGridProps {
   albums: any[];
@@ -30,6 +31,7 @@ interface PlaylistsGridProps {
 interface RecommendationGridProps {
   recommendations: any[];
   title: string;
+  showMore?: boolean;
 }
 
 interface ArtistGridProps {
@@ -163,22 +165,43 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
 export const RecommendationGrid = ({
   recommendations,
   title,
+  showMore = false,
 }: RecommendationGridProps) => {
   if (!recommendations?.length) return null;
 
   return (
-    <View className="mb-6">
-      {title && (
-        <Text className="text-xl font-bold text-white mb-4">{title}</Text>
-      )}
+    <View className="mb-8">
+      <View className="flex-row justify-between items-center mb-4">
+        {title && (
+          <Text
+            className="text-xl font-bold text-white"
+            style={{ fontFamily: "System" }}
+          >
+            {title}
+          </Text>
+        )}
+        {showMore && (
+          <TouchableOpacity
+            className="px-3 py-1 bg-slate-800/40 rounded-full"
+            onPress={() => router.push("/song-history")}
+          >
+            <Text className="text-slate-300 text-sm font-medium">View all</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <FlatList
         data={recommendations}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <NewSongCard song={item?.songData} />}
+        keyExtractor={(item, index) => item?.id || index.toString()}
+        renderItem={({ item }) => <NewSongCard song={item} />}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingRight: 16 }}
-        ItemSeparatorComponent={() => <View className="w-3" />}
+        contentContainerStyle={{ paddingRight: 16, paddingLeft: 2 }}
+        ItemSeparatorComponent={() => <View className="w-4" />}
+        decelerationRate="fast"
+        snapToAlignment="start"
+        snapToInterval={180}
+        className="pb-2"
       />
     </View>
   );

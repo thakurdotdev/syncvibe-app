@@ -148,6 +148,13 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="song-history"
+          options={{
+            headerShown: false,
+            title: "Your Listening History",
+          }}
+        />
+        <Stack.Screen
           name="oauthredirect"
           options={{
             headerShown: false,
