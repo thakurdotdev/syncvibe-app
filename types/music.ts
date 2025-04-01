@@ -42,7 +42,6 @@ export interface PlayerControls {
   playSong: (song: Song) => void;
   stopSong: () => void;
   handlePlayPauseSong: () => void;
-  handleVolumeChange: (value: number) => void;
   addToPlaylist: (songs: Song | Song[]) => void;
   addToQueue: (songs: Song | Song[]) => void;
   handleNextSong: () => void;
@@ -50,8 +49,6 @@ export interface PlayerControls {
   setPlayMode: (mode: PlayMode) => void;
   clearQueue: () => void;
   removeFromQueue: (songId: string) => void;
-  setSleepTimer: (minutes?: number, songs?: number) => void;
-  clearSleepTimer: () => void;
 }
 
 export interface PlaylistContextValue extends PlaylistState {

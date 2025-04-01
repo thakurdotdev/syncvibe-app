@@ -37,6 +37,7 @@ import TrackPlayer, {
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 import NewPlayerDrawer from "./NewPlayerDrawer";
+import DynamicIslandPlayer from "./DynamicIslandPlayer";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
@@ -349,27 +350,6 @@ export default function Player() {
       <View
         style={[styles.expandedPlayerBackground, { paddingTop: insets.top }]}
       >
-        <Animated.View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 150,
-            zIndex: 0,
-          }}
-        >
-          <LinearGradient
-            colors={["#42353A", "#092B31", "#121212"]}
-            start={{ x: 0.1, y: 0.1 }}
-            end={{ x: 0.8, y: 0.85 }} // End slightly higher to allow for organic fade
-            style={{
-              height: "100%",
-              width: "100%",
-            }}
-          />
-        </Animated.View>
         <PanGestureHandler onGestureEvent={gestureHandler}>
           <Animated.View>
             <View style={styles.header}>

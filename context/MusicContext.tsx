@@ -15,7 +15,6 @@ import {
   useMemo,
   useReducer,
   useRef,
-  useState,
 } from "react";
 import TrackPlayer, {
   Event,
@@ -45,30 +44,6 @@ const PlaylistContext = createContext<PlaylistContextValue | undefined>(
   undefined,
 );
 
-// Add the SleepTimer Context
-const SleepTimerContext = createContext<{
-  setSleepTimer: (minutes?: number, songs?: number) => void;
-  clearSleepTimer: () => void;
-  timeRemaining: number;
-  songsRemaining: number;
-  isActive: boolean;
-}>({
-  setSleepTimer: () => {},
-  clearSleepTimer: () => {},
-  timeRemaining: 0,
-  songsRemaining: 0,
-  isActive: false,
-});
-
-// Create a hook to use the SleepTimer context
-export const useSleepTimer = () => {
-  const context = useContext(SleepTimerContext);
-  if (!context) {
-    throw new Error("useSleepTimer must be used within the MusicProvider");
-  }
-  return context;
-};
-
 const playbackReducer = (
   state: PlaybackState,
   action: { type: string; payload?: any },
@@ -84,6 +59,8 @@ const playbackReducer = (
       return { ...state, volume: Math.min(Math.max(action.payload, 0), 1) };
     case "SET_LOADING":
       return { ...state, isLoading: action.payload };
+    case "SET_PLAY_MODE":
+      return { ...state, playMode: action.payload };
     default:
       return state;
   }
@@ -105,6 +82,18 @@ const playlistReducer = (
       };
     case "CLEAR_PLAYLIST":
       return { ...state, playlist: [] };
+    case "ADD_TO_PLAYLIST":
+      // Ensure we don't have duplicates
+      const newSongs = Array.isArray(action.payload)
+        ? action.payload
+        : [action.payload];
+      const uniqueSongs = newSongs.filter(
+        (newSong) => !state.playlist.some((song) => song.id === newSong.id),
+      );
+      return {
+        ...state,
+        playlist: [...state.playlist, ...uniqueSongs],
+      };
     default:
       return state;
   }
@@ -132,13 +121,21 @@ export const usePlaylist = (): PlaylistContextValue => {
 };
 
 const convertSongToTrack = (song: Song): Track => {
+  // Prioritize highest quality audio URL
+  const audioUrl =
+    song.download_url?.[3].link ||
+    song.download_url?.[2].link ||
+    song.download_url?.[1].link;
+
+  // Prioritize highest quality image
+  const artwork = song.image?.[2].link || song.image?.[1].link;
   return {
     id: song.id,
-    url: song.download_url?.[4]?.link || song.download_url?.[3]?.link || "",
+    url: audioUrl,
     title: song.name || "Unknown Title",
-    artist: song?.artist_map?.primary_artists?.[0].name || "Unknown Artist",
+    artist: song?.artist_map?.primary_artists?.[0]?.name || "Unknown Artist",
     album: song.album || "Unknown Album",
-    artwork: song.image?.[2]?.link || song.image?.[1]?.link || "",
+    artwork: artwork,
     duration: song.duration || 0,
   };
 };
@@ -146,10 +143,6 @@ const convertSongToTrack = (song: Song): Track => {
 interface PlayerProviderProps {
   children: ReactNode;
 }
-
-const getAudioUrl = (song: Song | null): string => {
-  return song?.download_url?.[4]?.link || song?.download_url?.[3]?.link || "";
-};
 
 export function MusicProvider({ children }: PlayerProviderProps) {
   const api = useApi();
@@ -162,25 +155,8 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     isLoading: false,
     playMode: PLAY_MODES.REPEAT_OFF,
   });
-
-  // Add sleep timer state
-  const [sleepTimer, setSleepTimerState] = useState<{
-    timeoutId: NodeJS.Timeout | null;
-    endTime: number | null;
-    minutesTotal: number;
-    timeRemaining: number;
-    songsRemaining: number;
-    songsTotal: number;
-    isActive: boolean;
-  }>({
-    timeoutId: null,
-    endTime: null,
-    minutesTotal: 0,
-    timeRemaining: 0,
-    songsRemaining: 0,
-    songsTotal: 0,
-    isActive: false,
-  });
+  const playerSetupPromise = useRef<Promise<boolean> | null>(null);
+  const queueUpdateInProgress = useRef(false);
 
   const [playbackState, playbackDispatch] = useReducer(playbackReducer, {
     currentSong: null,
@@ -199,33 +175,21 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     playbackStateRef.current = playbackState;
   }, [playbackState]);
 
+  // Initialize TrackPlayer once
   useEffect(() => {
-    let isMounted = true;
-
-    const initialize = async () => {
-      try {
-        const isSetup = await setupPlayer();
-
-        if (isMounted) {
+    if (!playerSetupPromise.current) {
+      playerSetupPromise.current = setupPlayer()
+        .then((isSetup) => {
           trackPlayerInitialized.current = isSetup;
-          console.log(
-            "TrackPlayer initialization status in MusicProvider:",
-            isSetup,
-          );
-        }
-      } catch (error) {
-        console.error("Error initializing in MusicProvider:", error);
-      }
-    };
+          console.log("TrackPlayer initialization status:", isSetup);
+          return isSetup;
+        })
+        .catch((error) => {
+          console.error("Error initializing TrackPlayer:", error);
+          return false;
+        });
+    }
 
-    initialize();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
     return () => {
       const cleanup = async () => {
         try {
@@ -241,9 +205,20 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     };
   }, []);
 
-  // Add a reference to track songs played for the song-based sleep timer
-  const songCountRef = useRef(0);
+  // Helper to ensure TrackPlayer is ready before performing operations
+  const ensurePlayerReady = async (): Promise<boolean> => {
+    if (trackPlayerInitialized.current) return true;
 
+    if (playerSetupPromise.current) {
+      const isReady = await playerSetupPromise.current;
+      trackPlayerInitialized.current = isReady;
+      return isReady;
+    }
+
+    return false;
+  };
+
+  // Handle TrackPlayer events
   useTrackPlayerEvents(
     [
       Event.PlaybackState,
@@ -259,29 +234,25 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     ],
     async (event) => {
       try {
+        if (!(await ensurePlayerReady())) return;
+
         switch (event.type) {
+          case Event.PlaybackState:
+            const playerState = await TrackPlayer.getState();
+            playbackDispatch({
+              type: "SET_PLAYING",
+              payload: playerState === State.Playing,
+            });
+            break;
+
           case Event.PlaybackActiveTrackChanged:
-            // Increment song count for sleep timer
-            if (event.index !== undefined && sleepTimer.songsRemaining > 0) {
-              songCountRef.current += 1;
-              setSleepTimerState((prev) => ({
-                ...prev,
-                songsRemaining: prev.songsTotal - songCountRef.current,
-              }));
-
-              // Check if we've reached the song limit
-              if (songCountRef.current >= sleepTimer.songsTotal) {
-                controls.stopSong();
-                clearSleepTimerState();
-              }
-            }
-
             if (event.index !== undefined) {
               const track = await TrackPlayer.getTrack(event.index);
               if (track) {
                 const songIndex = playlistState.playlist.findIndex(
                   (song) => song.id === track.id,
                 );
+
                 if (songIndex >= 0) {
                   const currentSong = playlistState.playlist[songIndex];
                   playbackDispatch({
@@ -289,7 +260,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                     payload: currentSong,
                   });
 
-                  // Remove the current song from playlist after playing
+                  // Remove the current song from playlist after it starts playing
                   playlistDispatch({
                     type: "REMOVE_FROM_PLAYLIST",
                     payload: track.id,
@@ -301,22 +272,32 @@ export function MusicProvider({ children }: PlayerProviderProps) {
 
           case Event.PlaybackError:
             console.error("Playback error:", event.message);
-            // Try to recover by playing next song
-            if (playbackStateRef.current.isPlaying) {
-              controls.handleNextSong();
-            }
+
+            // Wait a moment before trying to recover
+            setTimeout(async () => {
+              // Try to recover by playing next song
+              if (playbackStateRef.current.isPlaying) {
+                await controls.handleNextSong();
+              }
+            }, 500);
             break;
 
           case Event.PlaybackQueueEnded:
+            // Handle queue ending based on play mode
             switch (playbackState.playMode) {
               case PLAY_MODES.REPEAT_OFF:
                 controls.stopSong();
                 break;
+
               case PLAY_MODES.REPEAT_PLAYLIST:
                 if (playlistState.playlist.length > 0) {
                   controls.playSong(playlistState.playlist[0]);
+                } else if (playbackState.currentSong) {
+                  // If playlist is empty but we have a current song, replay it
+                  controls.playSong(playbackState.currentSong);
                 }
                 break;
+
               case PLAY_MODES.REPEAT_TRACK:
                 if (playbackState.currentSong) {
                   controls.playSong(playbackState.currentSong);
@@ -325,7 +306,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             }
             break;
 
-          // Remote control events from notification/lock screen
+          // Remote control events
           case Event.RemotePlay:
             await TrackPlayer.play();
             break;
@@ -335,8 +316,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.RemoteStop:
-            await TrackPlayer.stop();
-            playbackDispatch({ type: "STOP_SONG" });
+            controls.stopSong();
             break;
 
           case Event.RemoteNext:
@@ -348,7 +328,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.RemoteSeek:
-            if (event.position) {
+            if (event.position !== undefined) {
               await TrackPlayer.seekTo(event.position);
             }
             break;
@@ -359,74 +339,59 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     },
   );
 
-  const clearSleepTimerState = () => {
-    if (sleepTimer.timeoutId) {
-      clearTimeout(sleepTimer.timeoutId);
-    }
-    songCountRef.current = 0;
-    setSleepTimerState({
-      timeoutId: null,
-      endTime: null,
-      minutesTotal: 0,
-      timeRemaining: 0,
-      songsRemaining: 0,
-      songsTotal: 0,
-      isActive: false,
-    });
-  };
-
-  useEffect(() => {
-    if (!sleepTimer.isActive || !sleepTimer.endTime) return;
-
-    const intervalId = setInterval(() => {
-      const now = Date.now();
-      const remaining = Math.max(
-        0,
-        Math.floor((sleepTimer.endTime! - now) / 1000),
-      );
-
-      setSleepTimerState((prev) => ({
-        ...prev,
-        timeRemaining: remaining,
-      }));
-
-      // Check if time has expired
-      if (remaining <= 0 && sleepTimer.isActive) {
-        controls.stopSong();
-        clearSleepTimerState();
-      }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [sleepTimer.isActive, sleepTimer.endTime]);
-
-  // Player controls
+  // Player controls with debouncing and error handling
   const controls: PlayerControls = useMemo(
     () => ({
       playSong: async (song: Song) => {
-        if (!song?.id || !trackPlayerInitialized.current) return;
+        if (!song?.id) return;
 
         try {
           playbackDispatch({ type: "SET_LOADING", payload: true });
 
+          if (!(await ensurePlayerReady())) {
+            console.error("TrackPlayer not initialized");
+            playbackDispatch({ type: "SET_LOADING", payload: false });
+            return;
+          }
+
+          // Reset the player and prepare the new track
           await TrackPlayer.reset();
           const track = convertSongToTrack(song);
 
+          // Only proceed if we have a valid URL
+          if (!track.url) {
+            console.error("Song has no playable URL:", song.id);
+            playbackDispatch({ type: "SET_LOADING", payload: false });
+            return;
+          }
+
+          // Add the track and start playback
           await TrackPlayer.add([track]);
+
+          // Set proper volume before playing
+          await TrackPlayer.setVolume(playbackState.volume);
+
+          // Begin playback
           await TrackPlayer.play();
 
+          // Update state
           playbackDispatch({ type: "SET_CURRENT_SONG", payload: song });
           playbackDispatch({ type: "SET_PLAYING", payload: true });
           playbackDispatch({ type: "SET_LOADING", payload: false });
         } catch (error) {
           console.error("Song play error:", error);
           playbackDispatch({ type: "SET_LOADING", payload: false });
+
+          // Try playing the next song if this one fails
+          if (playlistState.playlist.length > 0) {
+            setTimeout(() => controls.handleNextSong(), 500);
+          }
         }
       },
 
       stopSong: async () => {
         try {
-          if (trackPlayerInitialized.current) {
+          if (await ensurePlayerReady()) {
             await TrackPlayer.stop();
             await TrackPlayer.reset();
           }
@@ -438,29 +403,24 @@ export function MusicProvider({ children }: PlayerProviderProps) {
 
       handlePlayPauseSong: async () => {
         try {
-          if (!trackPlayerInitialized.current) return;
+          if (!(await ensurePlayerReady())) return;
 
-          if (State.Playing) {
+          const playerState = await TrackPlayer.getState();
+
+          if (playerState === State.Playing) {
             await TrackPlayer.pause();
             playbackDispatch({ type: "SET_PLAYING", payload: false });
-          } else if (State.Paused) {
-            await TrackPlayer.play();
-            playbackDispatch({ type: "SET_PLAYING", payload: true });
+          } else {
+            // If we have a current song but the player is stopped, replay it
+            if (playerState === State.None && playbackState.currentSong) {
+              await controls.playSong(playbackState.currentSong);
+            } else {
+              await TrackPlayer.play();
+              playbackDispatch({ type: "SET_PLAYING", payload: true });
+            }
           }
         } catch (error) {
           console.error("Error toggling play/pause:", error);
-        }
-      },
-
-      handleVolumeChange: async (value: number) => {
-        try {
-          const newVolume = Math.min(Math.max(value, 0), 1);
-          if (trackPlayerInitialized.current) {
-            await TrackPlayer.setVolume(newVolume);
-            playbackDispatch({ type: "SET_VOLUME", payload: newVolume });
-          }
-        } catch (error) {
-          console.error("Error changing volume:", error);
         }
       },
 
@@ -468,7 +428,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         const newSongs = Array.isArray(songs) ? songs : [songs];
         playlistDispatch({
           type: "SET_PLAYLIST",
-          payload: newSongs,
+          payload: [...playlistState.playlist, ...newSongs],
         });
       },
 
@@ -476,94 +436,111 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         playbackDispatch({ type: "SET_PLAY_MODE", payload: mode });
       },
 
-      clearQueue: () => {
+      clearQueue: async () => {
         playlistDispatch({ type: "CLEAR_PLAYLIST" });
-        controls.stopSong();
+        await controls.stopSong();
       },
 
       addToQueue: async (songs: Song | Song[]) => {
-        const newSongs = Array.isArray(songs) ? songs : [songs];
+        if (queueUpdateInProgress.current) return;
+        queueUpdateInProgress.current = true;
 
-        // Filter out the currently playing song if it exists
-        const currentSongId = playbackState.currentSong?.id;
-        const filteredNewSongs = newSongs.filter(
-          (song) => song.id !== currentSongId,
-        );
+        try {
+          const newSongs = Array.isArray(songs) ? songs : [songs];
 
-        // Filter out songs already in the playlist
-        const uniqueNewSongs = filteredNewSongs.filter(
-          (song) => !playlistState.playlist.some((s) => s.id === song.id),
-        );
+          // Filter out the currently playing song
+          const currentSongId = playbackState.currentSong?.id;
+          const filteredNewSongs = newSongs.filter(
+            (song) => song.id !== currentSongId,
+          );
 
-        if (uniqueNewSongs.length > 0) {
-          playlistDispatch({
-            type: "SET_PLAYLIST",
-            payload: [...playlistState.playlist, ...uniqueNewSongs],
-          });
+          // Filter out songs already in the playlist
+          const uniqueNewSongs = filteredNewSongs.filter(
+            (song) => !playlistState.playlist.some((s) => s.id === song.id),
+          );
 
-          if (trackPlayerInitialized.current) {
-            try {
+          if (uniqueNewSongs.length > 0) {
+            // Update the playlist state
+            playlistDispatch({
+              type: "ADD_TO_PLAYLIST",
+              payload: uniqueNewSongs,
+            });
+
+            // If player is ready, add tracks to queue
+            if (await ensurePlayerReady()) {
               const tracksToAdd = uniqueNewSongs.map(convertSongToTrack);
-              await TrackPlayer.add(tracksToAdd);
-            } catch (error) {
-              console.error("Queue addition error:", error);
+
+              // Filter out tracks with no URL
+              const validTracks = tracksToAdd.filter((track) => track.url);
+
+              if (validTracks.length > 0) {
+                await TrackPlayer.add(validTracks);
+              }
             }
           }
+        } catch (error) {
+          console.error("Queue addition error:", error);
+        } finally {
+          queueUpdateInProgress.current = false;
         }
       },
 
       removeFromQueue: async (songId: string) => {
-        playlistDispatch({ type: "REMOVE_FROM_PLAYLIST", payload: songId });
-        if (trackPlayerInitialized.current) {
-          try {
+        try {
+          playlistDispatch({ type: "REMOVE_FROM_PLAYLIST", payload: songId });
+
+          if (await ensurePlayerReady()) {
             const currentSongId = playbackState.currentSong?.id;
+
+            // If we're removing the current song, stop it
             if (currentSongId === songId) {
               await TrackPlayer.stop();
               playbackDispatch({ type: "STOP_SONG" });
+
+              // Play the next song if available
+              if (playlistState.playlist.length > 0) {
+                setTimeout(() => controls.handleNextSong(), 300);
+              }
+            } else {
+              // Otherwise just remove it from the queue
+              const currentQueue = await TrackPlayer.getQueue();
+              const songIndex = currentQueue.findIndex(
+                (track) => track.id === songId,
+              );
+
+              if (songIndex >= 0) {
+                await TrackPlayer.remove(songIndex);
+              }
             }
-            const currentQueue = await TrackPlayer.getQueue();
-            const songIndex = currentQueue.findIndex(
-              (song) => song.id === songId,
-            );
-            if (songIndex >= 0) {
-              await TrackPlayer.remove(songIndex);
-            }
-          } catch (error) {
-            console.error("Queue removal error:", error);
           }
+        } catch (error) {
+          console.error("Queue removal error:", error);
         }
       },
 
       handleNextSong: async () => {
-        if (!trackPlayerInitialized.current) return;
+        if (!(await ensurePlayerReady())) return;
 
         try {
           // Get current song ID
           const currentSongId = playbackState.currentSong?.id;
 
           // Create a working copy of the current playlist
-          let updatedPlaylist = [...playlistState.playlist];
+          const updatedPlaylist = [...playlistState.playlist];
 
-          // If there's a current song, remove it from our working copy
-          if (currentSongId) {
-            updatedPlaylist = updatedPlaylist.filter(
-              (song) => song.id !== currentSongId,
-            );
-          }
-
-          // Now get the next song from our modified playlist
+          // Get the next song from the playlist
           const nextSong =
             updatedPlaylist.length > 0 ? updatedPlaylist[0] : null;
 
-          // Update the playlist state with our modified playlist
-          playlistDispatch({
-            type: "SET_PLAYLIST",
-            payload: updatedPlaylist,
-          });
-
-          // Play the next song or stop if there are no more songs
+          // Play the next song or stop if there are none
           if (nextSong) {
             controls.playSong(nextSong);
+          } else if (
+            playbackState.playMode === PLAY_MODES.REPEAT_TRACK &&
+            playbackState.currentSong
+          ) {
+            // In REPEAT_TRACK mode, replay the current song if there's nothing in the queue
+            await controls.playSong(playbackState.currentSong);
           } else {
             await TrackPlayer.stop();
             playbackDispatch({ type: "STOP_SONG" });
@@ -574,79 +551,25 @@ export function MusicProvider({ children }: PlayerProviderProps) {
       },
 
       handlePrevSong: async () => {
-        if (!trackPlayerInitialized.current) return;
+        if (!(await ensurePlayerReady())) return;
 
         try {
-          const position = await TrackPlayer.getProgress().then(
-            (progress) => progress.position,
-          );
+          // Get current playback position
+          const { position } = await TrackPlayer.getProgress();
 
+          // If we're more than 3 seconds into the song, just restart it
           if (position > 3) {
             await TrackPlayer.seekTo(0);
-          } else {
-            await TrackPlayer.skipToPrevious();
+          } else if (playbackState.currentSong) {
+            // Otherwise replay the current song (since we don't have a "previous" queue)
+            controls.playSong(playbackState.currentSong);
           }
         } catch (error) {
           console.error("Error handling previous song:", error);
         }
       },
-
-      setSleepTimer: (minutes = 0, songs = 0) => {
-        if (sleepTimer.timeoutId) {
-          clearTimeout(sleepTimer.timeoutId);
-        }
-
-        // Reset song counter
-        songCountRef.current = 0;
-
-        // If both are 0, just clear the timer
-        if (minutes === 0 && songs === 0) {
-          clearSleepTimerState();
-          return;
-        }
-
-        // Set up the time-based timer
-        if (minutes > 0) {
-          const timeoutMs = minutes * 60 * 1000;
-          const endTime = Date.now() + timeoutMs;
-
-          const timeoutId = setTimeout(() => {
-            controls.stopSong();
-            clearSleepTimerState();
-          }, timeoutMs);
-
-          setSleepTimerState({
-            timeoutId,
-            endTime,
-            minutesTotal: minutes,
-            timeRemaining: minutes * 60,
-            songsRemaining: 0,
-            songsTotal: 0,
-            isActive: true,
-          });
-        }
-        // Set up the song-based timer
-        else if (songs > 0) {
-          setSleepTimerState({
-            timeoutId: null,
-            endTime: null,
-            minutesTotal: 0,
-            timeRemaining: 0,
-            songsRemaining: songs,
-            songsTotal: songs,
-            isActive: true,
-          });
-        }
-      },
-
-      clearSleepTimer: clearSleepTimerState,
     }),
-    [
-      playbackState.currentSong,
-      playlistState.playlist,
-      getAudioUrl,
-      sleepTimer,
-    ],
+    [playbackState, playlistState.playlist],
   );
 
   const playbackValue: PlaybackContextValue = {
@@ -677,6 +600,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     }
   };
 
+  // Fetch playlists when user is available
   useEffect(() => {
     if (user?.userid) {
       getPlaylists();
@@ -686,7 +610,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
   const playlistValue: PlaylistContextValue = {
     ...playlistState,
     getPlaylists,
-
     setPlaylist: (playlist: Song[]) => {
       playlistDispatch({ type: "SET_PLAYLIST", payload: playlist });
     },
@@ -695,23 +618,11 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     },
   };
 
-  // Create sleep timer value object
-  const sleepTimerValue = {
-    setSleepTimer: (minutes?: number, songs?: number) =>
-      controls.setSleepTimer(minutes, songs),
-    clearSleepTimer: controls.clearSleepTimer,
-    timeRemaining: sleepTimer.timeRemaining,
-    songsRemaining: sleepTimer.songsRemaining,
-    isActive: sleepTimer.isActive,
-  };
-
   return (
     <PlayerControlsContext.Provider value={controls}>
       <PlayerStateContext.Provider value={playbackValue}>
         <PlaylistContext.Provider value={playlistValue}>
-          <SleepTimerContext.Provider value={sleepTimerValue}>
-            {children}
-          </SleepTimerContext.Provider>
+          {children}
         </PlaylistContext.Provider>
       </PlayerStateContext.Provider>
     </PlayerControlsContext.Provider>

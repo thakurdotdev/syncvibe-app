@@ -30,7 +30,9 @@ export const setupPlayer = async (): Promise<boolean> => {
       // Initialize the player
       await TrackPlayer.setupPlayer({
         autoUpdateMetadata: true,
-        androidAudioContentType: AndroidAudioContentType.Music,
+        androidAudioContentType: AndroidAudioContentType.Speech,
+        autoHandleInterruptions: true,
+        maxCacheSize: 1024 * 1024 * 100, // 100 MB
       });
 
       // Configure capabilities for background and lock screen

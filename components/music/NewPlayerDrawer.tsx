@@ -1,23 +1,12 @@
-import {
-  usePlayer,
-  usePlayerState,
-  usePlaylist,
-  useSleepTimer,
-} from "@/context/MusicContext";
+import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
+import { toast } from "@/context/ToastContext";
 import { Song } from "@/types/song";
-import {
-  Feather,
-  FontAwesome,
-  Ionicons,
-  MaterialIcons,
-} from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import SwipeableModal from "../common/SwipeableModal";
 import AddToPlaylist from "./AddToPlaylist";
-import { toast } from "@/context/ToastContext";
-import SleepTimerModal from "../SleepTimerModal";
 
 interface PlayerDrawerProps {
   isVisible: boolean;
@@ -34,8 +23,6 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
   const { addToQueue, removeFromQueue } = usePlayer();
   const { currentSong } = usePlayerState();
   const { playlist } = usePlaylist();
-  const [sleepTimerModal, setSleepTimerModal] = useState(false);
-  const { isActive } = useSleepTimer();
 
   const artistName = song.artist_map?.artists || [
     { name: "Unknown Artist", id: null },
@@ -146,30 +133,6 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
               <Text style={styles.optionText}>View Album</Text>
             </TouchableOpacity>
           )}
-
-          {/* Divider */}
-
-          {/* Sleep Timer */}
-          {currentSong && (
-            <>
-              <View style={styles.divider} />
-              <TouchableOpacity
-                style={styles.optionRow}
-                onPress={() => setSleepTimerModal(true)}
-              >
-                <View style={styles.iconContainer}>
-                  <FontAwesome
-                    name="clock-o"
-                    size={24}
-                    color={isActive ? "#4ADE80" : "#FFFFFF"}
-                  />
-                </View>
-                <Text style={styles.optionText}>
-                  {isActive ? "Cancel Sleep Timer" : "Set Sleep Timer"}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
         </View>
       </SwipeableModal>
       {playlistModal && (
@@ -177,12 +140,6 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
           dialogOpen={playlistModal}
           setDialogOpen={() => setPlaylistModal(false)}
           song={song}
-        />
-      )}
-      {sleepTimerModal && (
-        <SleepTimerModal
-          isVisible={sleepTimerModal}
-          onClose={() => setSleepTimerModal(false)}
         />
       )}
     </>

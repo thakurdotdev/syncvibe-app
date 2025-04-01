@@ -22,7 +22,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const { width } = Dimensions.get("window");
 
 export default function SearchMusic() {
-  const { playSong } = usePlayer();
   const [searchQuery, setSearchQuery] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,7 +74,6 @@ export default function SearchMusic() {
 
     return (
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
-        <Text style={styles.headerTitle}>Search Music</Text>
         <Text style={styles.headerSubtitle}>Find your favorite songs</Text>
 
         <Animated.View
@@ -198,12 +196,6 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     paddingBottom: 10,
     backgroundColor: "#121212",
-  },
-  headerTitle: {
-    color: "white",
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 4,
   },
   headerSubtitle: {
     color: "white",

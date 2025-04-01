@@ -10,6 +10,7 @@ import { registerForPushNotificationsAsync } from "@/utils/registerForPushNotifi
 import { useChat } from "./SocketContext";
 import { useUser } from "./UserContext";
 import useApi from "@/utils/hooks/useApi";
+import { router } from "expo-router";
 
 type NotificationContextType = {
   expoPushToken: string | null;
@@ -33,30 +34,52 @@ export function NotificationProvider({
   const [notification, setNotification] =
     useState<Notifications.Notification | null>(null);
 
-  // Store pending chat ID to process when users and user are available
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
 
   const notificationListener = useRef<Notifications.EventSubscription>();
   const responseListener = useRef<Notifications.EventSubscription>();
+  const appInitialized = useRef(false);
+
+  // Handle initial notification (on app launch)
+  useEffect(() => {
+    if (!appInitialized.current) {
+      appInitialized.current = true;
+
+      // Check if app was opened from a notification
+      Notifications.getLastNotificationResponseAsync()
+        .then((response) => {
+          if (response) {
+            const chatid = response.notification.request.content.data?.chatid;
+            if (chatid) {
+              setPendingChatId(chatid);
+            }
+          }
+        })
+        .catch((err) =>
+          console.error("Error checking last notification:", err),
+        );
+    }
+  }, []);
 
   useEffect(() => {
     registerForPushNotificationsAsync().then((token) =>
       setExpoPushToken(token || null),
     );
 
-    // This listener is fired whenever a notification is received while the app is foregrounded
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         setNotification(notification);
       });
 
-    // This listener is fired whenever a user taps on or interacts with a notification
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log("Notification response received:", response);
+
         const chatid = response.notification.request.content.data?.chatid;
 
         // Instead of trying to process immediately, store the chatid
         if (chatid) {
+          console.log("Setting pending chat ID from notification tap:", chatid);
           setPendingChatId(chatid);
         }
       });
@@ -71,7 +94,7 @@ export function NotificationProvider({
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
-  }, []); // Remove dependencies to avoid recreating listeners
+  }, []);
 
   // Process pending notifications when users and user are available
   useEffect(() => {
@@ -80,6 +103,13 @@ export function NotificationProvider({
       if (chat) {
         setCurrentChat(chat);
         setPendingChatId(null);
+
+        // Slight delay to ensure context updates before navigation
+        setTimeout(() => {
+          router.push("/message");
+        }, 100);
+      } else {
+        console.log("No matching chat found for ID:", pendingChatId);
       }
     }
   }, [pendingChatId, users, user, setCurrentChat]);

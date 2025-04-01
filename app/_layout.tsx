@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -54,6 +54,7 @@ function RootLayout() {
 
 function RootLayoutNav() {
   const { incomingCall, isInCall } = useVideoCall();
+
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#000" />

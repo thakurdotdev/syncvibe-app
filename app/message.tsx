@@ -6,7 +6,7 @@ import useApi from "@/utils/hooks/useApi";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, memo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -50,6 +51,111 @@ const formatDate = (date: string) => {
   }
 };
 
+// Memoized Message Item Component to improve FlatList performance
+const MessageItem = memo(
+  ({
+    item,
+    isOwnMessage,
+    loggedInUserId,
+    currentChat,
+    chatImages,
+    onImagePress,
+  }: any) => {
+    if (item.type === "date") {
+      return (
+        <View style={styles.dateHeaderContainer}>
+          <Text style={styles.dateHeaderText}>{item.date}</Text>
+        </View>
+      );
+    }
+
+    const isFirstInSequence = item.isFirstInSequence;
+
+    return (
+      <View
+        style={[
+          styles.messageContainer,
+          isOwnMessage
+            ? styles.ownMessageContainer
+            : styles.otherMessageContainer,
+        ]}
+      >
+        {!isOwnMessage && isFirstInSequence && (
+          <Image
+            source={{ uri: currentChat?.otherUser?.profilepic }}
+            style={styles.messageBubbleAvatar}
+          />
+        )}
+
+        <View
+          style={[
+            styles.messageBubbleWrapper,
+            isOwnMessage
+              ? styles.ownMessageWrapper
+              : styles.otherMessageWrapper,
+            isFirstInSequence
+              ? {}
+              : isOwnMessage
+              ? { marginRight: 10 }
+              : { marginLeft: 10 },
+          ]}
+        >
+          <View
+            style={[
+              styles.messageBubble,
+              isOwnMessage
+                ? styles.ownMessageBubble
+                : styles.otherMessageBubble,
+              isFirstInSequence
+                ? isOwnMessage
+                  ? styles.ownFirstBubble
+                  : styles.otherFirstBubble
+                : {},
+            ]}
+          >
+            {item.fileurl && (
+              <TouchableOpacity
+                style={styles.imageContainer}
+                activeOpacity={0.9}
+                onPress={() => {
+                  const imageIndex = chatImages.indexOf(item.fileurl);
+                  onImagePress(imageIndex);
+                }}
+              >
+                <Image
+                  source={{ uri: item.fileurl }}
+                  style={styles.messageImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            )}
+            {item.content && (
+              <Text
+                style={[
+                  styles.messageText,
+                  isOwnMessage
+                    ? styles.ownMessageText
+                    : styles.otherMessageText,
+                ]}
+              >
+                {item.content}
+              </Text>
+            )}
+          </View>
+          <Text
+            style={[
+              styles.timeText,
+              isOwnMessage ? styles.ownTimeText : styles.otherTimeText,
+            ]}
+          >
+            {formatTime(item.createdat)}
+          </Text>
+        </View>
+      </View>
+    );
+  },
+);
+
 const ChatWithUser = () => {
   const api = useApi();
   const { user } = useUser();
@@ -68,6 +174,7 @@ const ChatWithUser = () => {
   const [inputHeight, setInputHeight] = useState(50);
   const [showGallery, setShowGallery] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   // Refs
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,6 +193,7 @@ const ChatWithUser = () => {
       console.error("Error fetching messages:", error);
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
   }, [
     loggedInUserId,
@@ -119,14 +227,18 @@ const ChatWithUser = () => {
     currentChat?.chatid,
   ]);
 
-  // Auto scroll to bottom when new messages arrive
+  // Auto scroll to bottom when new messages arrive or on initial load
   useEffect(() => {
     if (messages.length > 0 && flatListRef.current) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      // Use a shorter timeout for initial load to avoid flickering
+      setTimeout(
+        () => {
+          flatListRef.current?.scrollToEnd({ animated: !initialLoad });
+        },
+        initialLoad ? 100 : 300,
+      );
     }
-  }, [messages]);
+  }, [messages, initialLoad]);
 
   const handleSendMessage = async () => {
     if (!message.trim() && !file) return;
@@ -199,8 +311,14 @@ const ChatWithUser = () => {
   const handleTyping = useCallback(
     (text: string) => {
       setMessage(text);
-      if (text.length > 30) {
-        setInputHeight(80);
+
+      // Dynamic input height based on content length
+      if (text.length > 80) {
+        setInputHeight(110);
+      } else if (text.length > 40) {
+        setInputHeight(90);
+      } else if (text.length > 0) {
+        setInputHeight(70);
       } else {
         setInputHeight(50);
       }
@@ -230,10 +348,11 @@ const ChatWithUser = () => {
     [loggedInUserId, currentChat?.otherUser?.userid, socket],
   );
 
-  // Group messages by date
+  // Pre-process messages for better performance
   const processedMessages = useCallback(() => {
     const result: any[] = [];
     let currentDate = "";
+    let prevSenderId: string | null = null;
 
     messages.forEach((msg) => {
       const messageDate = formatDate(msg.createdat);
@@ -245,9 +364,19 @@ const ChatWithUser = () => {
           date: messageDate,
         });
         currentDate = messageDate;
+        // Reset the previous sender ID after a date divider
+        prevSenderId = null;
       }
 
-      result.push({ ...msg, type: "message" });
+      // Check if this is the first message in a sequence from this sender
+      const isFirstInSequence = prevSenderId !== msg.senderid;
+      prevSenderId = msg.senderid;
+
+      result.push({
+        ...msg,
+        type: "message",
+        isFirstInSequence,
+      });
     });
 
     return result;
@@ -259,106 +388,26 @@ const ChatWithUser = () => {
 
   const chatImages = getChatImages();
 
-  const renderItem = ({ item, index }: { item: any; index: number }) => {
-    if (item.type === "date") {
+  const renderItem = useCallback(
+    ({ item }: { item: any }) => {
+      const isOwnMessage = item.senderid === loggedInUserId;
+
       return (
-        <View style={styles.dateHeaderContainer}>
-          <Text style={styles.dateHeaderText}>{item.date}</Text>
-        </View>
+        <MessageItem
+          item={item}
+          isOwnMessage={isOwnMessage}
+          loggedInUserId={loggedInUserId}
+          currentChat={currentChat}
+          chatImages={chatImages}
+          onImagePress={(index: number) => {
+            setSelectedImageIndex(index);
+            setShowGallery(true);
+          }}
+        />
       );
-    }
-
-    const isOwnMessage = item.senderid === loggedInUserId;
-
-    const isFirstInSequence =
-      index === 0 ||
-      processedMessages()[index - 1].type === "date" ||
-      processedMessages()[index - 1].senderid !== item.senderid;
-
-    return (
-      <View
-        style={[
-          styles.messageContainer,
-          isOwnMessage
-            ? styles.ownMessageContainer
-            : styles.otherMessageContainer,
-        ]}
-      >
-        {!isOwnMessage && isFirstInSequence && (
-          <Image
-            source={{ uri: currentChat?.otherUser?.profilepic }}
-            style={styles.messageBubbleAvatar}
-          />
-        )}
-
-        <View
-          style={[
-            styles.messageBubbleWrapper,
-            isOwnMessage
-              ? styles.ownMessageWrapper
-              : styles.otherMessageWrapper,
-            isFirstInSequence
-              ? {}
-              : isOwnMessage
-              ? { marginRight: 10 }
-              : { marginLeft: 10 },
-          ]}
-        >
-          <View
-            style={[
-              styles.messageBubble,
-              isOwnMessage
-                ? styles.ownMessageBubble
-                : styles.otherMessageBubble,
-              isFirstInSequence
-                ? isOwnMessage
-                  ? styles.ownFirstBubble
-                  : styles.otherFirstBubble
-                : {},
-            ]}
-          >
-            {item.fileurl && (
-              <TouchableOpacity
-                style={styles.imageContainer}
-                activeOpacity={0.9}
-                onPress={() => {
-                  const imageIndex = chatImages.indexOf(item.fileurl);
-                  setSelectedImageIndex(imageIndex);
-                  setShowGallery(true);
-                }}
-              >
-                <Image
-                  source={{ uri: item.fileurl }}
-                  style={styles.messageImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            )}
-            {item.content && (
-              <Text
-                style={[
-                  styles.messageText,
-                  isOwnMessage
-                    ? styles.ownMessageText
-                    : styles.otherMessageText,
-                ]}
-              >
-                {item.content}
-              </Text>
-            )}
-          </View>
-          <Text
-            style={[
-              styles.timeText,
-              isOwnMessage ? styles.ownTimeText : styles.otherTimeText,
-            ]}
-          >
-            {formatTime(item.createdat)}
-          </Text>
-        </View>
-      </View>
-    );
-  };
+    },
+    [loggedInUserId, currentChat, chatImages],
+  );
 
   const renderAttachmentPreview = () => {
     if (!filePreview) return null;
@@ -410,10 +459,30 @@ const ChatWithUser = () => {
   const scrollToBottom = () => {
     if (flatListRef.current && messages.length > 0) {
       flatListRef.current.scrollToEnd({ animated: true });
+      setShowScrollButton(false);
     }
   };
 
   const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ""];
+
+  const getItemLayout = useCallback((data: any, index: number) => {
+    // Estimate height based on type (date header is shorter than message)
+    const item = data[index];
+    let height = item.type === "date" ? 40 : 80;
+
+    // Adjust height for messages with images
+    if (item.type === "message" && item.fileurl) {
+      height = 220; // Image + text + padding
+    }
+
+    return { length: height, offset: height * index, index };
+  }, []);
+
+  const keyExtractor = useCallback(
+    (item: any, index: number) =>
+      item.type === "date" ? item.id : `msg-${item.messageid || index}`,
+    [],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -450,93 +519,101 @@ const ChatWithUser = () => {
         </View>
       </View>
 
-      <View style={styles.messagesContainer}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0A84FF" />
+      <KeyboardAvoidingView
+        style={styles.mainContainer}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <View style={styles.messagesContainer}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0A84FF" />
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={processedMessages()}
+              keyExtractor={keyExtractor}
+              renderItem={renderItem}
+              getItemLayout={getItemLayout}
+              contentContainerStyle={styles.messagesList}
+              showsVerticalScrollIndicator={false}
+              initialNumToRender={10}
+              maxToRenderPerBatch={5}
+              windowSize={5}
+              removeClippedSubviews={true}
+              onEndReachedThreshold={0.5}
+              onScroll={({ nativeEvent }) => {
+                const { contentOffset, contentSize, layoutMeasurement } =
+                  nativeEvent;
+                const distanceFromBottom =
+                  contentSize.height -
+                  (contentOffset.y + layoutMeasurement.height);
+                setShowScrollButton(distanceFromBottom > 300);
+              }}
+              scrollEventThrottle={100}
+            />
+          )}
+
+          {showScrollButton && (
+            <TouchableOpacity
+              style={styles.scrollToBottomButton}
+              onPress={scrollToBottom}
+            >
+              <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {renderAttachmentPreview()}
+        <View style={[styles.inputContainer, { height: inputHeight }]}>
+          <View style={styles.inputRow}>
+            <TouchableOpacity style={styles.attachButton} onPress={pickImage}>
+              <Ionicons name="image-outline" size={22} color="#0A84FF" />
+            </TouchableOpacity>
+
+            <View style={styles.textInputContainer}>
+              <TextInput
+                ref={inputRef}
+                value={message}
+                onChangeText={handleTyping}
+                style={styles.input}
+                placeholder="Message..."
+                placeholderTextColor="#8E8E93"
+                multiline
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                {
+                  backgroundColor:
+                    message.trim() || file
+                      ? "#0A84FF"
+                      : "rgba(10, 132, 255, 0.3)",
+                },
+              ]}
+              onPress={handleSendMessage}
+              disabled={!message.trim() && !file}
+            >
+              <Ionicons
+                name="send"
+                size={18}
+                color={message.trim() || file ? "#FFFFFF" : "#CCCCCC"}
+              />
+            </TouchableOpacity>
           </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={processedMessages()}
-            keyExtractor={(item, index) =>
-              item.type === "date" ? item.id : `msg-${item.messageid || index}`
-            }
-            renderItem={renderItem}
-            contentContainerStyle={styles.messagesList}
-            showsVerticalScrollIndicator={false}
-            initialNumToRender={20}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            onScroll={({ nativeEvent }) => {
-              const { contentOffset, contentSize, layoutMeasurement } =
-                nativeEvent;
-              const distanceFromBottom =
-                contentSize.height -
-                (contentOffset.y + layoutMeasurement.height);
-              setShowScrollButton(distanceFromBottom > 200);
-            }}
-            scrollEventThrottle={16}
+        </View>
+
+        {showGallery && chatImages.length > 0 && (
+          <ImageGallery
+            images={chatImages}
+            initialIndex={selectedImageIndex}
+            onClose={() => setShowGallery(false)}
           />
         )}
-
-        {showScrollButton && (
-          <TouchableOpacity
-            style={styles.scrollToBottomButton}
-            onPress={scrollToBottom}
-          >
-            <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {renderAttachmentPreview()}
-      <View style={[styles.inputContainer, { height: inputHeight }]}>
-        <View style={styles.inputRow}>
-          <TouchableOpacity style={styles.attachButton} onPress={pickImage}>
-            <Ionicons name="image-outline" size={22} color="#0A84FF" />
-          </TouchableOpacity>
-
-          <View style={styles.textInputContainer}>
-            <TextInput
-              ref={inputRef}
-              value={message}
-              onChangeText={handleTyping}
-              style={styles.input}
-              placeholder="Message..."
-              placeholderTextColor="#8E8E93"
-              multiline
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              {
-                backgroundColor:
-                  message.trim() || file
-                    ? "#0A84FF"
-                    : "rgba(10, 132, 255, 0. 5)",
-              },
-            ]}
-            onPress={handleSendMessage}
-            disabled={!message.trim() && !file}
-          >
-            <Ionicons
-              name="send"
-              size={18}
-              color={message.trim() || file ? "#FFFFFF" : "#CCCCCC"}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-      {showGallery && chatImages.length > 0 && (
-        <ImageGallery
-          images={chatImages}
-          initialIndex={selectedImageIndex}
-          onClose={() => setShowGallery(false)}
-        />
-      )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -546,6 +623,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000000",
   },
+  mainContainer: {
+    flex: 1,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -554,6 +634,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
     backgroundColor: "#121212",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
   },
   backButton: {
     padding: 8,
@@ -594,10 +679,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
     marginBottom: 2,
-  },
-  lastSeen: {
-    fontSize: 12,
-    color: "#8E8E93",
   },
   typingContainer: {
     flexDirection: "row",
@@ -721,17 +802,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 15,
     bottom: 15,
-    width: 32,
-    height: 32,
-    backgroundColor: "rgba(40, 40, 40, 0.7)",
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    backgroundColor: "rgba(40, 40, 40, 0.8)",
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   inputContainer: {
     paddingHorizontal: 12,
@@ -740,7 +823,6 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255, 255, 255, 0.1)",
     backgroundColor: "#121212",
     justifyContent: "center",
-    marginBottom: 15,
   },
   inputRow: {
     flexDirection: "row",
@@ -762,17 +844,17 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   attachButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#2C2C2E",
     justifyContent: "center",
     alignItems: "center",
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -780,6 +862,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: "#121212",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
   },
   attachmentPreview: {
     width: 80,
