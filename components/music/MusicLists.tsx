@@ -1,8 +1,9 @@
 import { Song } from "@/types/song";
+import { router } from "expo-router";
+import { RefreshCcwIcon } from "lucide-react-native";
 import React, { memo } from "react";
 import {
   ActivityIndicator,
-  Button,
   FlatList,
   Text,
   TouchableOpacity,
@@ -15,8 +16,6 @@ import {
   PlaylistCard,
   SongCard,
 } from "./MusicCards";
-import { RefreshCcwIcon } from "lucide-react-native";
-import { router } from "expo-router";
 
 interface AlbumsGridProps {
   albums: any[];
@@ -198,9 +197,6 @@ export const RecommendationGrid = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingRight: 16, paddingLeft: 2 }}
         ItemSeparatorComponent={() => <View className="w-4" />}
-        decelerationRate="fast"
-        snapToAlignment="start"
-        snapToInterval={180}
         className="pb-2"
       />
     </View>

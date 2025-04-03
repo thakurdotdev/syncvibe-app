@@ -31,6 +31,7 @@ interface Group {
   id: string;
   name: string;
   createdBy: number;
+  qrCode?: string;
 }
 
 interface Message {

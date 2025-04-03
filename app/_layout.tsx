@@ -156,6 +156,13 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="qr-scanner"
+          options={{
+            headerShown: false,
+            title: "QR Scanner",
+          }}
+        />
+        <Stack.Screen
           name="oauthredirect"
           options={{
             headerShown: false,

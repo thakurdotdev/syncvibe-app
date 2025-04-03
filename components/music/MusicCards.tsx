@@ -21,10 +21,26 @@ import {
   useRef,
   useState,
 } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Slider } from "react-native-awesome-slider";
 import { TouchableOpacity } from "react-native-gesture-handler";
-import { useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import TrackPlayer, {
   State,
   usePlaybackState,
@@ -32,6 +48,7 @@ import TrackPlayer, {
 } from "react-native-track-player";
 import NewPlayerDrawer from "./NewPlayerDrawer";
 import * as Haptics from "expo-haptics";
+import { addToHistory } from "@/utils/api/addToHistory";
 
 interface SongCardProps {
   song: Song;
@@ -95,18 +112,13 @@ const CardContainer = ({
 );
 export const SongCard = memo(({ song }: SongCardProps) => {
   const { playSong } = usePlayer();
-  const { currentSong } = usePlayerState();
-  const playbackState = usePlaybackState();
-  const isPlaying = playbackState.state === State.Playing;
+  const { currentSong, isPlaying, isLoading } = usePlayerState();
 
+  const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
+  const isCurrentSong = currentSong?.id === securedSong.id;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
-  // Apply HTTPS conversion to the song object
-  const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
-
-  const isCurrentSong = currentSong?.id === securedSong.id;
-
-  const handlePress = async () => {
+  const handlePress = useCallback(async () => {
     if (isCurrentSong) {
       if (isPlaying) {
         await TrackPlayer.pause();
@@ -115,69 +127,104 @@ export const SongCard = memo(({ song }: SongCardProps) => {
       }
     } else {
       playSong(securedSong);
+      addToHistory(securedSong, 10);
     }
-  };
+  }, [isCurrentSong, isPlaying, securedSong, playSong]);
 
-  const handleLongPress = () => {
+  const handleLongPress = useCallback(() => {
     setPlayerDrawerOpen(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  }, []);
+
+  const gradientColors = useMemo(
+    () =>
+      isCurrentSong
+        ? (["rgba(59, 130, 246, 0.6)", "rgba(30, 30, 60, 0.8)"] as const)
+        : (["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"] as const),
+    [isCurrentSong],
+  );
 
   return (
     <>
       <Pressable
         onPress={handlePress}
         onLongPress={handleLongPress}
-        style={{
-          backgroundColor: "rgba(24, 24, 27, 0.8)",
-          borderRadius: 8,
-          overflow: "hidden",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
-        }}
+        style={({ pressed }) => [
+          {
+            backgroundColor: "rgba(24, 24, 27, 0.8)",
+            borderRadius: 12,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 5,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+          },
+        ]}
         android_ripple={{
-          color: "rgba(255, 255, 255, 0.5)",
+          color: "rgba(255, 255, 255, 0.2)",
           borderless: false,
         }}
-        className="flex-row items-center rounded-xl mb-2 overflow-hidden"
-        key={securedSong.id}
+        className="flex-row items-center rounded-xl mb-3 overflow-hidden"
       >
         <BlurView intensity={20} tint="dark" className="absolute inset-0" />
         <LinearGradient
-          colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
-          className="w-full flex-row border border-gray-800/30 rounded-xl p-2"
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          className="w-full flex-row border border-gray-800/30 rounded-xl p-3"
         >
-          <Image
-            source={{ uri: securedSong.image[0]?.link }}
-            className="w-12 h-12 rounded-md"
-            alt="Song cover"
-          />
+          <View className="relative">
+            <Image
+              source={{ uri: securedSong.image[0]?.link }}
+              className="w-14 h-14 rounded-lg"
+              alt="Song cover"
+              fadeDuration={0}
+              resizeMode="cover"
+            />
+          </View>
+
           <View className="flex-1 px-4 justify-center">
-            <Text className="text-white font-semibold" numberOfLines={1}>
+            <Text
+              className="text-white font-semibold text-base"
+              numberOfLines={1}
+            >
               {securedSong.name}
             </Text>
-            <Text className="text-gray-400 text-sm" numberOfLines={1}>
+            <Text className="text-gray-300 text-sm" numberOfLines={1}>
               {securedSong.subtitle ||
                 securedSong.artist_map?.artists?.[0]?.name}
             </Text>
           </View>
-          {isCurrentSong && (
+
+          {isCurrentSong ? (
+            <View className="flex-row items-end h-10 space-x-0.5 pr-2">
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#3b82f6" />
+              ) : (
+                <>
+                  <View className="ml-3">
+                    <Ionicons
+                      name={isPlaying ? "pause" : "play"}
+                      size={22}
+                      color="#3b82f6"
+                    />
+                  </View>
+                </>
+              )}
+            </View>
+          ) : (
             <View className="justify-center pr-2">
-              <Ionicons
-                name={isPlaying ? "pause" : "play"}
-                size={24}
-                color="white"
-              />
+              <Ionicons name="play" size={20} color="white" />
             </View>
           )}
         </LinearGradient>
       </Pressable>
+
       {playerDrawerOpen && (
         <NewPlayerDrawer
-          isVisible={playerDrawerOpen}
+          isVisible={true}
           onClose={() => setPlayerDrawerOpen(false)}
           song={securedSong}
         />
@@ -293,12 +340,9 @@ export const PlaylistCard = memo(
 export const NewSongCard = memo(({ song }: SongCardProps) => {
   if (!song.id) return null;
   const { playSong } = usePlayer();
-  const { currentSong } = usePlayerState();
+  const { currentSong, isPlaying, isLoading } = usePlayerState();
   const isCurrentSong = currentSong?.id === song.id;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
-
-  const playbackState = usePlaybackState();
-  const isPlaying = playbackState.state === State.Playing;
 
   const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
 
@@ -317,6 +361,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
       }
     } else {
       playSong(securedSong);
+      addToHistory(securedSong, 10);
     }
   };
 

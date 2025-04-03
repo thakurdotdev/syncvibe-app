@@ -4,10 +4,16 @@ import { Song } from "@/types/song";
 import { ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { LinearGradient } from "expo-linear-gradient";
-import { usePathname } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect, usePathname } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   StyleSheet,
@@ -37,7 +43,6 @@ import TrackPlayer, {
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 import NewPlayerDrawer from "./NewPlayerDrawer";
-import DynamicIslandPlayer from "./DynamicIslandPlayer";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
@@ -103,15 +108,15 @@ const RecommendationsTab = React.memo(
 );
 
 export default function Player() {
-  const { addToQueue, handleNextSong, setPlayMode } = usePlayer();
-  const { currentSong } = usePlayerState();
+  const { addToQueue, handleNextSong } = usePlayer();
+  const { currentSong, isPlaying, isLoading } = usePlayerState();
   const { playlist } = usePlaylist();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("player");
   const insets = useSafeAreaInsets();
-  const playbackState = usePlaybackState();
-  const isPlaying = playbackState.state === State.Playing;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
+  const [isPlayerVisible, setIsPlayerVisible] = useState(true);
+  const lastPathRef = useRef("");
 
   const handlePlayPauseSong = async () => {
     if (isPlaying) {
@@ -125,6 +130,37 @@ export default function Player() {
 
   // Determine active tab based on pathname
   const isHomeActive = pathname.includes("/home");
+
+  // Force re-render on route change or when song changes
+  useFocusEffect(
+    useCallback(() => {
+      // Reset visibility when we navigate back to home
+      if (pathname.includes("/home") && currentSong) {
+        setIsPlayerVisible(true);
+      }
+
+      // Track path changes to detect navigation events
+      if (lastPathRef.current !== pathname) {
+        lastPathRef.current = pathname;
+
+        // Small delay to ensure context is stable after navigation
+        const timer = setTimeout(() => {
+          if (currentSong && pathname.includes("/home")) {
+            setIsPlayerVisible(true);
+          }
+        }, 100);
+
+        return () => clearTimeout(timer);
+      }
+    }, [pathname, currentSong]),
+  );
+
+  // Additional effect to monitor currentSong changes
+  useEffect(() => {
+    if (currentSong && isHomeActive) {
+      setIsPlayerVisible(true);
+    }
+  }, [currentSong, isHomeActive]);
 
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -231,15 +267,12 @@ export default function Player() {
     [currentSong],
   );
 
-  // Swipe gesture handler for closing expanded player - YouTube style
   const gestureHandler = useAnimatedGestureHandler({
     onStart: (_, ctx) => {
       ctx.startY = gestureTranslateY.value;
     },
     onActive: (event, ctx: any) => {
       if (event.translationY > 0) {
-        // Only allow downward swipes
-        // Add some resistance to the drag
         const dampenedDrag = event.translationY * 0.8;
         gestureTranslateY.value = ctx.startY + dampenedDrag;
       }
@@ -325,11 +358,20 @@ export default function Player() {
           }}
           style={styles.playPauseButton}
         >
-          <Ionicons
-            name={isPlaying ? "pause" : "play"}
-            size={22}
-            color="white"
-          />
+          {isLoading ? (
+            <ActivityIndicator
+              size={22}
+              color="white"
+              style={{ opacity: 0.5 }}
+              aria-disabled={true}
+            />
+          ) : (
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={22}
+              color="white"
+            />
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={(e) => {
@@ -425,7 +467,7 @@ export default function Player() {
     </Animated.View>
   );
 
-  if (!currentSong || !isHomeActive) return null;
+  if (!currentSong || !isHomeActive || !isPlayerVisible) return null;
 
   return (
     <>
