@@ -20,14 +20,18 @@ const ensureHttpsForImages = (
   if (!Array.isArray(images)) {
     return {
       ...images,
-      link: images.link ? convertToHttps(images.link) : undefined,
+      link: images.link
+        ? convertToHttps(images.link)
+        : "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp",
     };
   }
 
   // Handle array of images
   return images.map((img) => ({
     ...img,
-    link: img.link ? convertToHttps(img.link) : undefined,
+    link: img.link
+      ? convertToHttps(img.link)
+      : "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp",
   }));
 };
 
@@ -39,7 +43,9 @@ const ensureHttpsForArtists = (artists?: Artist[]): Artist[] => {
   return artists.map((artist) => ({
     ...artist,
     url: artist.url ? convertToHttps(artist.url) : undefined,
-    image: artist.image ? ensureHttpsForImages(artist.image) : undefined,
+    image: artist.image
+      ? ensureHttpsForImages(artist.image)
+      : "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp",
   }));
 };
 
@@ -128,7 +134,12 @@ export const ensureHttpsForArtistUrls = (artist: any): any => {
   const securedArtist = { ...artist };
 
   if (artist.url) securedArtist.url = convertToHttps(artist.url);
-  if (artist.image) securedArtist.image = ensureHttpsForImages(artist.image);
+  if (artist.image) {
+    securedArtist.image = ensureHttpsForImages(artist.image);
+  } else {
+    securedArtist.image =
+      "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp";
+  }
 
   if (Array.isArray(artist.albums)) {
     securedArtist.albums = artist.albums.map((album: any) =>
@@ -158,7 +169,9 @@ export const ensureHttpsForPlaylistUrls = (playlist: any): any => {
   if (playlist.image) {
     securedPlaylist.image = Array.isArray(playlist.image)
       ? ensureHttpsForImages(playlist.image)
-      : convertToHttps(playlist.image);
+      : playlist.image
+      ? convertToHttps(playlist.image)
+      : "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp";
   }
 
   if (playlist.artists) {

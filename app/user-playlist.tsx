@@ -161,7 +161,7 @@ export default function UserPlaylistDetails() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Animated.FlatList
         data={playlistData?.songs}
         renderItem={({ item }) => <SongCard song={item.songData} />}
@@ -232,7 +232,7 @@ export default function UserPlaylistDetails() {
                 onPress={handlePlayAll}
                 disabled={!playlistData?.songs?.length}
               >
-                <Ionicons name="play" size={22} color="white" />
+                <Ionicons name="play" size={22} color="black" />
                 <Text style={styles.buttonText}>Play All</Text>
               </Pressable>
 
@@ -242,7 +242,7 @@ export default function UserPlaylistDetails() {
                 disabled={!playlistData?.songs?.length}
               >
                 <Ionicons name="shuffle" size={22} color="white" />
-                <Text style={styles.buttonText}>Shuffle</Text>
+                <Text className="text-white">Shuffle</Text>
               </Pressable>
             </View>
 
@@ -278,7 +278,7 @@ export default function UserPlaylistDetails() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -389,13 +389,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   playButton: {
-    backgroundColor: "#1DB954", // Spotify green
+    backgroundColor: "#ffffff", // Spotify green
   },
   shuffleButton: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   buttonText: {
-    color: "white",
+    color: "black",
     fontSize: 16,
     fontWeight: "600",
   },

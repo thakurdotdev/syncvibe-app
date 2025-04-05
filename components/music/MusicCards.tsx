@@ -1,6 +1,8 @@
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { usePlayer, usePlayerState } from "@/context/MusicContext";
+import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
+import { addToHistory } from "@/utils/api/addToHistory";
 import {
   ensureHttpsForAlbumUrls,
   ensureHttpsForArtistUrls,
@@ -9,6 +11,7 @@ import {
 } from "@/utils/getHttpsUrls";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { SkipBackIcon, SkipForwardIcon } from "lucide-react-native";
@@ -31,24 +34,13 @@ import {
 } from "react-native";
 import { Slider } from "react-native-awesome-slider";
 import { TouchableOpacity } from "react-native-gesture-handler";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
+import { useSharedValue, withTiming } from "react-native-reanimated";
 import TrackPlayer, {
   State,
   usePlaybackState,
   useProgress,
 } from "react-native-track-player";
 import NewPlayerDrawer from "./NewPlayerDrawer";
-import * as Haptics from "expo-haptics";
-import { addToHistory } from "@/utils/api/addToHistory";
 
 interface SongCardProps {
   song: Song;
@@ -84,7 +76,7 @@ interface CardContainerProps {
   width?: number | `${number}%`;
 }
 
-const CardContainer = ({
+export const CardContainer = ({
   children,
   onPress,
   width = 160,
@@ -113,6 +105,7 @@ const CardContainer = ({
 export const SongCard = memo(({ song }: SongCardProps) => {
   const { playSong } = usePlayer();
   const { currentSong, isPlaying, isLoading } = usePlayerState();
+  const { user } = useUser();
 
   const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
   const isCurrentSong = currentSong?.id === securedSong.id;
@@ -127,7 +120,9 @@ export const SongCard = memo(({ song }: SongCardProps) => {
       }
     } else {
       playSong(securedSong);
-      addToHistory(securedSong, 10);
+      if (user?.userid) {
+        addToHistory(securedSong, 10);
+      }
     }
   }, [isCurrentSong, isPlaying, securedSong, playSong]);
 
@@ -233,7 +228,7 @@ export const SongCard = memo(({ song }: SongCardProps) => {
   );
 });
 
-const CardImage = ({ uri, alt }: { uri: string; alt: string }) => (
+export const CardImage = ({ uri, alt }: { uri: string; alt: string }) => (
   <View
     style={{ width: "100%", height: 140, borderRadius: 6, overflow: "hidden" }}
   >
@@ -340,7 +335,8 @@ export const PlaylistCard = memo(
 export const NewSongCard = memo(({ song }: SongCardProps) => {
   if (!song.id) return null;
   const { playSong } = usePlayer();
-  const { currentSong, isPlaying, isLoading } = usePlayerState();
+  const { user } = useUser();
+  const { currentSong, isPlaying } = usePlayerState();
   const isCurrentSong = currentSong?.id === song.id;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
@@ -361,7 +357,9 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
       }
     } else {
       playSong(securedSong);
-      addToHistory(securedSong, 10);
+      if (user?.userid) {
+        addToHistory(securedSong, 10);
+      }
     }
   };
 
