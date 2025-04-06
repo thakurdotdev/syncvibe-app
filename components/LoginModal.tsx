@@ -3,7 +3,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const LoginModal = ({ title }: { title?: string }) => {
   const router = useRouter();
@@ -28,7 +28,14 @@ const LoginModal = ({ title }: { title?: string }) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Ionicons name="lock-closed" size={30} color="#fff" />
+                <Image
+                  source={{
+                    uri: "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp",
+                  }}
+                  style={{ width: 65, height: 65 }}
+                  resizeMode="contain"
+                  className="rounded-full"
+                />
               </LinearGradient>
             </View>
 

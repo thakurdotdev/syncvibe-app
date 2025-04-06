@@ -1,3 +1,4 @@
+import LoginScreen from "@/app/login";
 import SwipeableModal from "@/components/common/SwipeableModal";
 import LoginModal from "@/components/LoginModal";
 import { CardContainer, CardImage } from "@/components/music/MusicCards";
@@ -147,6 +148,10 @@ const PlaylistScreen = () => {
   }
 
   if (loading && !selectedPlaylist) return <LoadingState />;
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   const renderRow = ({ item }: { item: any[] }) => (
     <View className="flex-row px-3 mb-4 w-full gap-5">

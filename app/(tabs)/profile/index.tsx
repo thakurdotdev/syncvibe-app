@@ -1,4 +1,4 @@
-import LoginModal from "@/components/LoginModal";
+import LoginScreen from "@/app/login";
 import { useUser } from "@/context/UserContext";
 import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -152,6 +152,10 @@ export default function ProfileScreen() {
     );
   }
 
+  if (!user) {
+    return <LoginScreen />;
+  }
+
   return (
     <View className="flex-1 bg-black">
       <ScrollView
@@ -273,7 +277,6 @@ export default function ProfileScreen() {
           </ProfileSection>
         </View>
       </ScrollView>
-      {!user && <LoginModal />}
     </View>
   );
 }

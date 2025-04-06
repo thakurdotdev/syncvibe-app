@@ -377,6 +377,11 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentCall(null);
     setReconnectionAttempts(0);
     setConnectionState("new");
+    setCameraType("front");
+    setConnectionQuality("good");
+    setIsMuted(false);
+    setLocalStream(null);
+    setRemoteStream(null);
     isInitializing.current = false;
   }, []);
 

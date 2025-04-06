@@ -19,8 +19,8 @@ import { useChat } from "@/context/SocketContext";
 import useApi from "@/utils/hooks/useApi";
 import { useDebounce } from "@/utils/hooks/useDebounce";
 import { useUser } from "@/context/UserContext";
-import LoginModal from "@/components/LoginModal";
 import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
+import LoginScreen from "@/app/login";
 
 const AVATAR_SIZE = 40;
 const ONLINE_INDICATOR_SIZE = 10;
@@ -159,7 +159,6 @@ const SearchUser: React.FC = () => {
     return () => clearTimeout(handler);
   }, [searchQuery, searchUsers]);
 
-  // Render functions
   const renderUserItem = useCallback(
     ({ item, index }: { item: any; index: number }) => {
       const isSearchResult = searchResults.length > 0;
@@ -229,6 +228,10 @@ const SearchUser: React.FC = () => {
     </View>
   );
 
+  if (!user) {
+    return <LoginScreen />;
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -294,7 +297,6 @@ const SearchUser: React.FC = () => {
           windowSize={10}
         />
       </View>
-      {!user && <LoginModal />}
     </SafeAreaView>
   );
 };

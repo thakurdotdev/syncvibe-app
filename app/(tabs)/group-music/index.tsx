@@ -1,6 +1,6 @@
+import LoginScreen from "@/app/login";
 import QRScannerScreen from "@/app/qr-scanner";
 import SwipeableModal from "@/components/common/SwipeableModal";
-import LoginModal from "@/components/LoginModal";
 import { GroupSongControls } from "@/components/music/MusicCards";
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { useUser } from "@/context/UserContext";
@@ -61,6 +61,10 @@ export default function GroupMusicMobile() {
       ]);
     }
   };
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <>
@@ -152,14 +156,6 @@ export default function GroupMusicMobile() {
               </View>
             )}
           </SafeAreaView>
-
-          {/* Login Modal - Display if user is null */}
-          {!user && (
-            <LoginModal
-              title="You need to be signed in to use Group Music features. Please sign in
-              to continue."
-            />
-          )}
 
           {/* Main Content */}
           {!currentGroup ? (
