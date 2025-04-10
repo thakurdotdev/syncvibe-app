@@ -4,63 +4,80 @@ import { Message, useChat } from "@/context/SocketContext";
 import { useUser } from "@/context/UserContext";
 import useApi from "@/utils/hooks/useApi";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState, memo } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Image,
   Keyboard,
+  KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
-  KeyboardAvoidingView,
 } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// Enable LayoutAnimation for Android
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Constants for styling
 const AVATAR_SIZE = 40;
 const ONLINE_INDICATOR_SIZE = 12;
+const ANIMATION_DURATION = 300;
 
-const formatTime = (date: string) => {
-  return new Date(date).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+// Average heights for different message types (for accurate getItemLayout)
+const DATE_HEADER_HEIGHT = 50;
+const TEXT_MESSAGE_HEIGHT = 70;
+const IMAGE_MESSAGE_HEIGHT = 230;
+
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-const formatDate = (date: string) => {
-  const messageDate = new Date(date);
+// Function to format date for grouping messages
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
   const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
 
-  if (messageDate.toDateString() === today.toDateString()) {
+  if (date.toDateString() === today.toDateString()) {
     return "Today";
-  } else if (messageDate.toDateString() === yesterday.toDateString()) {
+  } else if (date.toDateString() === yesterday.toDateString()) {
     return "Yesterday";
   } else {
-    return messageDate.toLocaleDateString(undefined, {
+    return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
+      year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
     });
   }
 };
 
+// Simplified Message Component
+const SimpleMessage = ({ children }) => {
+  return <View>{children}</View>;
+};
+
 // Memoized Message Item Component to improve FlatList performance
 const MessageItem = memo(
-  ({
-    item,
-    isOwnMessage,
-    loggedInUserId,
-    currentChat,
-    chatImages,
-    onImagePress,
-  }: any) => {
+  ({ item, isOwnMessage, currentChat, chatImages, onImagePress }: any) => {
     if (item.type === "date") {
       return (
         <View style={styles.dateHeaderContainer}>
@@ -69,89 +86,73 @@ const MessageItem = memo(
       );
     }
 
-    const isFirstInSequence = item.isFirstInSequence;
-
     return (
-      <View
-        style={[
-          styles.messageContainer,
-          isOwnMessage
-            ? styles.ownMessageContainer
-            : styles.otherMessageContainer,
-        ]}
-      >
-        {!isOwnMessage && isFirstInSequence && (
-          <Image
-            source={{ uri: currentChat?.otherUser?.profilepic }}
-            style={styles.messageBubbleAvatar}
-          />
-        )}
-
+      <SimpleMessage>
         <View
           style={[
-            styles.messageBubbleWrapper,
+            styles.messageContainer,
             isOwnMessage
-              ? styles.ownMessageWrapper
-              : styles.otherMessageWrapper,
-            isFirstInSequence
-              ? {}
-              : isOwnMessage
-              ? { marginRight: 10 }
-              : { marginLeft: 10 },
+              ? styles.ownMessageContainer
+              : styles.otherMessageContainer,
           ]}
         >
           <View
             style={[
-              styles.messageBubble,
+              styles.messageBubbleWrapper,
               isOwnMessage
-                ? styles.ownMessageBubble
-                : styles.otherMessageBubble,
-              isFirstInSequence
-                ? isOwnMessage
-                  ? styles.ownFirstBubble
-                  : styles.otherFirstBubble
-                : {},
+                ? styles.ownMessageWrapper
+                : styles.otherMessageWrapper,
             ]}
           >
-            {item.fileurl && (
-              <TouchableOpacity
-                style={styles.imageContainer}
-                activeOpacity={0.9}
-                onPress={() => {
-                  const imageIndex = chatImages.indexOf(item.fileurl);
-                  onImagePress(imageIndex);
-                }}
-              >
-                <Image
-                  source={{ uri: item.fileurl }}
-                  style={styles.messageImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            )}
-            {item.content && (
-              <Text
-                style={[
-                  styles.messageText,
-                  isOwnMessage
-                    ? styles.ownMessageText
-                    : styles.otherMessageText,
-                ]}
-              >
-                {item.content}
-              </Text>
-            )}
+            <View
+              style={[
+                styles.messageBubble,
+                isOwnMessage
+                  ? styles.ownMessageBubble
+                  : styles.otherMessageBubble,
+              ]}
+            >
+              {item.fileurl && (
+                <TouchableOpacity
+                  style={styles.imageContainer}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const imageIndex = chatImages.indexOf(item.fileurl);
+                    onImagePress(imageIndex);
+                  }}
+                >
+                  <Image
+                    source={{ uri: item.fileurl }}
+                    style={styles.messageImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              )}
+              {item.content && (
+                <Text
+                  style={[
+                    styles.messageText,
+                    isOwnMessage
+                      ? styles.ownMessageText
+                      : styles.otherMessageText,
+                  ]}
+                >
+                  {item.content}
+                </Text>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.timeText,
+                isOwnMessage ? styles.ownTimeText : styles.otherTimeText,
+              ]}
+            >
+              {formatTime(item.createdat)}
+            </Text>
           </View>
-          <Text
-            style={[
-              styles.timeText,
-              isOwnMessage ? styles.ownTimeText : styles.otherTimeText,
-            ]}
-          >
-            {formatTime(item.createdat)}
-          </Text>
         </View>
-      </View>
+      </SimpleMessage>
     );
   },
 );
@@ -175,11 +176,21 @@ const ChatWithUser = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [messagesLayoutReady, setMessagesLayoutReady] = useState(false);
+  const messagesEndRef = useRef(null);
+  const listContentHeight = useRef(0);
+  const listVisibleHeight = useRef(0);
 
   // Refs
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // Animation related states
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(50)).current;
+  const scrollButtonAnim = useRef(new Animated.Value(0)).current;
 
   const fetchMessages = useCallback(async () => {
     if (!loggedInUserId || !currentChat?.otherUser?.userid) return;
@@ -229,36 +240,48 @@ const ChatWithUser = () => {
 
   // Auto scroll to bottom when new messages arrive or on initial load
   useEffect(() => {
-    if (messages.length > 0 && flatListRef.current) {
-      // Use a shorter timeout for initial load to avoid flickering
-      setTimeout(
-        () => {
-          flatListRef.current?.scrollToEnd({ animated: !initialLoad });
-        },
-        initialLoad ? 100 : 300,
-      );
+    if (messages.length > 0 && flatListRef.current && messagesLayoutReady) {
+      // Use requestAnimationFrame to ensure layout is complete
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({ animated: !initialLoad });
+      });
     }
-  }, [messages, initialLoad]);
+  }, [messages, initialLoad, messagesLayoutReady]);
 
   const handleSendMessage = async () => {
     if (!message.trim() && !file) return;
 
     try {
+      // Use layout animation for smoother transitions
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+      const newMessageId = Date.now().toString();
       const newMessage = {
         senderid: loggedInUserId,
         content: message,
         createdat: new Date().toISOString(),
-        messageid: Date.now(),
+        messageid: newMessageId,
         participants: currentChat?.participants,
         chatid: currentChat?.chatid,
         fileurl: file ? filePreview : undefined,
         senderName: user?.name,
       };
 
+      setLastMessageId(newMessageId);
       setMessages((prevMessages) => [...prevMessages, newMessage]);
       setInputHeight(50);
 
+      // Provide haptic feedback when sending
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
       Keyboard.dismiss();
+
+      // Ensure scrollToEnd happens after state update
+      setTimeout(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      }, 100);
 
       if (!file) {
         socket?.emit("new-message", newMessage);
@@ -391,6 +414,7 @@ const ChatWithUser = () => {
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
       const isOwnMessage = item.senderid === loggedInUserId;
+      const isNew = item.messageid === lastMessageId;
 
       return (
         <MessageItem
@@ -399,14 +423,16 @@ const ChatWithUser = () => {
           loggedInUserId={loggedInUserId}
           currentChat={currentChat}
           chatImages={chatImages}
+          isNew={isNew}
           onImagePress={(index: number) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setSelectedImageIndex(index);
             setShowGallery(true);
           }}
         />
       );
     },
-    [loggedInUserId, currentChat, chatImages],
+    [loggedInUserId, currentChat, chatImages, lastMessageId],
   );
 
   const renderAttachmentPreview = () => {
@@ -459,6 +485,7 @@ const ChatWithUser = () => {
   const scrollToBottom = () => {
     if (flatListRef.current && messages.length > 0) {
       flatListRef.current.scrollToEnd({ animated: true });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setShowScrollButton(false);
     }
   };
@@ -466,16 +493,43 @@ const ChatWithUser = () => {
   const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ""];
 
   const getItemLayout = useCallback((data: any, index: number) => {
-    // Estimate height based on type (date header is shorter than message)
-    const item = data[index];
-    let height = item.type === "date" ? 40 : 80;
+    if (!data) return { length: 0, offset: 0, index };
 
-    // Adjust height for messages with images
-    if (item.type === "message" && item.fileurl) {
-      height = 220; // Image + text + padding
+    // Estimate height based on item type and content
+    const item = data[index];
+    let height = DATE_HEADER_HEIGHT; // Default for date headers
+
+    if (item.type === "message") {
+      // Base height for a message
+      height = TEXT_MESSAGE_HEIGHT;
+
+      // Add extra height for messages with images
+      if (item.fileurl) {
+        height = IMAGE_MESSAGE_HEIGHT;
+      }
+
+      // Adjust for longer text content
+      if (item.content && item.content.length > 100) {
+        height += 40; // Add more height for longer messages
+      } else if (item.content && item.content.length > 50) {
+        height += 20;
+      }
     }
 
-    return { length: height, offset: height * index, index };
+    // Calculate offset (sum of heights of all previous items)
+    let offset = 0;
+    for (let i = 0; i < index; i++) {
+      const prevItem = data[i];
+      if (prevItem.type === "date") {
+        offset += DATE_HEADER_HEIGHT;
+      } else if (prevItem.fileurl) {
+        offset += IMAGE_MESSAGE_HEIGHT;
+      } else {
+        offset += TEXT_MESSAGE_HEIGHT;
+      }
+    }
+
+    return { length: height, offset, index };
   }, []);
 
   const keyExtractor = useCallback(
@@ -484,137 +538,200 @@ const ChatWithUser = () => {
     [],
   );
 
+  // Show/hide scroll button with animation
+  useEffect(() => {
+    Animated.timing(scrollButtonAnim, {
+      toValue: showScrollButton ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [showScrollButton]);
+
+  // Animate header entrance
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            setCurrentChat(null);
-            router.back();
-          }}
-          style={styles.backButton}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY }],
+            },
+          ]}
         >
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setCurrentChat(null);
+              router.back();
+            }}
+            style={styles.backButton}
+          >
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
 
-        <View style={styles.headerContent}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: currentChat?.otherUser?.profilepic }}
-              style={styles.avatar}
-            />
-            {isOnline && <View style={styles.onlineIndicator} />}
-          </View>
-
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{currentChat?.otherUser?.name}</Text>
-            {currentChat?.isTyping && (
-              <View style={styles.typingContainer}>
-                <Text style={styles.typingText}>Typing...</Text>
-              </View>
-            )}
-          </View>
-
-          <StartCall />
-        </View>
-      </View>
-
-      <KeyboardAvoidingView
-        style={styles.mainContainer}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        <View style={styles.messagesContainer}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#0A84FF" />
-            </View>
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={processedMessages()}
-              keyExtractor={keyExtractor}
-              renderItem={renderItem}
-              getItemLayout={getItemLayout}
-              contentContainerStyle={styles.messagesList}
-              showsVerticalScrollIndicator={false}
-              initialNumToRender={10}
-              maxToRenderPerBatch={5}
-              windowSize={5}
-              removeClippedSubviews={true}
-              onEndReachedThreshold={0.5}
-              onScroll={({ nativeEvent }) => {
-                const { contentOffset, contentSize, layoutMeasurement } =
-                  nativeEvent;
-                const distanceFromBottom =
-                  contentSize.height -
-                  (contentOffset.y + layoutMeasurement.height);
-                setShowScrollButton(distanceFromBottom > 300);
-              }}
-              scrollEventThrottle={100}
-            />
-          )}
-
-          {showScrollButton && (
-            <TouchableOpacity
-              style={styles.scrollToBottomButton}
-              onPress={scrollToBottom}
-            >
-              <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {renderAttachmentPreview()}
-        <View style={[styles.inputContainer, { height: inputHeight }]}>
-          <View style={styles.inputRow}>
-            <TouchableOpacity style={styles.attachButton} onPress={pickImage}>
-              <Ionicons name="image-outline" size={22} color="#0A84FF" />
-            </TouchableOpacity>
-
-            <View style={styles.textInputContainer}>
-              <TextInput
-                ref={inputRef}
-                value={message}
-                onChangeText={handleTyping}
-                style={styles.input}
-                placeholder="Message..."
-                placeholderTextColor="#8E8E93"
-                multiline
+          <View style={styles.headerContent}>
+            <View style={styles.avatarContainer}>
+              <Image
+                source={{ uri: currentChat?.otherUser?.profilepic }}
+                style={styles.avatar}
               />
+              {isOnline && <View style={styles.onlineIndicator} />}
             </View>
 
-            <TouchableOpacity
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>
+                {currentChat?.otherUser?.name}
+              </Text>
+              {currentChat?.isTyping && (
+                <View style={styles.typingContainer}>
+                  <Text style={styles.typingText}>Typing</Text>
+                </View>
+              )}
+            </View>
+
+            <StartCall />
+          </View>
+        </Animated.View>
+
+        <KeyboardAvoidingView
+          style={styles.mainContainer}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
+          <View
+            style={styles.messagesContainer}
+            onLayout={() => setMessagesLayoutReady(true)}
+          >
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#0A84FF" />
+              </View>
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={processedMessages()}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                getItemLayout={getItemLayout}
+                contentContainerStyle={styles.messagesList}
+                showsVerticalScrollIndicator={false}
+                onScroll={({ nativeEvent }) => {
+                  const { contentOffset, contentSize, layoutMeasurement } =
+                    nativeEvent;
+                  const distanceFromBottom =
+                    contentSize.height -
+                    (contentOffset.y + layoutMeasurement.height);
+                  setShowScrollButton(distanceFromBottom > 300);
+                }}
+                scrollEventThrottle={16}
+              />
+            )}
+
+            <Animated.View
               style={[
-                styles.sendButton,
+                styles.scrollToBottomButton,
                 {
-                  backgroundColor:
-                    message.trim() || file
-                      ? "#0A84FF"
-                      : "rgba(10, 132, 255, 0.3)",
+                  opacity: scrollButtonAnim,
+                  transform: [
+                    {
+                      scale: scrollButtonAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.8, 1],
+                      }),
+                    },
+                    {
+                      translateY: scrollButtonAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                  ],
                 },
               ]}
-              onPress={handleSendMessage}
-              disabled={!message.trim() && !file}
             >
-              <Ionicons
-                name="send"
-                size={18}
-                color={message.trim() || file ? "#FFFFFF" : "#CCCCCC"}
-              />
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={scrollToBottom}
+                style={styles.scrollButtonTouchable}
+              >
+                <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </Animated.View>
           </View>
-        </View>
 
-        {showGallery && chatImages.length > 0 && (
-          <ImageGallery
-            images={chatImages}
-            initialIndex={selectedImageIndex}
-            onClose={() => setShowGallery(false)}
-          />
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          {renderAttachmentPreview()}
+          <View style={[styles.inputContainer, { height: inputHeight }]}>
+            <View style={styles.inputRow}>
+              <TouchableOpacity
+                style={styles.attachButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  pickImage();
+                }}
+              >
+                <Ionicons name="image-outline" size={22} color="#0A84FF" />
+              </TouchableOpacity>
+
+              <View style={styles.textInputContainer}>
+                <TextInput
+                  ref={inputRef}
+                  value={message}
+                  onChangeText={handleTyping}
+                  style={styles.input}
+                  placeholder="Message..."
+                  placeholderTextColor="#8E8E93"
+                  multiline
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  {
+                    backgroundColor:
+                      message.trim() || file
+                        ? "#0A84FF"
+                        : "rgba(10, 132, 255, 0.3)",
+                  },
+                ]}
+                onPress={handleSendMessage}
+                disabled={!message.trim() && !file}
+              >
+                <Ionicons
+                  name="send"
+                  size={18}
+                  color={message.trim() || file ? "#FFFFFF" : "#CCCCCC"}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {showGallery && chatImages.length > 0 && (
+            <ImageGallery
+              images={chatImages}
+              initialIndex={selectedImageIndex}
+              onClose={() => setShowGallery(false)}
+            />
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -634,11 +751,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
     backgroundColor: "#121212",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
   },
   backButton: {
     padding: 8,
@@ -688,6 +800,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#30D158",
     fontWeight: "500",
+    marginRight: 4,
   },
   messagesContainer: {
     flex: 1,
@@ -705,7 +818,7 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     flexDirection: "row",
-    marginVertical: 3,
+    marginVertical: 5,
     maxWidth: "85%",
   },
   ownMessageContainer: {
@@ -725,33 +838,17 @@ const styles = StyleSheet.create({
   otherMessageWrapper: {
     alignItems: "flex-start",
   },
-  messageBubbleAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    marginRight: 8,
-    alignSelf: "flex-end",
-    backgroundColor: "#2C2C2E",
-  },
   messageBubble: {
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     maxWidth: "100%",
   },
   ownMessageBubble: {
-    backgroundColor: "#0A84FF",
-    borderBottomRightRadius: 4,
+    backgroundColor: "#333333", // Changed from blue to dark gray
   },
   otherMessageBubble: {
     backgroundColor: "#262629",
-    borderBottomLeftRadius: 4,
-  },
-  ownFirstBubble: {
-    borderTopRightRadius: 18,
-  },
-  otherFirstBubble: {
-    borderTopLeftRadius: 18,
   },
   messageText: {
     fontSize: 16,
@@ -765,7 +862,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 10,
-    marginTop: 2,
+    marginTop: 4,
   },
   ownTimeText: {
     color: "rgba(255,255,255,0.5)",
@@ -777,7 +874,7 @@ const styles = StyleSheet.create({
   },
   dateHeaderContainer: {
     alignItems: "center",
-    marginVertical: 10,
+    marginVertical: 15,
   },
   dateHeaderText: {
     fontSize: 12,
@@ -789,36 +886,38 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   imageContainer: {
-    marginBottom: 6,
-    borderRadius: 12,
+    marginBottom: 0, // Removed bottom margin
+    borderRadius: 16,
     overflow: "hidden",
   },
   messageImage: {
-    width: 180,
-    height: 180,
-    borderRadius: 12,
+    width: 200,
+    height: 200,
+    borderRadius: 16, // Increased border radius for images
   },
   scrollToBottomButton: {
     position: "absolute",
     right: 15,
     bottom: 15,
-    width: 40,
-    height: 40,
-    backgroundColor: "rgba(40, 40, 40, 0.8)",
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+  },
+  scrollButtonTouchable: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(40, 40, 40, 0.7)",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
   },
   inputContainer: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.1)",
     backgroundColor: "#121212",
@@ -868,7 +967,7 @@ const styles = StyleSheet.create({
   attachmentPreview: {
     width: 80,
     height: 80,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   removeAttachmentButton: {
     position: "absolute",

@@ -102,131 +102,136 @@ export const CardContainer = ({
     {children}
   </Pressable>
 );
-export const SongCard = memo(({ song }: SongCardProps) => {
-  const { playSong } = usePlayer();
-  const { currentSong, isPlaying, isLoading } = usePlayerState();
-  const { user } = useUser();
+export const SongCard = memo(
+  ({
+    song,
+    disableOnLongPress = false,
+  }: SongCardProps & { disableOnLongPress?: boolean }) => {
+    const { playSong } = usePlayer();
+    const { currentSong, isPlaying, isLoading } = usePlayerState();
+    const { user } = useUser();
 
-  const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
-  const isCurrentSong = currentSong?.id === securedSong.id;
-  const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
+    const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
+    const isCurrentSong = currentSong?.id === securedSong.id;
+    const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
-  const handlePress = useCallback(async () => {
-    if (isCurrentSong) {
-      if (isPlaying) {
-        await TrackPlayer.pause();
+    const handlePress = useCallback(async () => {
+      if (isCurrentSong) {
+        if (isPlaying) {
+          await TrackPlayer.pause();
+        } else {
+          await TrackPlayer.play();
+        }
       } else {
-        await TrackPlayer.play();
+        playSong(securedSong);
+        if (user?.userid) {
+          addToHistory(securedSong, 10);
+        }
       }
-    } else {
-      playSong(securedSong);
-      if (user?.userid) {
-        addToHistory(securedSong, 10);
-      }
-    }
-  }, [isCurrentSong, isPlaying, securedSong, playSong]);
+    }, [isCurrentSong, isPlaying, securedSong, playSong]);
 
-  const handleLongPress = useCallback(() => {
-    setPlayerDrawerOpen(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, []);
+    const handleLongPress = useCallback(() => {
+      setPlayerDrawerOpen(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }, []);
 
-  const gradientColors = useMemo(
-    () =>
-      isCurrentSong
-        ? (["rgba(59, 130, 246, 0.6)", "rgba(30, 30, 60, 0.8)"] as const)
-        : (["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"] as const),
-    [isCurrentSong],
-  );
+    const gradientColors = useMemo(
+      () =>
+        isCurrentSong
+          ? (["rgba(59, 130, 246, 0.6)", "rgba(30, 30, 60, 0.8)"] as const)
+          : (["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"] as const),
+      [isCurrentSong],
+    );
 
-  return (
-    <>
-      <Pressable
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        style={({ pressed }) => [
-          {
-            backgroundColor: "rgba(24, 24, 27, 0.8)",
-            borderRadius: 12,
-            overflow: "hidden",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
-            elevation: 5,
-            transform: [{ scale: pressed ? 0.98 : 1 }],
-          },
-        ]}
-        android_ripple={{
-          color: "rgba(255, 255, 255, 0.2)",
-          borderless: false,
-        }}
-        className="flex-row items-center rounded-xl mb-3 overflow-hidden"
-      >
-        <BlurView intensity={20} tint="dark" className="absolute inset-0" />
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          className="w-full flex-row border border-gray-800/30 rounded-xl p-3"
+    return (
+      <>
+        <Pressable
+          onPress={handlePress}
+          onLongPress={disableOnLongPress ? undefined : handleLongPress}
+          style={({ pressed }) => [
+            {
+              backgroundColor: "rgba(24, 24, 27, 0.8)",
+              borderRadius: 12,
+              overflow: "hidden",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              elevation: 5,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
+          android_ripple={{
+            color: "rgba(255, 255, 255, 0.2)",
+            borderless: false,
+          }}
+          className="flex-row items-center rounded-xl mb-3 overflow-hidden"
         >
-          <View className="relative">
-            <Image
-              source={{ uri: securedSong.image[0]?.link }}
-              className="w-14 h-14 rounded-lg"
-              alt="Song cover"
-              fadeDuration={0}
-              resizeMode="cover"
-            />
-          </View>
-
-          <View className="flex-1 px-4 justify-center">
-            <Text
-              className="text-white font-semibold text-base"
-              numberOfLines={1}
-            >
-              {securedSong.name}
-            </Text>
-            <Text className="text-gray-300 text-sm" numberOfLines={1}>
-              {securedSong.subtitle ||
-                securedSong.artist_map?.artists?.[0]?.name}
-            </Text>
-          </View>
-
-          {isCurrentSong ? (
-            <View className="flex-row items-end h-10 space-x-0.5 pr-2">
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#3b82f6" />
-              ) : (
-                <>
-                  <View className="ml-3">
-                    <Ionicons
-                      name={isPlaying ? "pause" : "play"}
-                      size={22}
-                      color="#3b82f6"
-                    />
-                  </View>
-                </>
-              )}
+          <BlurView intensity={20} tint="dark" className="absolute inset-0" />
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            className="w-full flex-row border border-gray-800/30 rounded-xl p-3"
+          >
+            <View className="relative">
+              <Image
+                source={{ uri: securedSong.image[0]?.link }}
+                className="w-14 h-14 rounded-lg"
+                alt="Song cover"
+                fadeDuration={0}
+                resizeMode="cover"
+              />
             </View>
-          ) : (
-            <View className="justify-center pr-2">
-              <Ionicons name="play" size={20} color="white" />
-            </View>
-          )}
-        </LinearGradient>
-      </Pressable>
 
-      {playerDrawerOpen && (
-        <NewPlayerDrawer
-          isVisible={true}
-          onClose={() => setPlayerDrawerOpen(false)}
-          song={securedSong}
-        />
-      )}
-    </>
-  );
-});
+            <View className="flex-1 px-4 justify-center">
+              <Text
+                className="text-white font-semibold text-base"
+                numberOfLines={1}
+              >
+                {securedSong.name}
+              </Text>
+              <Text className="text-gray-300 text-sm" numberOfLines={1}>
+                {securedSong.subtitle ||
+                  securedSong.artist_map?.artists?.[0]?.name}
+              </Text>
+            </View>
+
+            {isCurrentSong ? (
+              <View className="flex-row items-end h-10 space-x-0.5 pr-2">
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#3b82f6" />
+                ) : (
+                  <>
+                    <View className="ml-3">
+                      <Ionicons
+                        name={isPlaying ? "pause" : "play"}
+                        size={22}
+                        color="#3b82f6"
+                      />
+                    </View>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View className="justify-center pr-2">
+                <Ionicons name="play" size={20} color="white" />
+              </View>
+            )}
+          </LinearGradient>
+        </Pressable>
+
+        {playerDrawerOpen && (
+          <NewPlayerDrawer
+            isVisible={true}
+            onClose={() => setPlayerDrawerOpen(false)}
+            song={securedSong}
+          />
+        )}
+      </>
+    );
+  },
+);
 
 export const CardImage = ({ uri, alt }: { uri: string; alt: string }) => (
   <View

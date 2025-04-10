@@ -44,6 +44,7 @@ export interface PlayerControls {
   handlePrevSong: () => void;
   clearQueue: () => void;
   removeFromQueue: (songId: string) => void;
+  reorderPlaylist: (newPlaylistOrder: Song[]) => void;
 }
 
 export interface PlaylistContextValue extends PlaylistState {

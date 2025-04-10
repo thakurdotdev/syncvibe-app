@@ -139,7 +139,7 @@ export default function HomeScreen() {
           backgroundColor="transparent"
           translucent
         />
-        <ActivityIndicator size="large" color="#1DB954" />
+        <ActivityIndicator size="large" color="#ffffff" />
         <Text className="text-white font-medium mt-4">
           Syncing your vibe with SyncVibe...
         </Text>

@@ -6,6 +6,7 @@ import {
   PlaylistState,
 } from "@/types/music";
 import { Song } from "@/types/song";
+import useApi from "@/utils/hooks/useApi";
 import { setupPlayer } from "@/utils/playerSetup";
 import {
   createContext,
@@ -22,8 +23,8 @@ import TrackPlayer, {
   Track,
   useTrackPlayerEvents,
 } from "react-native-track-player";
+import { getPlaybackState } from "react-native-track-player/lib/src/trackPlayer";
 import { useUser } from "./UserContext";
-import useApi from "@/utils/hooks/useApi";
 
 const PlayerControlsContext = createContext<PlayerControls | undefined>(
   undefined,
@@ -80,6 +81,11 @@ const playlistReducer = (
       return {
         ...state,
         playlist: [...state.playlist, ...uniqueSongs],
+      };
+    case "REORDER_PLAYLIST":
+      return {
+        ...state,
+        playlist: action.payload,
       };
     default:
       return state;
@@ -202,19 +208,23 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     };
   }, []);
 
-  // Handle TrackPlayer events
+  // Handle TrackPlayer events according to official documentation
   useTrackPlayerEvents(
     [
       Event.PlaybackState,
       Event.PlaybackError,
-      Event.PlaybackActiveTrackChanged,
+      Event.PlaybackActiveTrackChanged, // Preferred over deprecated PlaybackTrackChanged
       Event.PlaybackQueueEnded,
+      Event.RemoteDuck,
       Event.RemotePlay,
       Event.RemotePause,
       Event.RemoteStop,
       Event.RemoteNext,
       Event.RemotePrevious,
       Event.RemoteSeek,
+      Event.RemoteJumpForward,
+      Event.RemoteJumpBackward,
+      Event.PlaybackProgressUpdated, // Only fires if progressUpdateEventInterval is set
     ],
     async (event) => {
       try {
@@ -223,7 +233,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
 
         switch (event.type) {
           case Event.PlaybackState:
-            const playerState = await TrackPlayer.getState();
+            const playerState = (await getPlaybackState()).state;
             // Only update UI if state actually changed
             if (
               (playerState === State.Playing) !==
@@ -237,11 +247,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.PlaybackActiveTrackChanged:
-            if (event.index !== undefined) {
-              const track = await TrackPlayer.getTrack(event.index);
-              if (track) {
+            if (event.index !== undefined && event.track) {
+              // The event now includes the full track object
+              const trackId = event.track.id;
+
+              if (trackId) {
                 const songIndex = playlistState.playlist.findIndex(
-                  (song) => song.id === track.id,
+                  (song) => song.id === trackId,
                 );
 
                 if (songIndex >= 0) {
@@ -260,12 +272,12 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                   // Remove the current song from playlist after it starts playing
                   playlistDispatch({
                     type: "REMOVE_FROM_PLAYLIST",
-                    payload: track.id,
+                    payload: trackId,
                   });
 
                   // Preload next song in queue if available
                   if (playlistState.playlist.length > 1) {
-                    const nextSong = playlistState.playlist[1];
+                    const nextSong = playlistState.playlist[0];
                     // Convert and cache the next track
                     convertSongToTrack(nextSong);
                   }
@@ -275,7 +287,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.PlaybackError:
-            console.error("Playback error:", event.message);
+            console.error(`Playback error: ${event.code} - ${event.message}`);
 
             // Wait a moment before trying to recover
             setTimeout(async () => {
@@ -283,12 +295,25 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               if (playbackStateRef.current.isPlaying) {
                 await controls.handleNextSong();
               }
-            }, 300); // Reduced from 500ms for faster recovery
+            }, 300);
             break;
 
           case Event.PlaybackQueueEnded:
             if (playbackStateRef.current.currentSong) {
               controls.playSong(playbackStateRef.current.currentSong);
+            }
+            break;
+
+          case Event.RemoteDuck:
+            // Handle audio focus changes
+            // Note: This is automatically handled if autoHandleInterruptions is true
+            // But we can add custom behavior here if needed
+            if (!event.paused) {
+              // Audio focus regained, we can resume if we were playing before
+              const wasPlaying = playbackStateRef.current.isPlaying;
+              if (wasPlaying) {
+                await TrackPlayer.play();
+              }
             }
             break;
 
@@ -319,6 +344,32 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             if (event.position !== undefined) {
               await TrackPlayer.seekTo(event.position);
             }
+            break;
+
+          case Event.RemoteJumpForward:
+            const currentPositionForward = await TrackPlayer.getProgress().then(
+              (progress) => progress.position,
+            );
+
+            await TrackPlayer.seekTo(
+              currentPositionForward + (event.interval || 10),
+            );
+            break;
+
+          case Event.RemoteJumpBackward:
+            const currentPositionBackward =
+              await TrackPlayer.getProgress().then(
+                (progress) => progress.position,
+              );
+            await TrackPlayer.seekTo(
+              Math.max(0, currentPositionBackward - (event.interval || 10)),
+            );
+            break;
+
+          case Event.PlaybackProgressUpdated:
+            // This event is only fired if progressUpdateEventInterval is set in options
+            // We can use it for updating UI components that display progress
+            // No need to do anything here as React components will use the TrackPlayer hooks
             break;
         }
       } catch (error) {
@@ -525,6 +576,56 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           }
         } catch (error) {
           console.error("Queue removal error:", error);
+        }
+      },
+
+      reorderPlaylist: async (newPlaylistOrder: Song[]) => {
+        try {
+          // Update the playlist state with the new order
+          playlistDispatch({
+            type: "REORDER_PLAYLIST",
+            payload: newPlaylistOrder,
+          });
+
+          // If the player is initialized, update the queue without resetting
+          if (trackPlayerInitialized.current) {
+            // Get current queue from TrackPlayer
+            const currentQueue = await TrackPlayer.getQueue();
+
+            // Get the current track index to keep it playing
+            const currentTrackIndex = await TrackPlayer.getActiveTrackIndex();
+
+            if (currentTrackIndex === undefined || currentTrackIndex === null) {
+              // If no active track, just replace the queue
+              await TrackPlayer.reset();
+              const tracksToAdd = newPlaylistOrder
+                .map(convertSongToTrack)
+                .filter((track) => track.url);
+
+              if (tracksToAdd.length > 0) {
+                await TrackPlayer.add(tracksToAdd);
+              }
+              return;
+            }
+
+            // Convert new playlist order to tracks
+            const newOrderTracks = newPlaylistOrder
+              .map(convertSongToTrack)
+              .filter((track) => track.url);
+
+            // We'll rebuild the queue while keeping the current track playing
+            // First, remove all tracks after the current one
+            if (currentQueue.length > currentTrackIndex + 1) {
+              await TrackPlayer.removeUpcomingTracks();
+            }
+
+            // Then add the reordered tracks
+            if (newOrderTracks.length > 0) {
+              await TrackPlayer.add(newOrderTracks);
+            }
+          }
+        } catch (error) {
+          console.error("Error reordering playlist:", error);
         }
       },
 

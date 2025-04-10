@@ -1,14 +1,25 @@
+import { usePlayer, usePlayerState } from "@/context/MusicContext";
 import { Song } from "@/types/song";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { RefreshCcwIcon } from "lucide-react-native";
-import React, { memo } from "react";
+import React, { memo, useCallback, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
+  Pressable,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import DraggableFlatList, {
+  OpacityDecorator,
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
 import {
   AlbumCard,
   ArtistCard,
@@ -38,7 +49,112 @@ interface ArtistGridProps {
   title: string;
 }
 
+const SongCardQueue = memo(
+  ({
+    song,
+    drag,
+    isActive,
+  }: {
+    song: Song;
+    drag: () => void;
+    isActive: boolean;
+  }) => {
+    const { playSong } = usePlayer();
+    const { currentSong } = usePlayerState();
+    const isCurrentSong = currentSong?.id === song.id;
+
+    const handlePress = useCallback(() => {
+      playSong(song);
+    }, [song, playSong]);
+
+    const songImage = useMemo(() => song.image[0]?.link, [song.image]);
+    const songName = useMemo(() => song.name, [song.name]);
+    const songArtist = useMemo(
+      () => song.subtitle || song.artist_map?.artists?.[0]?.name,
+      [song.subtitle, song.artist_map],
+    );
+
+    return (
+      <ScaleDecorator>
+        <OpacityDecorator activeOpacity={1}>
+          <View className="mb-2">
+            <Pressable
+              onLongPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                drag();
+              }}
+              onPress={handlePress}
+              disabled={isActive}
+              delayLongPress={150}
+            >
+              <LinearGradient
+                colors={
+                  isCurrentSong
+                    ? ["rgba(59, 130, 246, 0.6)", "rgba(30, 30, 60, 0.8)"]
+                    : ["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="w-full flex-row border border-gray-800/30 rounded-xl p-3"
+              >
+                <View className="relative">
+                  <Image
+                    source={{ uri: songImage }}
+                    className="w-14 h-14 rounded-lg"
+                    style={{ width: 56, height: 56, borderRadius: 8 }}
+                  />
+                </View>
+
+                <View className="flex-1 px-4 justify-center">
+                  <Text
+                    className="text-white font-semibold text-base"
+                    numberOfLines={1}
+                  >
+                    {songName}
+                  </Text>
+                  <Text className="text-gray-300 text-sm" numberOfLines={1}>
+                    {songArtist}
+                  </Text>
+                </View>
+
+                {isActive ? (
+                  <View className="justify-center">
+                    <Ionicons name="menu" size={24} color="white" />
+                  </View>
+                ) : (
+                  <View className="justify-center">
+                    <View className="h-8 w-8 bg-gray-800/40 rounded-full items-center justify-center">
+                      <Ionicons
+                        name="reorder-three"
+                        size={20}
+                        color="rgba(255,255,255,0.6)"
+                      />
+                    </View>
+                  </View>
+                )}
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </OpacityDecorator>
+      </ScaleDecorator>
+    );
+  },
+);
+
 export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
+  const { reorderPlaylist } = usePlayer();
+  const scrollRef = useRef(null);
+
+  // Memoize the drag end handler
+  const handleDragEnd = useCallback(
+    ({ data }: { data: Song[] }) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      reorderPlaylist(data);
+    },
+    [reorderPlaylist],
+  );
+
+  // Empty state
   if (!playlist.length) {
     return (
       <View className="items-center justify-center py-10">
@@ -48,14 +164,17 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
   }
 
   return (
-    <FlatList
+    <DraggableFlatList
+      ref={scrollRef}
       data={playlist}
-      renderItem={({ item }) => <SongCard song={item} />}
+      renderItem={({ item, drag, isActive }: RenderItemParams<Song>) => (
+        <SongCardQueue song={item} drag={drag} isActive={isActive} />
+      )}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 120 }}
-      showsVerticalScrollIndicator={true}
-      scrollEnabled={true}
+      contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 8 }}
+      showsVerticalScrollIndicator={false}
       bounces={true}
+      onDragEnd={handleDragEnd}
     />
   );
 });

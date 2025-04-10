@@ -4,7 +4,7 @@ import { Song } from "@/types/song";
 import { ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { useFocusEffect, usePathname } from "expo-router";
+import { useFocusEffect, usePathname, useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -14,6 +14,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   Dimensions,
   Image,
   StyleSheet,
@@ -36,10 +37,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import TrackPlayer, {
-  State,
-  usePlaybackState,
-} from "react-native-track-player";
+import TrackPlayer from "react-native-track-player";
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 import NewPlayerDrawer from "./NewPlayerDrawer";
@@ -47,7 +45,7 @@ import NewPlayerDrawer from "./NewPlayerDrawer";
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 250;
 const TAB_ANIMATION_DURATION = 150;
-const SWIPE_THRESHOLD = 80;
+const SWIPE_THRESHOLD = 150;
 
 const PlayerTab = React.memo(
   ({
@@ -61,12 +59,21 @@ const PlayerTab = React.memo(
       <Animated.Image
         entering={FadeIn.duration(300)}
         source={{ uri: currentSong?.image[2]?.link }}
-        style={styles.albumArt}
+        style={[
+          styles.albumArt,
+          {
+            transform: [{ perspective: 1000 }], // Hardware acceleration hint
+          },
+        ]}
         resizeMode="cover"
       />
       <View style={styles.songInfoContainer}>
-        <Text style={styles.songTitle}>{currentSong?.name}</Text>
-        <Text style={styles.artistName}>{artistName}</Text>
+        <Text style={styles.songTitle} numberOfLines={1} ellipsizeMode="tail">
+          {currentSong?.name}
+        </Text>
+        <Text style={styles.artistName} numberOfLines={1} ellipsizeMode="tail">
+          {artistName}
+        </Text>
       </View>
       <SongControls />
     </View>
@@ -74,11 +81,17 @@ const PlayerTab = React.memo(
 );
 
 const QueueTab = React.memo(({ playlist }: { playlist: Song[] }) => (
-  <Animated.View
-    entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
-    exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
-    style={styles.tabContentContainer}
-  >
+  <Animated.View style={styles.tabContentContainer}>
+    {playlist.length > 0 && (
+      <View style={styles.dragInstructionsContainer}>
+        <Ionicons
+          name="menu-outline"
+          size={22}
+          color="rgba(255, 255, 255, 0.7)"
+        />
+        <Text style={styles.dragInstructionsText}>Drag to reorder songs</Text>
+      </View>
+    )}
     <MusicQueue playlist={playlist} />
   </Animated.View>
 ));
@@ -112,7 +125,9 @@ export default function Player() {
   const { currentSong, isPlaying, isLoading } = usePlayerState();
   const { playlist } = usePlaylist();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState("player");
+  const [activeTab, setActiveTab] = useState<
+    "player" | "queue" | "recommendations"
+  >("player");
   const insets = useSafeAreaInsets();
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
   const [isPlayerVisible, setIsPlayerVisible] = useState(true);
@@ -250,7 +265,7 @@ export default function Player() {
   }, [translateY, miniPlayerOpacity, gestureTranslateY]);
 
   const handleTabPress = useCallback(
-    (tab: string) => {
+    (tab: "player" | "queue" | "recommendations") => {
       if (tab !== activeTab) {
         setActiveTab(tab);
       }
@@ -323,6 +338,60 @@ export default function Player() {
     };
   });
 
+  // Pre-render all tabs for instant switching
+  const tabContents = useMemo(
+    () => ({
+      player: (
+        <Animated.View
+          entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
+          exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
+          style={[
+            styles.tabContentContainer,
+            { transform: [{ perspective: 1000 }] },
+          ]}
+        >
+          <PlayerTab currentSong={currentSong} artistName={artistName} />
+        </Animated.View>
+      ),
+      queue: (
+        <Animated.View
+          entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
+          exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
+          style={[
+            styles.tabContentContainer,
+            { transform: [{ perspective: 1000 }] },
+          ]}
+        >
+          <QueueTab playlist={playlist} />
+        </Animated.View>
+      ),
+      recommendations: (
+        <Animated.View
+          entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
+          exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
+          style={[
+            styles.tabContentContainer,
+            { transform: [{ perspective: 1000 }] },
+          ]}
+        >
+          <RecommendationsTab
+            recommendations={recommendations}
+            loading={loading}
+            fetchRecommendations={getRecommendations}
+          />
+        </Animated.View>
+      ),
+    }),
+    [
+      currentSong,
+      artistName,
+      playlist,
+      recommendations,
+      loading,
+      getRecommendations,
+    ],
+  );
+
   const renderMiniPlayer = () => (
     <Animated.View
       style={[
@@ -388,9 +457,19 @@ export default function Player() {
   );
 
   const renderExpandedPlayer = () => (
-    <Animated.View style={expandedPlayerStyle}>
+    <Animated.View
+      style={[
+        expandedPlayerStyle,
+        {
+          backfaceVisibility: "hidden", // Hardware acceleration hint
+        },
+      ]}
+    >
       <View
-        style={[styles.expandedPlayerBackground, { paddingTop: insets.top }]}
+        style={[
+          styles.expandedPlayerBackground,
+          { paddingTop: insets.top, transform: [{ perspective: 1000 }] },
+        ]}
       >
         <PanGestureHandler onGestureEvent={gestureHandler}>
           <Animated.View>
@@ -419,7 +498,11 @@ export default function Player() {
             <TouchableOpacity
               key={tab}
               style={styles.tab}
-              onPress={() => handleTabPress(tab)}
+              onPress={() =>
+                optimizedHandleTabPress(
+                  tab as "player" | "queue" | "recommendations",
+                )
+              }
               activeOpacity={0.7}
             >
               <Text
@@ -444,27 +527,39 @@ export default function Player() {
           ))}
         </View>
 
-        <View style={styles.contentContainer}>
-          {activeTab === "player" && (
-            <Animated.View
-              entering={FadeIn.duration(TAB_ANIMATION_DURATION)}
-              exiting={FadeOut.duration(TAB_ANIMATION_DURATION)}
-              style={styles.tabContentContainer}
-            >
-              <PlayerTab currentSong={currentSong} artistName={artistName} />
-            </Animated.View>
-          )}
-          {activeTab === "queue" && <QueueTab playlist={playlist} />}
-          {activeTab === "recommendations" && (
-            <RecommendationsTab
-              recommendations={recommendations}
-              loading={loading}
-              fetchRecommendations={getRecommendations}
-            />
-          )}
-        </View>
+        <View style={styles.contentContainer}>{tabContents[activeTab]}</View>
       </View>
     </Animated.View>
+  );
+
+  useEffect(() => {
+    const backAction = () => {
+      if (isExpanded) {
+        closePlayer();
+        return true; // Prevents app from closing
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [isExpanded, closePlayer]);
+
+  // Optimize tab switching for instant response
+  const optimizedHandleTabPress = useCallback(
+    (tab: "player" | "queue" | "recommendations") => {
+      if (tab !== activeTab) {
+        // Instant tab switch with no delay
+        requestAnimationFrame(() => {
+          setActiveTab(tab);
+        });
+      }
+    },
+    [activeTab],
   );
 
   if (!currentSong || !isHomeActive || !isPlayerVisible) return null;
@@ -487,25 +582,28 @@ export default function Player() {
 const styles = StyleSheet.create({
   miniPlayerContainer: {
     position: "absolute",
-    width: "100%",
-    left: 0,
+    width: "100%", // Make it narrower for a more modern look
+    // left: "2.5%", // Center it horizontally
+    // borderRadius: 16, // Rounded corners for modern appearance
+    overflow: "hidden", // Ensure contents respect border radius
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 10,
     zIndex: 5,
   },
   miniPlayerContent: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    backgroundColor: "#000",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    elevation: 8,
-    marginHorizontal: 8,
+    padding: 14,
+    backgroundColor: "rgba(18, 18, 18, 0.98)", // Slightly transparent black
+    // borderRadius: 16,
   },
   miniPlayerImage: {
     width: 48,
     height: 48,
-    borderRadius: 6,
+    borderRadius: 12, // More rounded image corners
   },
   miniPlayerTextContainer: {
     flex: 1,
@@ -515,23 +613,25 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "600",
     fontSize: 15,
+    letterSpacing: 0.2, // Slightly better readability
   },
   miniPlayerArtist: {
-    color: "rgba(255, 255, 255, 0.6)",
+    color: "rgba(255, 255, 255, 0.7)", // Slightly more visible text
     fontSize: 13,
     marginTop: 2,
   },
   playPauseButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: "rgba(255, 255, 255, 0.18)", // Slightly more visible
     padding: 10,
     borderRadius: 24,
     marginLeft: 8,
+    transform: [{ scale: 1.05 }], // Slightly larger buttons
   },
 
   // Expanded Player styles
   expandedPlayerBackground: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "rgb(12, 12, 12)", // Slightly lighter than pure black
     height: "100%",
   },
   swipeHandleContainer: {
@@ -550,29 +650,31 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingVertical: 12, // More padding
+    marginBottom: 4,
   },
   headerButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    padding: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    padding: 10,
     borderRadius: 24,
   },
   headerTitle: {
     color: "white",
-    fontSize: 16,
-    fontWeight: "500",
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: 0.3, // Better text spacing
   },
   tabsContainer: {
     flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 8,
+    marginHorizontal: 20,
+    marginTop: 10,
     marginBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14, // Taller tabs
     alignItems: "center",
     position: "relative",
   },
@@ -580,22 +682,24 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.6)",
     textAlign: "center",
     fontWeight: "500",
-    fontSize: 14,
+    fontSize: 15, // Larger font
+    letterSpacing: 0.3, // Better text spacing
   },
   activeTabText: {
     color: "white",
+    fontWeight: "600", // Bolder when active
   },
   activeTabIndicator: {
     position: "absolute",
     bottom: -1,
     height: 3,
-    width: "70%",
+    width: "50%", // Narrower indicator
     backgroundColor: "#ffffff",
     borderRadius: 3,
   },
   contentContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10, // More horizontal padding
   },
   tabContentContainer: {
     flex: 1,
@@ -605,31 +709,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   albumArt: {
-    width: "100%",
+    width: "90%", // Slightly narrower for better appearance
     aspectRatio: 1,
-    borderRadius: 16,
+    borderRadius: 20, // More rounded corners
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.44,
-    shadowRadius: 10.32,
-    elevation: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.48,
+    shadowRadius: 12,
+    elevation: 18,
+    alignSelf: "center",
     maxHeight: height * 0.45,
+    marginTop: 10, // Add some top margin
   },
   songInfoContainer: {
     width: "100%",
-    marginTop: 32,
-    marginBottom: 16,
+    marginTop: 36, // More spacing
+    marginBottom: 20,
   },
   songTitle: {
     color: "white",
-    fontSize: 24,
+    fontSize: 26, // Larger font
     fontWeight: "bold",
     textAlign: "center",
+    letterSpacing: 0.4, // Better text spacing
+    paddingHorizontal: 10, // Add some padding
   },
   artistName: {
-    color: "rgba(255, 255, 255, 0.6)",
+    color: "rgba(255, 255, 255, 0.7)", // More visible
     fontSize: 18,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 10, // More spacing
+  },
+  dragInstructionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center", // Center the text
+    marginBottom: 12,
+    marginTop: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)", // Slight background
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    alignSelf: "center", // Center in the container
+  },
+  dragInstructionsText: {
+    color: "rgba(255, 255, 255, 0.8)", // More visible
+    fontSize: 14,
+    marginLeft: 8,
+    fontWeight: "500", // Medium weight
   },
 });
