@@ -1,47 +1,20 @@
-import { Redirect } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { useLayoutEffect } from "react";
+import { View } from "react-native";
 
 export default function UnmatchedRoute() {
-  const [showRedirect, setShowRedirect] = useState(false);
+  const navigation = useNavigation<any>(); // Type casting to avoid TypeScript errors
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowRedirect(true);
-    }, 1000);
+  // useLayoutEffect runs synchronously after render but before screen updates
+  // This should provide a more seamless transition
+  useLayoutEffect(() => {
+    // For Expo Router, we can use the native navigation API with the correct screen name format
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "(tabs)" }],
+    });
+  }, [navigation]);
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Page not found</Text>
-      <Text style={styles.subtitle}>Redirecting you to home...</Text>
-
-      <ActivityIndicator size={"small"} color={"#fff"} />
-
-      {showRedirect && <Redirect href="/(tabs)/home" />}
-    </View>
-  );
+  // Return an invisible view while navigating
+  return <View style={{ flex: 1, backgroundColor: "transparent" }} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#000",
-    padding: 20,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  subtitle: {
-    color: "#aaa",
-    fontSize: 16,
-    marginBottom: 30,
-  },
-});

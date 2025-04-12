@@ -15,7 +15,7 @@ import { io, Socket } from "socket.io-client";
 import { useUser } from "./UserContext";
 
 export interface ChatUser {
-  chatid: string;
+  chatid: number;
   otherUser: User;
   lastmessage?: string;
   lastMessageType?: string;
@@ -30,11 +30,12 @@ export interface Message {
   senderid?: number;
   senderName?: string;
   content: string;
-  chatid?: string;
+  chatid?: number;
   timestamp?: string;
   fileurl?: string;
   createdat: string;
   participants: number[];
+  isread?: boolean;
 }
 
 interface ChatContextType {

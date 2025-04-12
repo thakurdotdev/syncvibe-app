@@ -82,16 +82,6 @@ const PlayerTab = React.memo(
 
 const QueueTab = React.memo(({ playlist }: { playlist: Song[] }) => (
   <Animated.View style={styles.tabContentContainer}>
-    {playlist.length > 0 && (
-      <View style={styles.dragInstructionsContainer}>
-        <Ionicons
-          name="menu-outline"
-          size={22}
-          color="rgba(255, 255, 255, 0.7)"
-        />
-        <Text style={styles.dragInstructionsText}>Drag to reorder songs</Text>
-      </View>
-    )}
     <MusicQueue playlist={playlist} />
   </Animated.View>
 ));

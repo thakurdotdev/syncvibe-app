@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { RefreshCcwIcon } from "lucide-react-native";
+import { RefreshCcwIcon, Trash2Icon } from "lucide-react-native";
 import React, { memo, useCallback, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
@@ -20,6 +20,8 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
+import { RectButton } from "react-native-gesture-handler";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 import {
   AlbumCard,
   ArtistCard,
@@ -59,9 +61,10 @@ const SongCardQueue = memo(
     drag: () => void;
     isActive: boolean;
   }) => {
-    const { playSong } = usePlayer();
+    const { playSong, addToQueue, removeFromQueue } = usePlayer();
     const { currentSong } = usePlayerState();
     const isCurrentSong = currentSong?.id === song.id;
+    const swipeableRef = useRef<Swipeable>(null);
 
     const handlePress = useCallback(() => {
       playSong(song);
@@ -74,67 +77,101 @@ const SongCardQueue = memo(
       [song.subtitle, song.artist_map],
     );
 
+    const renderRightActions = useCallback(
+      (progressAnimatedValue: any, dragAnimatedValue: any) => {
+        return (
+          <RectButton
+            onPress={() => {
+              removeFromQueue(song.id);
+              swipeableRef.current?.close();
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+            style={{
+              backgroundColor: "#dc2626", // red-600
+              justifyContent: "center",
+              alignItems: "center",
+              width: 80,
+              marginBottom: 8,
+            }}
+          >
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <Trash2Icon size={24} color="white" />
+              <Text className="text-white text-xs mt-1">Remove</Text>
+            </View>
+          </RectButton>
+        );
+      },
+      [removeFromQueue, song],
+    );
+
     return (
       <ScaleDecorator>
         <OpacityDecorator activeOpacity={1}>
-          <View className="mb-2">
-            <Pressable
-              onLongPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                drag();
-              }}
-              onPress={handlePress}
-              disabled={isActive}
-              delayLongPress={150}
-            >
-              <LinearGradient
-                colors={
-                  isCurrentSong
-                    ? ["rgba(59, 130, 246, 0.6)", "rgba(30, 30, 60, 0.8)"]
-                    : ["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="w-full flex-row border border-gray-800/30 rounded-xl p-3"
+          <Swipeable
+            ref={swipeableRef}
+            renderRightActions={renderRightActions}
+            friction={2}
+            rightThreshold={40}
+          >
+            <View className="mb-2">
+              <Pressable
+                onLongPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  drag();
+                }}
+                onPress={handlePress}
+                disabled={isActive}
+                delayLongPress={150}
               >
-                <View className="relative">
-                  <Image
-                    source={{ uri: songImage }}
-                    className="w-14 h-14 rounded-lg"
-                    style={{ width: 56, height: 56, borderRadius: 8 }}
-                  />
-                </View>
-
-                <View className="flex-1 px-4 justify-center">
-                  <Text
-                    className="text-white font-semibold text-base"
-                    numberOfLines={1}
-                  >
-                    {songName}
-                  </Text>
-                  <Text className="text-gray-300 text-sm" numberOfLines={1}>
-                    {songArtist}
-                  </Text>
-                </View>
-
-                {isActive ? (
-                  <View className="justify-center">
-                    <Ionicons name="menu" size={24} color="white" />
+                <LinearGradient
+                  colors={
+                    isCurrentSong
+                      ? ["rgba(59, 130, 246, 0.6)", "rgba(30, 30, 60, 0.8)"]
+                      : ["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  className="w-full flex-row border border-gray-800/30 rounded-xl p-3"
+                >
+                  <View className="relative">
+                    <Image
+                      source={{ uri: songImage }}
+                      className="w-14 h-14 rounded-lg"
+                      style={{ width: 56, height: 56, borderRadius: 8 }}
+                    />
                   </View>
-                ) : (
-                  <View className="justify-center">
-                    <View className="h-8 w-8 bg-gray-800/40 rounded-full items-center justify-center">
-                      <Ionicons
-                        name="reorder-three"
-                        size={20}
-                        color="rgba(255,255,255,0.6)"
-                      />
+
+                  <View className="flex-1 px-4 justify-center">
+                    <Text
+                      className="text-white font-semibold text-base"
+                      numberOfLines={1}
+                    >
+                      {songName}
+                    </Text>
+                    <Text className="text-gray-300 text-sm" numberOfLines={1}>
+                      {songArtist}
+                    </Text>
+                  </View>
+
+                  {isActive ? (
+                    <View className="justify-center">
+                      <Ionicons name="menu" size={24} color="white" />
                     </View>
-                  </View>
-                )}
-              </LinearGradient>
-            </Pressable>
-          </View>
+                  ) : (
+                    <View className="justify-center">
+                      <View className="h-8 w-8 bg-gray-800/40 rounded-full items-center justify-center">
+                        <Ionicons
+                          name="reorder-three"
+                          size={20}
+                          color="rgba(255,255,255,0.6)"
+                        />
+                      </View>
+                    </View>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </Swipeable>
         </OpacityDecorator>
       </ScaleDecorator>
     );

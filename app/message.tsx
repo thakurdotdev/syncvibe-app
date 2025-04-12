@@ -1,68 +1,220 @@
 import ImageGallery from "@/components/ImageGallery";
 import StartCall from "@/components/video/StartCall";
+import SwipeableModal from "@/components/common/SwipeableModal";
 import { Message, useChat } from "@/context/SocketContext";
 import { useUser } from "@/context/UserContext";
+import { getOptimizedImageUrl } from "@/utils/Cloudinary";
 import useApi from "@/utils/hooks/useApi";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   FlatList,
   Image,
-  Keyboard,
   KeyboardAvoidingView,
-  LayoutAnimation,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  UIManager,
   View,
 } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Enable LayoutAnimation for Android
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+const MessageHeader = React.memo(
+  ({
+    onBack,
+    user,
+    isOnline,
+    isTyping,
+  }: {
+    onBack: () => void;
+    user: any;
+    isOnline: boolean;
+    isTyping: boolean | undefined;
+  }) => (
+    <View style={styles.header}>
+      <Pressable onPress={onBack} hitSlop={10} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+      </Pressable>
 
-// Constants for styling
-const AVATAR_SIZE = 40;
-const ONLINE_INDICATOR_SIZE = 12;
-const ANIMATION_DURATION = 300;
+      <View style={styles.userContainer}>
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: user?.profilepic }} style={styles.avatar} />
+          {isOnline && <View style={styles.onlineIndicator} />}
+        </View>
 
-// Average heights for different message types (for accurate getItemLayout)
-const DATE_HEADER_HEIGHT = 50;
-const TEXT_MESSAGE_HEIGHT = 70;
-const IMAGE_MESSAGE_HEIGHT = 230;
+        <View style={styles.userTextContainer}>
+          <Text style={styles.username}>{user?.name}</Text>
+          {isTyping && <Text style={styles.typingText}>typing...</Text>}
+        </View>
+      </View>
+
+      <StartCall />
+    </View>
+  ),
+);
+
+const DateSeparator = React.memo(({ date }: { date: string }) => (
+  <View style={styles.dateSeparator}>
+    <Text style={styles.dateText}>{date}</Text>
+  </View>
+));
+
+const ChatMessage = React.memo(
+  ({
+    message,
+    isOwn,
+    onImagePress,
+    onMessageLongPress,
+  }: {
+    message: Message;
+    isOwn: boolean;
+    onImagePress: (url: string) => void;
+    onMessageLongPress: (message: Message) => void;
+  }) => (
+    <View
+      style={[
+        styles.messageBubbleContainer,
+        isOwn ? styles.ownMessageContainer : styles.otherMessageContainer,
+      ]}
+    >
+      {message.fileurl && (
+        <Pressable
+          onPress={() => message.fileurl && onImagePress(message.fileurl)}
+          style={styles.imageContainer}
+        >
+          <Image
+            source={{
+              uri: getOptimizedImageUrl(message.fileurl, { thumbnail: true }),
+            }}
+            style={styles.messageImage}
+            resizeMode="cover"
+          />
+        </Pressable>
+      )}
+
+      {message.content && (
+        <Pressable
+          onLongPress={() => {
+            if (isOwn) {
+              onMessageLongPress(message);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+          }}
+          style={[
+            styles.messageBubble,
+            isOwn ? styles.ownMessageBubble : styles.otherMessageBubble,
+          ]}
+        >
+          <Text style={styles.messageText}>{message.content}</Text>
+        </Pressable>
+      )}
+
+      <View style={styles.messageFooter}>
+        <Text style={styles.timeText}>{formatTime(message.createdat)}</Text>
+
+        {isOwn && (
+          <View style={styles.readStatus}>
+            {message.isread ? (
+              <MaterialCommunityIcons
+                name="check-all"
+                size={14}
+                color="#60a5fa"
+              />
+            ) : (
+              <MaterialCommunityIcons name="check" size={14} color="#9ca3af" />
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  ),
+);
+
+const InputToolbar = React.memo(
+  ({
+    message,
+    onChangeText,
+    onSend,
+    onAttach,
+    filePreview,
+    onRemoveAttachment,
+  }: {
+    message: string;
+    onChangeText: (text: string) => void;
+    onSend: () => void;
+    onAttach: () => void;
+    filePreview: string | null;
+    onRemoveAttachment: () => void;
+  }) => (
+    <View style={styles.inputToolbar}>
+      {filePreview ? (
+        <View style={styles.attachmentPreview}>
+          <Image source={{ uri: filePreview }} style={styles.previewImage} />
+          <Pressable
+            style={styles.removeAttachmentButton}
+            onPress={onRemoveAttachment}
+          >
+            <Ionicons name="close-circle" size={20} color="#FFFFFF" />
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View style={styles.inputContainer}>
+        <Pressable style={styles.attachButton} onPress={onAttach}>
+          <Ionicons name="image-outline" size={22} color="#60a5fa" />
+        </Pressable>
+
+        <TextInput
+          value={message}
+          onChangeText={onChangeText}
+          style={styles.textInput}
+          placeholder="Message..."
+          placeholderTextColor="#9ca3af"
+          multiline
+          maxLength={500}
+        />
+
+        <Pressable
+          style={[
+            styles.sendButton,
+            message.trim() || filePreview ? styles.sendButtonActive : null,
+          ]}
+          onPress={onSend}
+          disabled={!message.trim() && !filePreview}
+        >
+          <Ionicons
+            name="send"
+            size={18}
+            color={message.trim() || filePreview ? "#FFFFFF" : "#9ca3af"}
+          />
+        </Pressable>
+      </View>
+    </View>
+  ),
+);
 
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-// Function to format date for grouping messages
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
 
   if (date.toDateString() === today.toDateString()) {
     return "Today";
   } else if (date.toDateString() === yesterday.toDateString()) {
     return "Yesterday";
   } else {
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",
       year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
@@ -70,91 +222,29 @@ const formatDate = (dateString: string) => {
   }
 };
 
-// Simplified Message Component
-const SimpleMessage = ({ children }) => {
-  return <View>{children}</View>;
-};
-
-// Memoized Message Item Component to improve FlatList performance
-const MessageItem = memo(
-  ({ item, isOwnMessage, currentChat, chatImages, onImagePress }: any) => {
-    if (item.type === "date") {
-      return (
-        <View style={styles.dateHeaderContainer}>
-          <Text style={styles.dateHeaderText}>{item.date}</Text>
-        </View>
-      );
-    }
-
-    return (
-      <SimpleMessage>
-        <View
-          style={[
-            styles.messageContainer,
-            isOwnMessage
-              ? styles.ownMessageContainer
-              : styles.otherMessageContainer,
-          ]}
-        >
-          <View
-            style={[
-              styles.messageBubbleWrapper,
-              isOwnMessage
-                ? styles.ownMessageWrapper
-                : styles.otherMessageWrapper,
-            ]}
-          >
-            <View
-              style={[
-                styles.messageBubble,
-                isOwnMessage
-                  ? styles.ownMessageBubble
-                  : styles.otherMessageBubble,
-              ]}
-            >
-              {item.fileurl && (
-                <TouchableOpacity
-                  style={styles.imageContainer}
-                  activeOpacity={0.9}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    const imageIndex = chatImages.indexOf(item.fileurl);
-                    onImagePress(imageIndex);
-                  }}
-                >
-                  <Image
-                    source={{ uri: item.fileurl }}
-                    style={styles.messageImage}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              )}
-              {item.content && (
-                <Text
-                  style={[
-                    styles.messageText,
-                    isOwnMessage
-                      ? styles.ownMessageText
-                      : styles.otherMessageText,
-                  ]}
-                >
-                  {item.content}
-                </Text>
-              )}
-            </View>
-            <Text
-              style={[
-                styles.timeText,
-                isOwnMessage ? styles.ownTimeText : styles.otherTimeText,
-              ]}
-            >
-              {formatTime(item.createdat)}
-            </Text>
-          </View>
-        </View>
-      </SimpleMessage>
-    );
-  },
+const MessageOptionItem = React.memo(
+  ({
+    icon,
+    text,
+    onPress,
+    color = "#FFFFFF",
+  }: {
+    icon: any;
+    text: string;
+    onPress: () => void;
+    color?: string;
+  }) => (
+    <Pressable
+      style={styles.optionItem}
+      onPress={() => {
+        onPress();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+    >
+      <Ionicons name={icon} size={22} color={color} />
+      <Text style={[styles.optionText, { color }]}>{text}</Text>
+    </Pressable>
+  ),
 );
 
 const ChatWithUser = () => {
@@ -163,7 +253,7 @@ const ChatWithUser = () => {
   const loggedInUserId = user?.userid;
   const { currentChat, setCurrentChat, socket, onlineStatuses } = useChat();
 
-  // States
+  // State
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -171,29 +261,22 @@ const ChatWithUser = () => {
     null,
   );
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [showScrollButton, setShowScrollButton] = useState(false);
-  const [inputHeight, setInputHeight] = useState(50);
   const [showGallery, setShowGallery] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [messagesLayoutReady, setMessagesLayoutReady] = useState(false);
-  const messagesEndRef = useRef(null);
-  const listContentHeight = useRef(0);
-  const listVisibleHeight = useRef(0);
+  const [showMessageOptions, setShowMessageOptions] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editText, setEditText] = useState("");
 
   // Refs
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const flatListRef = useRef<FlatList>(null);
-  const inputRef = useRef<TextInput>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const didMountRef = useRef(false); // Track if component has mounted
 
-  // Animation related states
-  const [lastMessageId, setLastMessageId] = useState<string | null>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(50)).current;
-  const scrollButtonAnim = useRef(new Animated.Value(0)).current;
-
+  // Load messages
   const fetchMessages = useCallback(async () => {
-    if (!loggedInUserId || !currentChat?.otherUser?.userid) return;
+    if (!currentChat?.chatid) return;
+
     try {
       setLoading(true);
       const response = await api.get(`/api/get/messages/${currentChat.chatid}`);
@@ -204,147 +287,84 @@ const ChatWithUser = () => {
       console.error("Error fetching messages:", error);
     } finally {
       setLoading(false);
-      setInitialLoad(false);
     }
-  }, [
-    loggedInUserId,
-    currentChat?.otherUser?.userid,
-    currentChat?.chatid,
-    api,
-  ]);
+  }, [currentChat?.chatid, api]);
+
+  const markAsRead = useCallback(
+    async (messageIds: number[]) => {
+      if (!currentChat?.chatid || !socket) return;
+
+      try {
+        const response = await api.post(`/api/read/messages`, {
+          messageIds,
+        });
+
+        if (response.status === 200) {
+          socket.emit("messages-read", {
+            messageIds,
+            chatid: currentChat.chatid,
+            readerId: loggedInUserId,
+            senderId: currentChat.otherUser.userid,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
+    },
+    [currentChat?.chatid, api],
+  );
 
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
 
   useEffect(() => {
-    if (!socket || !loggedInUserId || !currentChat?.otherUser?.userid) return;
+    if (!socket || !currentChat?.chatid) return;
 
     const handleNewMessage = (newMessageReceived: Message) => {
-      if (newMessageReceived.chatid === currentChat?.chatid) {
-        setMessages((prevMessages) => [...prevMessages, newMessageReceived]);
+      if (newMessageReceived.chatid === currentChat.chatid) {
+        setMessages((prev) => [...prev, newMessageReceived]);
+      }
+    };
+
+    const handleReadStatus = (data: Message) => {
+      if (data.chatid === currentChat.chatid) {
+        setMessages((prev) => prev.map((msg) => ({ ...msg, isread: true })));
       }
     };
 
     socket.on("message-received", handleNewMessage);
+    socket.on("messages-read-status", handleReadStatus);
 
     return () => {
       socket.off("message-received", handleNewMessage);
+      socket.off("messages-read-status", handleReadStatus);
     };
-  }, [
-    socket,
-    loggedInUserId,
-    currentChat?.otherUser?.userid,
-    currentChat?.chatid,
-  ]);
+  }, [socket, currentChat?.chatid]);
 
-  // Auto scroll to bottom when new messages arrive or on initial load
+  // Mark messages as read when the chat is opened
   useEffect(() => {
-    if (messages.length > 0 && flatListRef.current && messagesLayoutReady) {
-      // Use requestAnimationFrame to ensure layout is complete
-      requestAnimationFrame(() => {
-        flatListRef.current?.scrollToEnd({ animated: !initialLoad });
-      });
-    }
-  }, [messages, initialLoad, messagesLayoutReady]);
+    if (currentChat?.chatid && loggedInUserId) {
+      const unreadMessages = messages.filter(
+        (msg) => msg.chatid === currentChat.chatid && !msg.isread,
+      );
 
-  const handleSendMessage = async () => {
-    if (!message.trim() && !file) return;
+      if (unreadMessages.length > 0) {
+        const messageIds = unreadMessages
+          .map((msg) => msg.messageid)
+          .filter((id): id is number => id !== undefined);
 
-    try {
-      // Use layout animation for smoother transitions
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
-      const newMessageId = Date.now().toString();
-      const newMessage = {
-        senderid: loggedInUserId,
-        content: message,
-        createdat: new Date().toISOString(),
-        messageid: newMessageId,
-        participants: currentChat?.participants,
-        chatid: currentChat?.chatid,
-        fileurl: file ? filePreview : undefined,
-        senderName: user?.name,
-      };
-
-      setLastMessageId(newMessageId);
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-      setInputHeight(50);
-
-      // Provide haptic feedback when sending
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      Keyboard.dismiss();
-
-      // Ensure scrollToEnd happens after state update
-      setTimeout(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({ animated: true });
+        if (messageIds.length > 0) {
+          markAsRead(messageIds);
         }
-      }, 100);
-
-      if (!file) {
-        socket?.emit("new-message", newMessage);
       }
-
-      setFile(null);
-      setFilePreview(null);
-      setMessage("");
-
-      // Send typing status as false when message is sent
-      socket?.emit("typing", {
-        userId: loggedInUserId,
-        recipientId: currentChat?.otherUser.userid,
-        isTyping: false,
-      });
-
-      const formData = new FormData();
-      formData.append("chatid", currentChat?.chatid);
-      formData.append("senderid", loggedInUserId);
-      formData.append("content", message);
-      if (file && file.assets?.[0]) {
-        const fileAsset = file.assets[0];
-        formData.append("file", {
-          uri: fileAsset.uri,
-          type: fileAsset.mimeType,
-          name: fileAsset.fileName,
-        } as any);
-      }
-
-      const response = await api.post(`/api/send/message`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (file) {
-        let serverMessage = response.data.message;
-        serverMessage.participants = currentChat?.participants;
-        socket?.emit("new-message", serverMessage);
-      }
-
-      socket?.emit("typing", {
-        userId: loggedInUserId,
-        recipientId: currentChat?.otherUser.userid,
-        isTyping: false,
-      });
-    } catch (error) {
-      console.error("Error sending message:", error);
     }
-  };
+  }, [currentChat?.chatid, loggedInUserId, messages, markAsRead]);
 
+  // Handle typing status
   const handleTyping = useCallback(
     (text: string) => {
       setMessage(text);
-
-      // Dynamic input height based on content length
-      if (text.length > 80) {
-        setInputHeight(110);
-      } else if (text.length > 40) {
-        setInputHeight(90);
-      } else if (text.length > 0) {
-        setInputHeight(70);
-      } else {
-        setInputHeight(50);
-      }
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -365,17 +385,119 @@ const ChatWithUser = () => {
               isTyping: false,
             });
           }
-        }, 3000);
+        }, 1500);
       }
     },
-    [loggedInUserId, currentChat?.otherUser?.userid, socket],
+    [socket, loggedInUserId, currentChat?.otherUser?.userid],
   );
 
-  // Pre-process messages for better performance
+  // Send message function
+  const handleSendMessage = async () => {
+    if (!message.trim() && !file) return;
+    if (!currentChat?.chatid) return;
+
+    try {
+      const newMessage = {
+        senderid: loggedInUserId,
+        content: message,
+        createdat: new Date().toISOString(),
+        messageid: Date.now(),
+        participants: currentChat?.participants,
+        chatid: currentChat?.chatid,
+        fileurl: filePreview || undefined,
+        senderName: user?.name,
+      };
+
+      // Add to UI immediately for responsiveness
+      setMessages((prev) => [...prev, newMessage]);
+
+      // Clear input fields
+      setMessage("");
+      setFile(null);
+      setFilePreview(null);
+
+      // Provide feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // Send to socket if no file (will be sent after upload otherwise)
+      if (!file) {
+        socket?.emit("new-message", newMessage);
+      }
+
+      // Cancel typing indicator
+      socket?.emit("typing", {
+        userId: loggedInUserId,
+        recipientId: currentChat?.otherUser.userid,
+        isTyping: false,
+      });
+
+      // Scroll to bottom
+      setTimeout(
+        () => flatListRef.current?.scrollToEnd({ animated: true }),
+        100,
+      );
+
+      if (!loggedInUserId) return;
+
+      // API call to save message
+      const formData = new FormData();
+      formData.append("chatid", currentChat.chatid.toString());
+      formData.append("senderid", loggedInUserId.toString());
+      formData.append("content", message);
+
+      if (file && file.assets?.[0]) {
+        const fileAsset = file.assets[0];
+        formData.append("file", {
+          uri: fileAsset.uri,
+          type: fileAsset.mimeType,
+          name: fileAsset.fileName || "image.jpg",
+        } as any);
+      }
+
+      const response = await api.post("/api/send/message", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // If we had a file, now we can notify via socket with server data
+      if (file && response?.data?.message) {
+        let serverMessage = response.data.message;
+        serverMessage.participants = currentChat.participants;
+        socket?.emit("new-message", serverMessage);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  // Image picker
+  const handleAttachment = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status === "granted") {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.7,
+          allowsMultipleSelection: false,
+        });
+
+        if (!result.canceled && result.assets?.[0]) {
+          setFile(result);
+          setFilePreview(result.assets[0].uri);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+    }
+  };
+
+  // Process messages with date separators
   const processedMessages = useCallback(() => {
     const result: any[] = [];
     let currentDate = "";
-    let prevSenderId: string | null = null;
 
     messages.forEach((msg) => {
       const messageDate = formatDate(msg.createdat);
@@ -387,351 +509,309 @@ const ChatWithUser = () => {
           date: messageDate,
         });
         currentDate = messageDate;
-        // Reset the previous sender ID after a date divider
-        prevSenderId = null;
       }
-
-      // Check if this is the first message in a sequence from this sender
-      const isFirstInSequence = prevSenderId !== msg.senderid;
-      prevSenderId = msg.senderid;
 
       result.push({
         ...msg,
         type: "message",
-        isFirstInSequence,
       });
     });
 
     return result;
   }, [messages]);
 
-  const getChatImages = useCallback(() => {
-    return messages.filter((msg) => msg.fileurl).map((msg) => msg.fileurl);
-  }, [messages]);
+  // Get all image URLs for gallery view
+  const chatImages = messages
+    .filter((msg) => msg.fileurl)
+    .map((msg) => msg.fileurl || "");
 
-  const chatImages = getChatImages();
+  // Find image index by URL
+  const findImageIndex = useCallback(
+    (url: string) => {
+      return chatImages.findIndex((imgUrl) => imgUrl === url);
+    },
+    [chatImages],
+  );
 
+  // Handle image press to open gallery
+  const handleImagePress = useCallback(
+    (imageUrl: string) => {
+      const index = findImageIndex(imageUrl);
+      if (index !== -1) {
+        setSelectedImageIndex(index);
+        setShowGallery(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    },
+    [findImageIndex],
+  );
+
+  // Handle message long press
+  const handleMessageLongPress = useCallback((msg: Message) => {
+    setSelectedMessage(msg);
+    setShowMessageOptions(true);
+  }, []);
+
+  // Handle edit message
+  const handleEditMessage = useCallback(() => {
+    if (selectedMessage) {
+      setEditText(selectedMessage.content || "");
+      setEditMode(true);
+      setShowMessageOptions(false);
+    }
+  }, [selectedMessage]);
+
+  // Handle delete message
+  const handleDeleteMessage = useCallback(async () => {
+    if (!selectedMessage?.messageid) {
+      setShowMessageOptions(false);
+      return;
+    }
+
+    try {
+      const response = await api.delete(
+        `/api/message/${selectedMessage.messageid}`,
+      );
+
+      if (response.status === 200) {
+        // Remove message from local state
+        setMessages((prev) =>
+          prev.filter((msg) => msg.messageid !== selectedMessage.messageid),
+        );
+
+        // Notify other users through socket
+        socket?.emit("message-deleted", {
+          messageid: selectedMessage.messageid,
+          chatid: currentChat?.chatid,
+        });
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    } finally {
+      setShowMessageOptions(false);
+    }
+  }, [selectedMessage, api, socket, currentChat?.chatid]);
+
+  // Handle save edited message
+  const handleSaveEdit = useCallback(async () => {
+    if (!selectedMessage?.messageid || !editText.trim()) {
+      setEditMode(false);
+      return;
+    }
+
+    try {
+      const response = await api.put(
+        `/api/message/${selectedMessage.messageid}`,
+        {
+          content: editText,
+        },
+      );
+
+      if (response.status === 200) {
+        // Update message in local state
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.messageid === selectedMessage.messageid
+              ? { ...msg, content: editText, edited: true }
+              : msg,
+          ),
+        );
+
+        // Notify other users through socket
+        socket?.emit("message-edited", {
+          messageid: selectedMessage.messageid,
+          chatid: currentChat?.chatid,
+          content: editText,
+        });
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error("Error updating message:", error);
+    } finally {
+      setEditMode(false);
+      setEditText("");
+    }
+  }, [selectedMessage, editText, api, socket, currentChat?.chatid]);
+
+  // Handle cancel edit
+  const handleCancelEdit = useCallback(() => {
+    setEditMode(false);
+    setEditText("");
+  }, []);
+
+  // Handle copy message text
+  const handleCopyText = useCallback(() => {
+    if (selectedMessage?.content) {
+      // Using Clipboard.setStringAsync from expo-clipboard would be ideal here
+      // But for now, just close the modal
+      setShowMessageOptions(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [selectedMessage]);
+
+  // Render list items
   const renderItem = useCallback(
-    ({ item }: { item: any }) => {
-      const isOwnMessage = item.senderid === loggedInUserId;
-      const isNew = item.messageid === lastMessageId;
+    ({ item }: any) => {
+      if (item.type === "date") {
+        return <DateSeparator date={item.date} />;
+      }
+
+      const isOwn = item.senderid === loggedInUserId;
 
       return (
-        <MessageItem
-          item={item}
-          isOwnMessage={isOwnMessage}
-          loggedInUserId={loggedInUserId}
-          currentChat={currentChat}
-          chatImages={chatImages}
-          isNew={isNew}
-          onImagePress={(index: number) => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setSelectedImageIndex(index);
-            setShowGallery(true);
-          }}
+        <ChatMessage
+          message={item}
+          isOwn={isOwn}
+          onImagePress={handleImagePress}
+          onMessageLongPress={handleMessageLongPress}
         />
       );
     },
-    [loggedInUserId, currentChat, chatImages, lastMessageId],
+    [loggedInUserId, handleImagePress, handleMessageLongPress],
   );
 
-  const renderAttachmentPreview = () => {
-    if (!filePreview) return null;
-
-    return (
-      <View style={styles.attachmentPreviewContainer}>
-        <Image
-          source={{ uri: filePreview }}
-          style={styles.attachmentPreview}
-          resizeMode="cover"
-        />
-        <TouchableOpacity
-          style={styles.removeAttachmentButton}
-          onPress={() => {
-            setFile(null);
-            setFilePreview(null);
-            setInputHeight(50);
-          }}
-        >
-          <Ionicons name="close-circle" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const pickImage = async () => {
-    try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (status === "granted") {
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: "images",
-          allowsEditing: true,
-          quality: 0.8,
-        });
-
-        if (!result.canceled) {
-          setFile(result);
-          setFilePreview(result.assets[0].uri);
-          setInputHeight(120);
-        }
-      }
-    } catch (error) {
-      console.error("Error picking image:", error);
-    }
-  };
-
-  const scrollToBottom = () => {
-    if (flatListRef.current && messages.length > 0) {
-      flatListRef.current.scrollToEnd({ animated: true });
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setShowScrollButton(false);
-    }
-  };
-
-  const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ""];
-
-  const getItemLayout = useCallback((data: any, index: number) => {
-    if (!data) return { length: 0, offset: 0, index };
-
-    // Estimate height based on item type and content
-    const item = data[index];
-    let height = DATE_HEADER_HEIGHT; // Default for date headers
-
-    if (item.type === "message") {
-      // Base height for a message
-      height = TEXT_MESSAGE_HEIGHT;
-
-      // Add extra height for messages with images
-      if (item.fileurl) {
-        height = IMAGE_MESSAGE_HEIGHT;
-      }
-
-      // Adjust for longer text content
-      if (item.content && item.content.length > 100) {
-        height += 40; // Add more height for longer messages
-      } else if (item.content && item.content.length > 50) {
-        height += 20;
-      }
-    }
-
-    // Calculate offset (sum of heights of all previous items)
-    let offset = 0;
-    for (let i = 0; i < index; i++) {
-      const prevItem = data[i];
-      if (prevItem.type === "date") {
-        offset += DATE_HEADER_HEIGHT;
-      } else if (prevItem.fileurl) {
-        offset += IMAGE_MESSAGE_HEIGHT;
-      } else {
-        offset += TEXT_MESSAGE_HEIGHT;
-      }
-    }
-
-    return { length: height, offset, index };
-  }, []);
-
+  // List key extractor
   const keyExtractor = useCallback(
-    (item: any, index: number) =>
-      item.type === "date" ? item.id : `msg-${item.messageid || index}`,
+    (item: any) => (item.type === "date" ? item.id : `msg-${item.messageid}`),
     [],
   );
 
-  // Show/hide scroll button with animation
-  useEffect(() => {
-    Animated.timing(scrollButtonAnim, {
-      toValue: showScrollButton ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  }, [showScrollButton]);
-
-  // Animate header entrance
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  // Check if other user is online
+  const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ""];
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setCurrentChat(null);
-              router.back();
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <MessageHeader
+          onBack={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setCurrentChat(null);
+            router.back();
+          }}
+          user={currentChat?.otherUser}
+          isOnline={isOnline}
+          isTyping={currentChat?.isTyping}
+        />
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#60a5fa" />
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={processedMessages()}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={styles.messageList}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            removeClippedSubviews={true}
+            showsVerticalScrollIndicator={false}
+            onLayout={() => {
+              // Scroll immediately without animation when layout completes
+              if (messages.length > 0) {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }
             }}
-            style={styles.backButton}
-          >
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+            onContentSizeChange={() => {
+              // Scroll immediately without animation when content size changes
+              if (messages.length > 0) {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }
+            }}
+          />
+        )}
 
-          <View style={styles.headerContent}>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={{ uri: currentChat?.otherUser?.profilepic }}
-                style={styles.avatar}
-              />
-              {isOnline && <View style={styles.onlineIndicator} />}
+        {editMode ? (
+          <View style={styles.editContainer}>
+            <View style={styles.editHeader}>
+              <Text style={styles.editTitle}>Edit message</Text>
+              <Pressable onPress={handleCancelEdit}>
+                <Ionicons name="close" size={22} color="#9ca3af" />
+              </Pressable>
             </View>
-
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>
-                {currentChat?.otherUser?.name}
-              </Text>
-              {currentChat?.isTyping && (
-                <View style={styles.typingContainer}>
-                  <Text style={styles.typingText}>Typing</Text>
-                </View>
-              )}
-            </View>
-
-            <StartCall />
-          </View>
-        </Animated.View>
-
-        <KeyboardAvoidingView
-          style={styles.mainContainer}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        >
-          <View
-            style={styles.messagesContainer}
-            onLayout={() => setMessagesLayoutReady(true)}
-          >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#0A84FF" />
-              </View>
-            ) : (
-              <FlatList
-                ref={flatListRef}
-                data={processedMessages()}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                getItemLayout={getItemLayout}
-                contentContainerStyle={styles.messagesList}
-                showsVerticalScrollIndicator={false}
-                onScroll={({ nativeEvent }) => {
-                  const { contentOffset, contentSize, layoutMeasurement } =
-                    nativeEvent;
-                  const distanceFromBottom =
-                    contentSize.height -
-                    (contentOffset.y + layoutMeasurement.height);
-                  setShowScrollButton(distanceFromBottom > 300);
-                }}
-                scrollEventThrottle={16}
+            <View style={styles.editInputContainer}>
+              <TextInput
+                value={editText}
+                onChangeText={setEditText}
+                style={styles.editTextInput}
+                autoFocus
+                multiline
+                maxLength={500}
               />
-            )}
-
-            <Animated.View
-              style={[
-                styles.scrollToBottomButton,
-                {
-                  opacity: scrollButtonAnim,
-                  transform: [
-                    {
-                      scale: scrollButtonAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.8, 1],
-                      }),
-                    },
-                    {
-                      translateY: scrollButtonAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <TouchableOpacity
-                onPress={scrollToBottom}
-                style={styles.scrollButtonTouchable}
-              >
-                <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-
-          {renderAttachmentPreview()}
-          <View style={[styles.inputContainer, { height: inputHeight }]}>
-            <View style={styles.inputRow}>
-              <TouchableOpacity
-                style={styles.attachButton}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  pickImage();
-                }}
-              >
-                <Ionicons name="image-outline" size={22} color="#0A84FF" />
-              </TouchableOpacity>
-
-              <View style={styles.textInputContainer}>
-                <TextInput
-                  ref={inputRef}
-                  value={message}
-                  onChangeText={handleTyping}
-                  style={styles.input}
-                  placeholder="Message..."
-                  placeholderTextColor="#8E8E93"
-                  multiline
-                />
-              </View>
-
-              <TouchableOpacity
+              <Pressable
                 style={[
                   styles.sendButton,
-                  {
-                    backgroundColor:
-                      message.trim() || file
-                        ? "#0A84FF"
-                        : "rgba(10, 132, 255, 0.3)",
-                  },
+                  editText.trim() ? styles.sendButtonActive : null,
                 ]}
-                onPress={handleSendMessage}
-                disabled={!message.trim() && !file}
+                onPress={handleSaveEdit}
+                disabled={!editText.trim()}
               >
                 <Ionicons
-                  name="send"
-                  size={18}
-                  color={message.trim() || file ? "#FFFFFF" : "#CCCCCC"}
+                  name="checkmark"
+                  size={22}
+                  color={editText.trim() ? "#FFFFFF" : "#9ca3af"}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
+        ) : (
+          <InputToolbar
+            message={message}
+            onChangeText={handleTyping}
+            onSend={handleSendMessage}
+            onAttach={handleAttachment}
+            filePreview={filePreview}
+            onRemoveAttachment={() => {
+              setFile(null);
+              setFilePreview(null);
+            }}
+          />
+        )}
 
-          {showGallery && chatImages.length > 0 && (
-            <ImageGallery
-              images={chatImages}
-              initialIndex={selectedImageIndex}
-              onClose={() => setShowGallery(false)}
+        {showGallery && chatImages.length > 0 && (
+          <ImageGallery
+            images={chatImages}
+            initialIndex={selectedImageIndex}
+            onClose={() => setShowGallery(false)}
+          />
+        )}
+
+        <SwipeableModal
+          isVisible={showMessageOptions}
+          onClose={() => setShowMessageOptions(false)}
+          maxHeight="25%"
+        >
+          <View style={styles.modalContent}>
+            <MessageOptionItem
+              icon="pencil"
+              text="Edit"
+              onPress={handleEditMessage}
             />
-          )}
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </GestureHandlerRootView>
+            <MessageOptionItem
+              icon="copy-outline"
+              text="Copy"
+              onPress={handleCopyText}
+            />
+            <MessageOptionItem
+              icon="trash-outline"
+              text="Delete"
+              onPress={handleDeleteMessage}
+              color="#ef4444"
+            />
+          </View>
+        </SwipeableModal>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -740,9 +820,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000000",
   },
-  mainContainer: {
-    flex: 1,
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -750,12 +827,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "#121212",
   },
   backButton: {
     padding: 8,
   },
-  headerContent: {
+  userContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
@@ -763,219 +839,210 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: "relative",
-    marginRight: 12,
   },
   avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: "#2C2C2E",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    borderColor: "#374151", // Darker border for the avatar
+    backgroundColor: "#1f2937", // Darker background for the avatar
+    position: "relative",
   },
   onlineIndicator: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    width: ONLINE_INDICATOR_SIZE,
-    height: ONLINE_INDICATOR_SIZE,
-    borderRadius: ONLINE_INDICATOR_SIZE / 2,
-    backgroundColor: "#30D158",
-    borderWidth: 2,
-    borderColor: "#121212",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#10b981",
+    borderWidth: 1.5,
+    borderColor: "#111827",
   },
-  userInfo: {
-    flex: 1,
-    justifyContent: "center",
+  userTextContainer: {
+    marginLeft: 10,
   },
-  userName: {
+  username: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 2,
-  },
-  typingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    color: "#f9fafb",
   },
   typingText: {
     fontSize: 12,
-    color: "#30D158",
+    color: "#10b981",
     fontWeight: "500",
-    marginRight: 4,
-  },
-  messagesContainer: {
-    flex: 1,
-    position: "relative",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  messagesList: {
-    paddingHorizontal: 12,
-    paddingBottom: 20,
-    paddingTop: 10,
+  messageList: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  messageContainer: {
-    flexDirection: "row",
-    marginVertical: 5,
-    maxWidth: "85%",
+  dateSeparator: {
+    alignItems: "center",
+    marginVertical: 16,
+  },
+  dateText: {
+    fontSize: 12,
+    color: "#9ca3af",
+    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  messageBubbleContainer: {
+    marginVertical: 4,
+    maxWidth: "80%",
   },
   ownMessageContainer: {
     alignSelf: "flex-end",
-    justifyContent: "flex-end",
   },
   otherMessageContainer: {
     alignSelf: "flex-start",
-    justifyContent: "flex-start",
-  },
-  messageBubbleWrapper: {
-    flexDirection: "column",
-  },
-  ownMessageWrapper: {
-    alignItems: "flex-end",
-  },
-  otherMessageWrapper: {
-    alignItems: "flex-start",
   },
   messageBubble: {
     borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    maxWidth: "100%",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   ownMessageBubble: {
-    backgroundColor: "#333333", // Changed from blue to dark gray
+    backgroundColor: "#1f2937", // Darker gray for own messages
   },
   otherMessageBubble: {
-    backgroundColor: "#262629",
+    backgroundColor: "#1f2937", // Darker gray for other messages
   },
   messageText: {
     fontSize: 16,
-    lineHeight: 20,
-  },
-  ownMessageText: {
-    color: "#FFFFFF",
-  },
-  otherMessageText: {
-    color: "#FFFFFF",
-  },
-  timeText: {
-    fontSize: 10,
-    marginTop: 4,
-  },
-  ownTimeText: {
-    color: "rgba(255,255,255,0.5)",
-    marginRight: 4,
-  },
-  otherTimeText: {
-    color: "rgba(255,255,255,0.5)",
-    marginLeft: 4,
-  },
-  dateHeaderContainer: {
-    alignItems: "center",
-    marginVertical: 15,
-  },
-  dateHeaderText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#8E8E93",
-    backgroundColor: "rgba(30, 30, 30, 0.7)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    color: "#f9fafb",
+    lineHeight: 22,
   },
   imageContainer: {
-    marginBottom: 0, // Removed bottom margin
-    borderRadius: 16,
+    marginBottom: 4,
+    borderRadius: 12,
     overflow: "hidden",
   },
   messageImage: {
     width: 200,
     height: 200,
-    borderRadius: 16, // Increased border radius for images
+    borderRadius: 12,
   },
-  scrollToBottomButton: {
-    position: "absolute",
-    right: 15,
-    bottom: 15,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scrollButtonTouchable: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(40, 40, 40, 0.7)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  inputContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "#121212",
-    justifyContent: "center",
-  },
-  inputRow: {
+  messageFooter: {
     flexDirection: "row",
-    alignItems: "flex-end",
-  },
-  textInputContainer: {
-    flex: 1,
-    backgroundColor: "#2C2C2E",
-    borderRadius: 20,
-    marginHorizontal: 8,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 10 : 6,
-    minHeight: 40,
-    justifyContent: "center",
-  },
-  input: {
-    fontSize: 16,
-    color: "#FFFFFF",
-    maxHeight: 100,
-  },
-  attachButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#2C2C2E",
-    justifyContent: "center",
+    justifyContent: "flex-end",
     alignItems: "center",
+    marginTop: 3,
   },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+  timeText: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.6)",
+    marginRight: 4,
   },
-  attachmentPreviewContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#121212",
+  readStatus: {
+    marginLeft: 2,
+  },
+  inputToolbar: {
+    padding: 10,
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.1)",
   },
   attachmentPreview: {
+    marginBottom: 8,
+    position: "relative",
+    width: 80,
+  },
+  previewImage: {
     width: 80,
     height: 80,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   removeAttachmentButton: {
     position: "absolute",
-    top: 12,
-    left: 70,
+    top: -6,
+    right: -6,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     borderRadius: 12,
-    padding: 2,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+  },
+  attachButton: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: "#1f2937",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+    maxHeight: 120,
+    color: "#f9fafb",
+    fontSize: 16,
+    marginHorizontal: 8,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#374151",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sendButtonActive: {
+    backgroundColor: "#3b82f6",
+  },
+  modalContent: {
+    padding: 16,
+  },
+  optionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  optionText: {
+    fontSize: 16,
+    marginLeft: 12,
+    fontWeight: "500",
+  },
+  editContainer: {
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#000000",
+  },
+  editHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  editTitle: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#9ca3af",
+  },
+  editInputContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+  },
+  editTextInput: {
+    flex: 1,
+    backgroundColor: "#1f2937",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    maxHeight: 120,
+    color: "#f9fafb",
+    fontSize: 16,
+    marginRight: 8,
   },
 });
 

@@ -194,7 +194,7 @@ export default function ArtistScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Animated.FlatList
         data={newSongs}
         renderItem={({ item }) => <SongCard song={item} />}
@@ -292,7 +292,7 @@ export default function ArtistScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
