@@ -1,5 +1,4 @@
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "@/context/ThemeContext";
 import { router, Tabs, usePathname } from "expo-router";
 import {
   Home,
@@ -25,26 +24,25 @@ const TabButton = ({
   label: string;
   icon: React.ComponentType<LucideProps>;
 }) => {
-  const color = isFocused ? "#ffffff" : "#8a8a8a";
-
-  const textStyle = {
-    color,
-    fontWeight: isFocused ? ("600" as const) : ("400" as const),
-    marginTop: 6,
-    fontSize: 12,
-  };
+  const { colors } = useTheme();
+  const color = isFocused ? colors.primary : colors.mutedForeground;
 
   return (
     <Pressable
       onPress={onPress}
-      className="flex-1 items-center justify-center"
-      style={{ paddingVertical: 10 }}
+      className="flex-1 items-center justify-center relative"
+      style={{ paddingVertical: 12 }}
     >
-      <View className="items-center justify-center">
-        <Icon size={22} color={color} />
+      <View className="items-center justify-center rounded-full px-4 py-1">
+        <Icon size={22} color={color} strokeWidth={isFocused ? 2.5 : 1.8} />
 
         <Text
-          style={textStyle}
+          style={{
+            color,
+            fontWeight: isFocused ? "600" : "400",
+            marginTop: 6,
+            fontSize: 12,
+          }}
           className="text-xs"
           numberOfLines={1}
           ellipsizeMode="tail"
@@ -59,6 +57,7 @@ const TabButton = ({
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const { colors } = useTheme();
 
   // Determine active tab based on pathname
   const isHomeActive = pathname.includes("/home");
@@ -68,7 +67,7 @@ export default function TabLayout() {
   const isChatActive = pathname.includes("/chat");
 
   return (
-    <View className="flex-1 bg-black">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -107,7 +106,6 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Custom tab bar with keyboard handling */}
       <Animated.View
         style={[
           {
@@ -117,23 +115,18 @@ export default function TabLayout() {
             right: 0,
             height: 75 + insets.bottom,
             paddingBottom: insets.bottom,
-            backgroundColor: "black",
-            borderTopWidth: 0,
+            backgroundColor: colors.card,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
             zIndex: 1000,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 5,
           },
         ]}
       >
-        <BlurView
-          intensity={20}
-          tint="dark"
-          className="absolute top-0 left-0 right-0 bottom-0"
-        >
-          <LinearGradient
-            colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
-            className="flex-1 border-t border-gray-800/30"
-          />
-        </BlurView>
-
         <View className="flex-row h-full">
           <TabButton
             onPress={() => router.push("/home")}

@@ -13,4 +13,5 @@ export interface User {
   passKeyChallenge?: string;
   challengeExpiry?: string;
   expoPushToken?: string;
+  favoriteGenres?: string[];
 }

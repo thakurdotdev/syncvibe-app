@@ -120,17 +120,12 @@ export async function PlaybackService() {
       if (global.processingPrevTrack) return;
       global.processingPrevTrack = true;
       // Preemptively fire UI state update for instant feedback
-      // Preemptively fire UI state update for instant feedback
       DeviceEventEmitter.emit("remote-prev-triggered");
-      const position = await TrackPlayer.getProgress().then(
-        (progress) => progress.position,
-      );
+
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
-      // If we're more than 3 seconds into the song, just restart it
-      if (position > 3) {
-        await TrackPlayer.seekTo(0);
-      } else if (currentIndex !== undefined && currentIndex > 0) {
+      // Always go to previous track regardless of current position
+      if (currentIndex !== undefined && currentIndex > 0) {
         const queue = await TrackPlayer.getQueue();
         const prevIndex = currentIndex - 1;
 
@@ -221,14 +216,40 @@ export async function PlaybackService() {
       if (currentTrackIndex !== undefined) {
         // Try to reload the current track first
         const wasPlaying = (await getPlaybackState()).state === State.Playing;
-        await TrackPlayer.skip(currentTrackIndex);
 
-        if (wasPlaying) {
-          // Try to resume playback
-          await TrackPlayer.play().catch(() => {
-            // If direct resume fails, try with delay
-            setTimeout(() => TrackPlayer.play(), 300);
-          });
+        // Try multiple recovery strategies
+        try {
+          // Strategy 1: Skip to same track to reload it
+          await TrackPlayer.skip(currentTrackIndex);
+
+          if (wasPlaying) {
+            // Try to resume playback
+            await TrackPlayer.play().catch(() => {
+              // If direct resume fails, try with delay
+              setTimeout(() => TrackPlayer.play(), 300);
+            });
+          }
+        } catch (recoveryError) {
+          console.error("First recovery attempt failed:", recoveryError);
+
+          try {
+            // Strategy 2: Get the track and re-add it
+            const currentTrack = await TrackPlayer.getTrack(currentTrackIndex);
+            if (currentTrack) {
+              await TrackPlayer.remove(currentTrackIndex);
+              await TrackPlayer.add(currentTrack, currentTrackIndex);
+
+              if (wasPlaying) {
+                await TrackPlayer.skip(currentTrackIndex);
+                await TrackPlayer.play();
+              }
+            }
+          } catch (secondRecoveryError) {
+            console.error(
+              "Second recovery attempt failed:",
+              secondRecoveryError,
+            );
+          }
         }
 
         // If still in error state after brief delay, try next track

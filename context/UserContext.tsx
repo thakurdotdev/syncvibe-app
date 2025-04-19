@@ -25,6 +25,8 @@ interface UserContextType {
   logout: () => Promise<void>;
   followers: followersType[];
   following: followingType[];
+  fetchFollowData: () => Promise<void>;
+  updateUser: (userData: Partial<User>) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | null>(null);
@@ -120,6 +122,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+  const updateUser = useCallback(async (userData: Partial<User>) => {
+    try {
+      const response = await api.put("/api/profile", userData);
+      if (response.status === 200) {
+        setUser((prev) => (prev ? { ...prev, ...userData } : null));
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    }
+  }, []);
+
   const memoizedValue = useMemo(
     () => ({
       user,
@@ -133,6 +146,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       setSelectedLanguages,
       followers,
       following,
+      fetchFollowData,
+      updateUser,
     }),
     [
       user,
@@ -142,6 +157,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       selectedLanguages,
       followers,
       following,
+      fetchFollowData,
+      updateUser,
     ],
   );
 

@@ -2,8 +2,10 @@ import LoginScreen from "@/app/login";
 import SwipeableModal from "@/components/common/SwipeableModal";
 import LoginModal from "@/components/LoginModal";
 import { CardContainer, CardImage } from "@/components/music/MusicCards";
+import Button from "@/components/ui/button";
 import { usePlaylist } from "@/context/MusicContext";
 import { toast } from "@/context/ToastContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
 import { ensureHttpsForPlaylistUrls } from "@/utils/getHttpsUrls";
 import useApi from "@/utils/hooks/useApi";
@@ -29,19 +31,36 @@ import {
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const PRIMARY_COLOR = "#1DB954";
+const LoadingState = () => {
+  const { colors } = useTheme();
 
-const LoadingState = () => (
-  <SafeAreaView className="flex-1 bg-black justify-center items-center">
-    <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-    <Text className="text-white mt-4 text-base font-medium">
-      Loading playlists...
-    </Text>
-  </SafeAreaView>
-);
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text
+        style={{
+          color: colors.text,
+          marginTop: 16,
+          fontSize: 16,
+          fontWeight: "500",
+        }}
+      >
+        Loading playlists...
+      </Text>
+    </SafeAreaView>
+  );
+};
 
 const PlaylistScreen = () => {
   const api = useApi();
+  const { colors, theme } = useTheme();
   const { user } = useUser();
   const { userPlaylist, getPlaylists } = usePlaylist();
   const [loading, setLoading] = useState(false);
@@ -154,8 +173,16 @@ const PlaylistScreen = () => {
   }
 
   const renderRow = ({ item }: { item: any[] }) => (
-    <View className="flex-row px-3 mb-4 w-full gap-5">
-      <View className="flex-1">
+    <View
+      style={{
+        flexDirection: "row",
+        paddingHorizontal: 12,
+        marginBottom: 16,
+        width: "100%",
+        gap: 20,
+      }}
+    >
+      <View style={{ flex: 1 }}>
         <PlaylistCard
           playlist={item[0]}
           isUser={true}
@@ -163,7 +190,7 @@ const PlaylistScreen = () => {
         />
       </View>
       {item[1] && (
-        <View className="flex-1">
+        <View style={{ flex: 1 }}>
           <PlaylistCard
             playlist={item[1]}
             isUser={true}
@@ -175,46 +202,88 @@ const PlaylistScreen = () => {
   );
 
   const EmptyState = () => (
-    <View className="flex-1 justify-center items-center p-6">
-      <Music4 size={60} color="rgba(255,255,255,0.3)" />
-      <Text className="text-white text-xl font-bold mt-4">
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+      }}
+    >
+      <Music4 size={60} color={colors.mutedForeground} />
+      <Text
+        style={{
+          color: colors.text,
+          fontSize: 20,
+          fontWeight: "bold",
+          marginTop: 16,
+        }}
+      >
         No playlists yet
       </Text>
-      <Text className="text-gray-400 text-center mt-2">
+      <Text
+        style={{
+          color: colors.mutedForeground,
+          textAlign: "center",
+          marginTop: 8,
+        }}
+      >
         Create your first playlist to start organizing your music
       </Text>
-      <TouchableOpacity
-        className="mt-6 bg-white px-6 py-3 rounded-full flex-row items-center"
+      <Button
+        variant="default"
+        size="lg"
+        icon={<Plus size={20} color={colors.primaryForeground} />}
+        iconPosition="left"
+        title="Create Playlist"
+        style={{ marginTop: 24 }}
         onPress={() => {
           setSelectedPlaylist(null);
           setFormData({ name: "", description: "" });
           setShowUpdateModal(true);
         }}
-      >
-        <Plus size={20} color="black" />
-        <Text className="text-black font-bold ml-2">Create Playlist</Text>
-      </TouchableOpacity>
+      />
     </View>
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-black relative p-5">
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        position: "relative",
+        padding: 20,
+      }}
+    >
       <Animated.View
-        className="flex-row justify-between items-center"
-        style={[{ backgroundColor: "rgba(0,0,0,0.9)" }]}
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          backgroundColor: colors.background,
+        }}
       >
-        <Text className="text-white text-xl font-bold">My Playlists</Text>
-        <TouchableOpacity
-          className="bg-slate-100 rounded-full py-2 px-3 flex-row items-center gap-2"
+        <Text
+          style={{
+            color: colors.text,
+            fontSize: 20,
+            fontWeight: "bold",
+          }}
+        >
+          My Playlists
+        </Text>
+        <Button
+          variant="outline"
+          size="sm"
+          icon={<Plus size={18} color={colors.primary} />}
+          iconPosition="left"
+          title="Create"
           onPress={() => {
             setSelectedPlaylist(null);
             setFormData({ name: "", description: "" });
             setShowUpdateModal(true);
           }}
-        >
-          <Plus size={20} color="black" />
-          <Text>Create</Text>
-        </TouchableOpacity>
+        />
       </Animated.View>
       <Animated.FlatList
         data={playlistPairs}
@@ -234,40 +303,53 @@ const PlaylistScreen = () => {
         isVisible={showActionsModal}
         onClose={() => setShowActionsModal(false)}
         maxHeight="30%"
-        backgroundColor="#1E1E1E"
+        backgroundColor={colors.card}
       >
-        <View className="p-6">
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-white text-xl font-bold">
+        <View style={{ padding: 24 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 24,
+            }}
+          >
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 20,
+                fontWeight: "bold",
+              }}
+            >
               Playlist Options
             </Text>
             <TouchableOpacity
-              className="rounded-full p-1"
+              style={{
+                borderRadius: 999,
+                padding: 4,
+              }}
               onPress={() => setShowActionsModal(false)}
             >
-              <X size={22} color="#999" />
+              <X size={22} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            className="bg-gray-800 p-4 rounded-xl mb-4 flex-row items-center"
+          <Button
+            variant="secondary"
+            title="Edit Playlist"
+            icon={<Edit3 size={20} color={colors.primary} />}
+            iconPosition="left"
+            style={{ marginBottom: 16 }}
             onPress={handleUpdateAction}
-          >
-            <Edit3 size={20} color={PRIMARY_COLOR} />
-            <Text className="text-white text-lg ml-3 font-medium">
-              Edit Playlist
-            </Text>
-          </TouchableOpacity>
+          />
 
-          <TouchableOpacity
-            className="bg-red-900/50 p-4 rounded-xl flex-row items-center"
+          <Button
+            variant="destructive"
+            title="Delete Playlist"
+            icon={<Trash2 size={20} color={colors.destructiveForeground} />}
+            iconPosition="left"
             onPress={handleDeleteAction}
-          >
-            <Trash2 size={20} color="#ff5252" />
-            <Text className="text-red-400 text-lg ml-3 font-medium">
-              Delete Playlist
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
       </SwipeableModal>
 
@@ -277,73 +359,108 @@ const PlaylistScreen = () => {
         onClose={() => setShowUpdateModal(false)}
         scrollable={true}
         useScrollView={true}
-        backgroundColor="#1E1E1E"
+        backgroundColor={colors.card}
       >
-        <View className="p-6">
-          <View className="flex-row justify-between items-center mb-6">
-            <View className="flex-row items-center">
-              <Text className="text-white text-xl font-bold ml-2">
+        <View style={{ padding: 24 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 24,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 20,
+                  fontWeight: "bold",
+                  marginLeft: 8,
+                }}
+              >
                 {selectedPlaylist ? "Edit Playlist" : "Create Playlist"}
               </Text>
             </View>
             <TouchableOpacity
-              className="rounded-full p-1"
+              style={{
+                borderRadius: 999,
+                padding: 4,
+              }}
               onPress={() => setShowUpdateModal(false)}
             >
-              <X size={22} color="#999" />
+              <X size={22} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
-          <View className="mb-4">
-            <Text className="text-white text-base mb-2 font-medium">Name</Text>
+          <View style={{ marginBottom: 16 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 16,
+                marginBottom: 8,
+                fontWeight: "500",
+              }}
+            >
+              Name
+            </Text>
             <TextInput
-              className="bg-gray-800 text-white p-4 rounded-xl"
+              style={{
+                backgroundColor: colors.muted,
+                color: colors.text,
+                padding: 16,
+                borderRadius: 12,
+              }}
               value={formData.name}
               onChangeText={(text) =>
                 setFormData((prev) => ({ ...prev, name: text }))
               }
               placeholder="Enter playlist name"
-              placeholderTextColor="#666"
-              selectionColor={PRIMARY_COLOR}
+              placeholderTextColor={colors.mutedForeground}
+              selectionColor={colors.primary}
             />
           </View>
 
-          <View className="mb-8">
-            <Text className="text-white text-base mb-2 font-medium">
+          <View style={{ marginBottom: 32 }}>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 16,
+                marginBottom: 8,
+                fontWeight: "500",
+              }}
+            >
               Description
             </Text>
             <TextInput
-              className="bg-gray-800 text-white p-4 rounded-xl"
+              style={{
+                backgroundColor: colors.muted,
+                color: colors.text,
+                padding: 16,
+                borderRadius: 12,
+                height: 100,
+                textAlignVertical: "top",
+              }}
               value={formData.description}
               onChangeText={(text) =>
                 setFormData((prev) => ({ ...prev, description: text }))
               }
               placeholder="Enter description"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.mutedForeground}
               multiline={true}
               numberOfLines={3}
-              style={{ height: 100, textAlignVertical: "top" }}
-              selectionColor={PRIMARY_COLOR}
+              selectionColor={colors.primary}
             />
           </View>
 
-          <TouchableOpacity
-            className={`p-4 rounded-xl items-center flex-row justify-center ${
-              loading ? "bg-gray-700" : "bg-white"
-            }`}
-            onPress={handleSavePlaylist}
+          <Button
+            variant="default"
+            size="lg"
+            title={selectedPlaylist ? "Save Changes" : "Create Playlist"}
             disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <>
-                <Text className="text-black text-base font-bold ml-2">
-                  {selectedPlaylist ? "Save Changes" : "Create Playlist"}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+            isLoading={loading}
+            onPress={handleSavePlaylist}
+          />
         </View>
       </SwipeableModal>
 
@@ -352,49 +469,62 @@ const PlaylistScreen = () => {
         isVisible={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         maxHeight="35%"
-        backgroundColor="#1E1E1E"
+        backgroundColor={colors.card}
       >
-        <View className="p-6">
-          <View className="items-center mb-4">
-            <View className="bg-red-900/30 p-3 rounded-full mb-3">
-              <AlertCircle size={28} color="#ff5252" />
+        <View style={{ padding: 24 }}>
+          <View style={{ alignItems: "center", marginBottom: 16 }}>
+            <View
+              style={{
+                backgroundColor:
+                  theme === "dark"
+                    ? "rgba(127, 29, 29, 0.3)"
+                    : "rgba(254, 202, 202, 0.3)",
+                padding: 12,
+                borderRadius: 999,
+                marginBottom: 12,
+              }}
+            >
+              <AlertCircle size={28} color={colors.destructive} />
             </View>
-            <Text className="text-white text-xl font-bold">
+            <Text
+              style={{ color: colors.text, fontSize: 20, fontWeight: "bold" }}
+            >
               Delete Playlist
             </Text>
           </View>
 
-          <Text className="text-gray-300 text-base mb-8 text-center">
+          <Text
+            style={{
+              color: colors.mutedForeground,
+              fontSize: 16,
+              marginBottom: 32,
+              textAlign: "center",
+            }}
+          >
             Are you sure you want to delete "{selectedPlaylist?.name}"? This
             action cannot be undone.
           </Text>
 
-          <View className="flex-row gap-4">
-            <TouchableOpacity
-              className="bg-gray-800 p-4 rounded-xl flex-1 items-center"
+          <View style={{ flexDirection: "row", gap: 16 }}>
+            <Button
+              variant="secondary"
+              title="Cancel"
+              size="default"
+              style={{ flex: 1 }}
               onPress={() => setShowDeleteModal(false)}
-            >
-              <Text className="text-white text-base font-medium">Cancel</Text>
-            </TouchableOpacity>
+            />
 
-            <TouchableOpacity
-              className={`p-4 rounded-xl flex-1 items-center flex-row justify-center ${
-                loading ? "bg-gray-700" : "bg-red-700"
-              }`}
-              onPress={handleDeletePlaylist}
+            <Button
+              variant="destructive"
+              title="Delete"
+              size="default"
+              isLoading={loading}
               disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <>
-                  <Trash2 size={18} color="white" />
-                  <Text className="text-white text-base font-bold ml-2">
-                    Delete
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+              icon={<Trash2 size={18} color={colors.destructiveForeground} />}
+              iconPosition="left"
+              style={{ flex: 1 }}
+              onPress={handleDeletePlaylist}
+            />
           </View>
         </View>
       </SwipeableModal>
@@ -405,6 +535,8 @@ const PlaylistScreen = () => {
 };
 
 export const PlaylistCard = memo(({ playlist, isUser, onLongPress }: any) => {
+  const { colors } = useTheme();
+
   const handlePress = useCallback(() => {
     router.push({
       pathname: "/user-playlist",
@@ -436,14 +568,21 @@ export const PlaylistCard = memo(({ playlist, isUser, onLongPress }: any) => {
 
         <View style={{ gap: 4, paddingHorizontal: 4 }}>
           <Text
-            style={{ color: "white", fontWeight: "600", fontSize: 14 }}
+            style={{
+              color: colors.text,
+              fontWeight: "600",
+              fontSize: 14,
+            }}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {securedPlaylist.name}
           </Text>
           <Text
-            style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
+            style={{
+              color: colors.mutedForeground,
+              fontSize: 12,
+            }}
             numberOfLines={1}
             ellipsizeMode="tail"
           >

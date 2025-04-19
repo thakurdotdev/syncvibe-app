@@ -33,10 +33,12 @@ export interface Rights {
 export interface Song {
   id: string;
   name: string;
+  title?: string;
   subtitle: string;
   type: string;
   url: string;
   image: ImageQuality[];
+  artwork?: string;
   language: string;
   year: number;
   header_desc: string;
@@ -47,6 +49,7 @@ export interface Song {
   list_count: number;
   music: string;
   artist_map: ArtistMap;
+  artist?: string;
   album: string;
   album_id: string;
   album_url: string;
@@ -64,4 +67,5 @@ export interface Song {
   release_date: string;
   triller_available: boolean;
   copyright_text: string;
+  isPlaying?: boolean;
 }

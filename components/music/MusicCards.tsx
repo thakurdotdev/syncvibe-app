@@ -1,5 +1,6 @@
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { usePlayer, usePlayerState } from "@/context/MusicContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
 import { addToHistory } from "@/utils/api/addToHistory";
@@ -41,6 +42,7 @@ import TrackPlayer, {
   useProgress,
 } from "react-native-track-player";
 import NewPlayerDrawer from "./NewPlayerDrawer";
+import Card from "../ui/card";
 
 interface SongCardProps {
   song: Song;
@@ -81,27 +83,28 @@ export const CardContainer = ({
   onPress,
   width = 160,
   onLongPress,
-}: CardContainerProps) => (
-  <Pressable
-    style={{
-      width: width,
-      backgroundColor: "rgba(24, 24, 27, 0.8)",
-      borderRadius: 8,
-      marginBottom: 16,
-      overflow: "hidden",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
-    }}
-    onPress={onPress}
-    android_ripple={{ color: "rgba(255, 255, 255, 0.5)", borderless: false }}
-    onLongPress={onLongPress}
-  >
-    {children}
-  </Pressable>
-);
+}: CardContainerProps) => {
+  const { colors } = useTheme();
+
+  return (
+    <Card variant="default" style={{ marginRight: 8, marginBottom: 8 }}>
+      <Pressable
+        style={{
+          width: width,
+          overflow: "hidden",
+        }}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        android_ripple={{
+          color: "rgba(255, 255, 255, 0.1)",
+        }}
+      >
+        {children}
+      </Pressable>
+    </Card>
+  );
+};
+
 export const SongCard = memo(
   ({
     song,
@@ -110,6 +113,7 @@ export const SongCard = memo(
     const { playSong } = usePlayer();
     const { currentSong, isPlaying, isLoading } = usePlayerState();
     const { user } = useUser();
+    const { colors, theme } = useTheme();
 
     const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
     const isCurrentSong = currentSong?.id === securedSong.id;
@@ -135,44 +139,13 @@ export const SongCard = memo(
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, []);
 
-    const gradientColors = useMemo(
-      () =>
-        isCurrentSong
-          ? (["rgba(59, 130, 246, 0.6)", "rgba(30, 30, 60, 0.8)"] as const)
-          : (["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"] as const),
-      [isCurrentSong],
-    );
-
     return (
-      <>
-        <Pressable
-          onPress={handlePress}
-          onLongPress={disableOnLongPress ? undefined : handleLongPress}
-          style={({ pressed }) => [
-            {
-              backgroundColor: "rgba(24, 24, 27, 0.8)",
-              borderRadius: 12,
-              overflow: "hidden",
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 8,
-              elevation: 5,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
-            },
-          ]}
-          android_ripple={{
-            color: "rgba(255, 255, 255, 0.2)",
-            borderless: false,
-          }}
-          className="flex-row items-center rounded-xl mb-3 overflow-hidden"
-        >
-          <BlurView intensity={20} tint="dark" className="absolute inset-0" />
-          <LinearGradient
-            colors={gradientColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            className="w-full flex-row border border-gray-800/30 rounded-xl p-3"
+      <Card variant="default">
+        <Card.Content>
+          <Pressable
+            onPress={handlePress}
+            onLongPress={disableOnLongPress ? undefined : handleLongPress}
+            className="flex-row items-center rounded-none overflow-hidden"
           >
             <View className="relative">
               <Image
@@ -186,12 +159,15 @@ export const SongCard = memo(
 
             <View className="flex-1 px-4 justify-center">
               <Text
-                className="text-white font-semibold text-base"
+                style={{ color: colors.text, fontWeight: "600", fontSize: 16 }}
                 numberOfLines={1}
               >
                 {securedSong.name}
               </Text>
-              <Text className="text-gray-300 text-sm" numberOfLines={1}>
+              <Text
+                style={{ color: colors.mutedForeground, fontSize: 14 }}
+                numberOfLines={1}
+              >
                 {securedSong.subtitle ||
                   securedSong.artist_map?.artists?.[0]?.name}
               </Text>
@@ -200,14 +176,14 @@ export const SongCard = memo(
             {isCurrentSong ? (
               <View className="flex-row items-end h-10 space-x-0.5 pr-2">
                 {isLoading ? (
-                  <ActivityIndicator size="small" color="#3b82f6" />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <>
                     <View className="ml-3">
                       <Ionicons
                         name={isPlaying ? "pause" : "play"}
-                        size={22}
-                        color="#3b82f6"
+                        size={24}
+                        color={colors.primary}
                       />
                     </View>
                   </>
@@ -215,11 +191,11 @@ export const SongCard = memo(
               </View>
             ) : (
               <View className="justify-center pr-2">
-                <Ionicons name="play" size={20} color="white" />
+                <Ionicons name="play" size={22} color={colors.text} />
               </View>
             )}
-          </LinearGradient>
-        </Pressable>
+          </Pressable>
+        </Card.Content>
 
         {playerDrawerOpen && (
           <NewPlayerDrawer
@@ -228,7 +204,7 @@ export const SongCard = memo(
             song={securedSong}
           />
         )}
-      </>
+      </Card>
     );
   },
 );
@@ -247,6 +223,7 @@ export const CardImage = ({ uri, alt }: { uri: string; alt: string }) => (
 );
 
 export const AlbumCard = memo(({ album }: AlbumCardProps) => {
+  const { colors } = useTheme();
   const handlePress = useCallback(() => {
     router.push({
       pathname: "/albums",
@@ -269,7 +246,7 @@ export const AlbumCard = memo(({ album }: AlbumCardProps) => {
         <CardImage uri={imageUrl} alt={`Album: ${name}`} />
         <Text
           style={{
-            color: "white",
+            color: colors.text,
             fontWeight: "600",
             fontSize: 14,
             paddingHorizontal: 4,
@@ -286,6 +263,7 @@ export const AlbumCard = memo(({ album }: AlbumCardProps) => {
 
 export const PlaylistCard = memo(
   ({ playlist, isUser = false }: PlaylistCardProps) => {
+    const { colors } = useTheme();
     const handlePress = useCallback(() => {
       router.push({
         pathname: isUser ? "/user-playlist" : "/playlists",
@@ -317,14 +295,14 @@ export const PlaylistCard = memo(
           <CardImage uri={imageUrl} alt={`Playlist: ${securedPlaylist.name}`} />
           <View style={{ gap: 4, paddingHorizontal: 4 }}>
             <Text
-              style={{ color: "white", fontWeight: "600", fontSize: 14 }}
+              style={{ color: colors.text, fontWeight: "600", fontSize: 14 }}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
               {securedPlaylist.name}
             </Text>
             <Text
-              style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
+              style={{ color: colors.mutedForeground, fontSize: 12 }}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
@@ -342,6 +320,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   const { playSong } = usePlayer();
   const { user } = useUser();
   const { currentSong, isPlaying } = usePlayerState();
+  const { colors } = useTheme();
   const isCurrentSong = currentSong?.id === song.id;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
@@ -373,6 +352,8 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
     setPlayerDrawerOpen(true);
   };
 
+  const accentColor = colors.primary || "rgb(99, 102, 241)";
+
   return (
     <>
       <CardContainer
@@ -380,11 +361,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
         onPress={handlePress}
         onLongPress={handleLongPress}
       >
-        <BlurView intensity={20} tint="dark" className="absolute inset-0" />
-        <LinearGradient
-          colors={["rgba(30, 30, 40, 0.7)", "rgba(20, 20, 28, 0.8)"]}
-          className="w-full flex-col border border-gray-800/30 rounded-xl p-2"
-        >
+        <View className="p-3">
           <CardImage uri={imageUrl} alt={`Song: ${securedSong.name}`} />
           <View
             style={{
@@ -405,7 +382,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
                 padding: 8,
                 borderRadius: 50,
                 backgroundColor: isCurrentSong
-                  ? "rgb(34, 197, 94)"
+                  ? accentColor
                   : "rgba(0, 0, 0, 0.5)",
               }}
             >
@@ -426,7 +403,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
                 height: 24,
                 width: 24,
                 borderRadius: 12,
-                backgroundColor: "rgb(34, 197, 94)",
+                backgroundColor: accentColor,
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -441,21 +418,21 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
 
           <View className="pt-1">
             <Text
-              style={{ color: "white", fontWeight: "500", fontSize: 14 }}
+              style={{ color: colors.text, fontWeight: "500", fontSize: 14 }}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
               {securedSong.name}
             </Text>
             <Text
-              style={{ color: "rgb(156, 163, 175)", fontSize: 12 }}
+              style={{ color: colors.mutedForeground, fontSize: 12 }}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
               {artistName}
             </Text>
           </View>
-        </LinearGradient>
+        </View>
       </CardContainer>
 
       {playerDrawerOpen && (
@@ -470,6 +447,8 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
 });
 
 export const ArtistCard = memo(({ artist }: ArtistCardProps) => {
+  const { colors } = useTheme();
+
   if (!artist?.name || !artist?.image) return null;
 
   // Apply HTTPS conversion to the artist object
@@ -499,7 +478,7 @@ export const ArtistCard = memo(({ artist }: ArtistCardProps) => {
         <CardImage uri={imageUrl} alt={`Artist: ${securedArtist.name}`} />
         <Text
           style={{
-            color: "white",
+            color: colors.text,
             fontWeight: "500",
             fontSize: 14,
             paddingHorizontal: 4,
@@ -520,6 +499,7 @@ export const SongControls = memo(() => {
   const isPlaying = playbackState.state === State.Playing;
   const isDragging = useRef(false);
   const { position, duration } = useProgress();
+  const { colors } = useTheme();
 
   const progress = useSharedValue(position);
   const min = useSharedValue(0);
@@ -564,25 +544,29 @@ export const SongControls = memo(() => {
           thumbWidth={12}
           containerStyle={styles.sliderContainer}
           theme={{
-            minimumTrackTintColor: "#fff",
-            maximumTrackTintColor: "rgba(99, 102, 241, 0.2)",
-            bubbleBackgroundColor: "#6366f1",
+            minimumTrackTintColor: colors.primary,
+            maximumTrackTintColor: colors.mutedForeground + "40",
+            bubbleBackgroundColor: colors.primary,
           }}
         />
       </View>
       <View className="flex-row justify-between">
-        <Text style={styles.timeText}>{formatTime(position)}</Text>
-        <Text style={styles.timeText}>{formatTime(duration)}</Text>
+        <Text style={[styles.timeText, { color: colors.mutedForeground }]}>
+          {formatTime(position)}
+        </Text>
+        <Text style={[styles.timeText, { color: colors.mutedForeground }]}>
+          {formatTime(duration)}
+        </Text>
       </View>
 
       {/* Control buttons */}
       <View style={styles.controls}>
         <TouchableOpacity onPress={handlePrevSong} activeOpacity={0.7}>
-          <SkipBackIcon size={24} color="#ffffff" />
+          <SkipBackIcon size={24} color={colors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.playButton}
+          style={[styles.playButton, { backgroundColor: colors.primary }]}
           onPress={handlePlayPause}
           activeOpacity={0.7}
           className="mx-5"
@@ -590,12 +574,12 @@ export const SongControls = memo(() => {
           <Ionicons
             name={isPlaying ? "pause" : "play"}
             size={28}
-            color="#374151"
+            color={colors.background}
           />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleNextSong} activeOpacity={0.7}>
-          <SkipForwardIcon color={"#ffffff"} />
+          <SkipForwardIcon color={colors.text} />
         </TouchableOpacity>
       </View>
     </View>
@@ -603,6 +587,7 @@ export const SongControls = memo(() => {
 });
 
 export const ProgressBar = memo(() => {
+  const { colors } = useTheme();
   const { position, duration } = useProgress();
 
   const progress = useSharedValue(position);
@@ -623,8 +608,9 @@ export const ProgressBar = memo(() => {
         thumbWidth={0}
         sliderHeight={2}
         theme={{
-          minimumTrackTintColor: "#ffffff",
-          maximumTrackTintColor: "#6b7280",
+          minimumTrackTintColor: colors.primary,
+          maximumTrackTintColor: colors.mutedForeground + "40",
+          bubbleBackgroundColor: colors.primary,
         }}
       />
     </View>

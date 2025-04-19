@@ -4,6 +4,7 @@ import SwipeableModal from "@/components/common/SwipeableModal";
 import { GroupSongControls } from "@/components/music/MusicCards";
 import { useGroupMusic } from "@/context/GroupMusicContext";
 import { useUser } from "@/context/UserContext";
+import { useTheme } from "@/context/ThemeContext";
 import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,12 +16,13 @@ import {
   FlatList,
   Image,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function GroupMusicMobile() {
   const {
@@ -42,6 +44,7 @@ export default function GroupMusicMobile() {
     handlePlayPause,
   } = useGroupMusic();
   const { user } = useUser();
+  const { colors, theme } = useTheme();
   const [newGroupName, setNewGroupName] = useState("");
   const [groupId, setGroupId] = useState("");
   const [tabIndex, setTabIndex] = useState(0);
@@ -81,7 +84,7 @@ export default function GroupMusicMobile() {
           }}
         />
       ) : (
-        <View style={{ flex: 1, backgroundColor: "#000" }}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
           <Animated.View
             style={{
               position: "absolute",
@@ -94,9 +97,12 @@ export default function GroupMusicMobile() {
             }}
           >
             <LinearGradient
-              colors={["#42353A", "#092B31", "#121212"]}
+              colors={[
+                colors.gradients.background[0],
+                colors.gradients.background[1],
+              ]}
               start={{ x: 0.1, y: 0.1 }}
-              end={{ x: 0.8, y: 0.85 }} // End slightly higher to allow for organic fade
+              end={{ x: 0.8, y: 0.85 }}
               style={{
                 height: "100%",
                 width: "100%",
@@ -112,14 +118,17 @@ export default function GroupMusicMobile() {
               alignItems: "center",
             }}
           >
-            {/* Rest of your existing header content */}
             <View
               style={{ flexDirection: "row", alignItems: "center", zIndex: 1 }}
             >
-              <Ionicons name="musical-notes-outline" size={24} color="#fff" />
+              <Ionicons
+                name="musical-notes-outline"
+                size={24}
+                color={colors.foreground}
+              />
               <Text
                 style={{
-                  color: "#fff",
+                  color: colors.foreground,
                   fontSize: 20,
                   fontWeight: "600",
                   marginLeft: 10,
@@ -133,25 +142,27 @@ export default function GroupMusicMobile() {
                 <TouchableOpacity
                   onPress={() => setShowSearchModal(true)}
                   style={{
-                    backgroundColor: "rgba(17,17,17,0.7)",
+                    backgroundColor: colors.secondary,
                     padding: 10,
                     borderRadius: 12,
                     marginRight: 30,
                   }}
                   className="flex-row items-center"
                 >
-                  <Feather name="search" size={18} color="#fff" />
-                  <Text style={{ color: "#fff", marginLeft: 6 }}>Search</Text>
+                  <Feather name="search" size={18} color={colors.foreground} />
+                  <Text style={{ color: colors.foreground, marginLeft: 6 }}>
+                    Search
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={leaveGroup}
                   style={{
-                    backgroundColor: "rgba(17,17,17,0.7)",
+                    backgroundColor: colors.secondary,
                     padding: 10,
                     borderRadius: 12,
                   }}
                 >
-                  <Feather name="log-out" size={18} color="#fff" />
+                  <Feather name="log-out" size={18} color={colors.foreground} />
                 </TouchableOpacity>
               </View>
             )}
@@ -167,10 +178,14 @@ export default function GroupMusicMobile() {
                 paddingHorizontal: 32,
               }}
             >
-              <Ionicons name="people-outline" size={72} color="#fff" />
+              <Ionicons
+                name="people-outline"
+                size={72}
+                color={colors.foreground}
+              />
               <Text
                 style={{
-                  color: "#fff",
+                  color: colors.foreground,
                   fontSize: 26,
                   fontWeight: "700",
                   marginTop: 32,
@@ -181,7 +196,7 @@ export default function GroupMusicMobile() {
               </Text>
               <Text
                 style={{
-                  color: "#888",
+                  color: colors.mutedForeground,
                   textAlign: "center",
                   marginTop: 12,
                   marginBottom: 40,
@@ -193,13 +208,9 @@ export default function GroupMusicMobile() {
                 to join and start playing music for everyone in the group.
               </Text>
               <TouchableOpacity
-                onPress={() => {
-                  console.log("Create or join group");
-
-                  setIsGroupModalOpen(true);
-                }}
+                onPress={() => setIsGroupModalOpen(true)}
                 style={{
-                  backgroundColor: "#fff",
+                  backgroundColor: colors.primary,
                   paddingVertical: 16,
                   paddingHorizontal: 24,
                   borderRadius: 16,
@@ -209,10 +220,14 @@ export default function GroupMusicMobile() {
                   width: "100%",
                 }}
               >
-                <Feather name="plus-circle" size={18} color="#000" />
+                <Feather
+                  name="plus-circle"
+                  size={18}
+                  color={colors.primaryForeground}
+                />
                 <Text
                   style={{
-                    color: "#000",
+                    color: colors.primaryForeground,
                     fontWeight: "700",
                     marginLeft: 8,
                     fontSize: 16,
@@ -225,96 +240,72 @@ export default function GroupMusicMobile() {
           ) : (
             <View style={{ flex: 1 }}>
               {/* Group Info */}
-              <View
-                style={{
-                  paddingHorizontal: 20,
-                  paddingTop: 20,
-                  paddingBottom: 12,
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <View>
-                    <Text style={{ color: "#888", fontSize: 13 }}>
-                      CURRENT GROUP
-                    </Text>
-                    <Text
+              <Card variant="outline" className="m-4">
+                <CardHeader>
+                  <CardTitle>{currentGroup.name}</CardTitle>
+                  <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                    <TouchableOpacity
+                      onPress={handleCopyGroupId}
                       style={{
-                        color: "#fff",
-                        fontWeight: "700",
-                        fontSize: 22,
-                        marginTop: 4,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        backgroundColor: colors.secondary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 12,
                       }}
                     >
-                      {currentGroup.name}
-                    </Text>
+                      <Text
+                        style={{
+                          color: colors.mutedForeground,
+                          fontSize: 12,
+                          marginRight: 8,
+                        }}
+                        numberOfLines={1}
+                      >
+                        ID: {currentGroup.id?.substring(0, 8)}...
+                      </Text>
+                      <Feather
+                        name="copy"
+                        size={14}
+                        color={colors.mutedForeground}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setShowQRCodeModal(true)}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        backgroundColor: colors.secondary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Feather
+                        name="grid"
+                        size={14}
+                        color={colors.mutedForeground}
+                      />
+                      <Text
+                        style={{
+                          color: colors.mutedForeground,
+                          fontSize: 12,
+                          marginLeft: 8,
+                        }}
+                        numberOfLines={1}
+                      >
+                        QR
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    onPress={handleCopyGroupId}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      backgroundColor: "#111",
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Text
-                      style={{ color: "#888", fontSize: 12, marginRight: 8 }}
-                      numberOfLines={1}
-                    >
-                      ID: {currentGroup.id?.substring(0, 8)}...
-                    </Text>
-                    <Feather name="copy" size={14} color="#888" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setShowQRCodeModal(true)}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      backgroundColor: "#111",
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Feather name="grid" size={14} color="#888" />
-                    <Text
-                      style={{ color: "#888", fontSize: 12, marginLeft: 8 }}
-                      numberOfLines={1}
-                    >
-                      QR
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+                </CardHeader>
+              </Card>
 
               {/* Current Song Display */}
-              <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-                {currentSong ? (
-                  <View
-                    style={{
-                      backgroundColor: "#111",
-                      padding: 16,
-                      borderRadius: 16,
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 8,
-                      elevation: 2,
-                    }}
-                  >
-                    <Text
-                      style={{ color: "#888", fontSize: 12, marginBottom: 8 }}
-                    >
-                      NOW PLAYING
-                    </Text>
+              <Card variant="outline" className="m-4">
+                <CardContent>
+                  {currentSong ? (
                     <View
                       style={{ flexDirection: "row", alignItems: "center" }}
                     >
@@ -326,16 +317,10 @@ export default function GroupMusicMobile() {
                         }}
                         style={{ width: 64, height: 64, borderRadius: 8 }}
                       />
-                      <View
-                        style={{
-                          marginLeft: 16,
-                          flex: 1,
-                          justifyContent: "center",
-                        }}
-                      >
+                      <View style={{ marginLeft: 16, flex: 1 }}>
                         <Text
                           style={{
-                            color: "#fff",
+                            color: colors.foreground,
                             fontWeight: "500",
                             fontSize: 16,
                           }}
@@ -344,7 +329,11 @@ export default function GroupMusicMobile() {
                           {currentSong.name}
                         </Text>
                         <Text
-                          style={{ color: "#888", fontSize: 14, marginTop: 4 }}
+                          style={{
+                            color: colors.mutedForeground,
+                            fontSize: 14,
+                            marginTop: 4,
+                          }}
                           numberOfLines={1}
                         >
                           {currentSong.artist_map?.primary_artists?.[0]?.name ||
@@ -354,7 +343,7 @@ export default function GroupMusicMobile() {
                       <TouchableOpacity
                         onPress={() => handlePlayPause()}
                         style={{
-                          backgroundColor: "#222",
+                          backgroundColor: colors.secondary,
                           height: 48,
                           width: 48,
                           borderRadius: 24,
@@ -365,107 +354,106 @@ export default function GroupMusicMobile() {
                         <Ionicons
                           name={isPlaying ? "pause" : "play"}
                           size={24}
-                          color={"#ffff"}
+                          color={colors.foreground}
                         />
                       </TouchableOpacity>
                     </View>
-                    <GroupSongControls />
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => setShowSearchModal(true)}
-                    style={{
-                      backgroundColor: "#111",
-                      padding: 20,
-                      borderRadius: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 8,
-                      elevation: 2,
-                    }}
-                  >
-                    <Feather name="music" size={28} color={"#ffffff"} />
-                    <Text
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => setShowSearchModal(true)}
                       style={{
-                        color: "#fff",
-                        marginTop: 12,
-                        fontWeight: "500",
-                        fontSize: 16,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 20,
                       }}
                     >
-                      Choose a song to play
-                    </Text>
-                    <Text
-                      style={{
-                        color: "#888",
-                        fontSize: 14,
-                        marginTop: 4,
-                        textAlign: "center",
-                      }}
-                    >
-                      Start the music for everyone in your group
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+                      <Feather
+                        name="music"
+                        size={28}
+                        color={colors.foreground}
+                      />
+                      <Text
+                        style={{
+                          color: colors.foreground,
+                          marginTop: 12,
+                          fontWeight: "500",
+                          fontSize: 16,
+                        }}
+                      >
+                        Choose a song to play
+                      </Text>
+                      <Text
+                        style={{
+                          color: colors.mutedForeground,
+                          fontSize: 14,
+                          marginTop: 4,
+                          textAlign: "center",
+                        }}
+                      >
+                        Start the music for everyone in your group
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Members List */}
-              <View style={{ flex: 1, paddingHorizontal: 20 }}>
-                <Text style={{ color: "#888", fontSize: 13, marginBottom: 12 }}>
-                  GROUP MEMBERS ({groupMembers.length})
-                </Text>
-                <FlatList
-                  data={groupMembers}
-                  keyExtractor={(item) => item.userId.toString()}
-                  renderItem={({ item }) => (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        paddingVertical: 14,
-                        borderBottomWidth: 1,
-                        borderBottomColor: "#222",
-                      }}
-                    >
-                      <Image
-                        source={{
-                          uri:
-                            getProfileCloudinaryUrl(item.profilePic) ||
-                            "https://via.placeholder.com/40",
-                        }}
+              <Card variant="outline" className="m-4">
+                <CardHeader>
+                  <CardTitle>Group Members ({groupMembers.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FlatList
+                    data={groupMembers}
+                    keyExtractor={(item) => item.userId.toString()}
+                    renderItem={({ item }) => (
+                      <View
                         style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 20,
-                          backgroundColor: "#222",
+                          flexDirection: "row",
+                          alignItems: "center",
+                          paddingVertical: 14,
+                          borderBottomWidth: 1,
+                          borderBottomColor: colors.border,
                         }}
-                      />
-                      <View style={{ marginLeft: 16 }}>
-                        <Text style={{ color: "#fff", fontSize: 15 }}>
-                          {item.userName}
-                        </Text>
-                        {item.userId === currentGroup.createdBy && (
+                      >
+                        <Image
+                          source={{
+                            uri:
+                              getProfileCloudinaryUrl(item.profilePic) ||
+                              "https://via.placeholder.com/40",
+                          }}
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            backgroundColor: colors.secondary,
+                          }}
+                        />
+                        <View style={{ marginLeft: 16 }}>
                           <Text
-                            style={{
-                              color: "#fff",
-                              fontSize: 12,
-                              marginTop: 2,
-                              opacity: 0.7,
-                            }}
+                            style={{ color: colors.foreground, fontSize: 15 }}
                           >
-                            Host
+                            {item.userName}
                           </Text>
-                        )}
+                          {item.userId === currentGroup.createdBy && (
+                            <Text
+                              style={{
+                                color: colors.mutedForeground,
+                                fontSize: 12,
+                                marginTop: 2,
+                              }}
+                            >
+                              Host
+                            </Text>
+                          )}
+                        </View>
                       </View>
-                    </View>
-                  )}
-                  contentContainerStyle={{ paddingBottom: 20 }}
-                  showsVerticalScrollIndicator={false}
-                />
-              </View>
+                    )}
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                    showsVerticalScrollIndicator={false}
+                  />
+                </CardContent>
+              </Card>
             </View>
           )}
 
@@ -479,7 +467,7 @@ export default function GroupMusicMobile() {
               <View style={{ flex: 1, padding: 20, marginBottom: 100 }}>
                 <Text
                   style={{
-                    color: "#fff",
+                    color: colors.foreground,
                     fontSize: 20,
                     fontWeight: "700",
                     textAlign: "center",
@@ -494,7 +482,7 @@ export default function GroupMusicMobile() {
                 <View
                   style={{
                     flexDirection: "row",
-                    backgroundColor: "#111",
+                    backgroundColor: colors.secondary,
                     borderRadius: 12,
                     marginBottom: 24,
                     padding: 4,
@@ -505,14 +493,18 @@ export default function GroupMusicMobile() {
                     style={{
                       flex: 1,
                       paddingVertical: 12,
-                      backgroundColor: tabIndex === 0 ? "#fff" : "transparent",
+                      backgroundColor:
+                        tabIndex === 0 ? colors.primary : "transparent",
                       borderRadius: 8,
                     }}
                   >
                     <Text
                       style={{
                         textAlign: "center",
-                        color: tabIndex === 0 ? "#000" : "#888",
+                        color:
+                          tabIndex === 0
+                            ? colors.primaryForeground
+                            : colors.foreground,
                         fontWeight: tabIndex === 0 ? "600" : "400",
                       }}
                     >
@@ -524,14 +516,18 @@ export default function GroupMusicMobile() {
                     style={{
                       flex: 1,
                       paddingVertical: 12,
-                      backgroundColor: tabIndex === 1 ? "#fff" : "transparent",
+                      backgroundColor:
+                        tabIndex === 1 ? colors.primary : "transparent",
                       borderRadius: 8,
                     }}
                   >
                     <Text
                       style={{
                         textAlign: "center",
-                        color: tabIndex === 1 ? "#000" : "#888",
+                        color:
+                          tabIndex === 1
+                            ? colors.primaryForeground
+                            : colors.foreground,
                         fontWeight: tabIndex === 1 ? "600" : "400",
                       }}
                     >
@@ -543,24 +539,12 @@ export default function GroupMusicMobile() {
                 {/* Tab Content */}
                 {tabIndex === 0 ? (
                   <View style={{ marginTop: 8 }}>
-                    <Text
-                      style={{ color: "#888", fontSize: 13, marginBottom: 8 }}
-                    >
-                      GROUP NAME
-                    </Text>
-                    <TextInput
-                      style={{
-                        backgroundColor: "#111",
-                        color: "#fff",
-                        paddingHorizontal: 16,
-                        paddingVertical: 14,
-                        borderRadius: 12,
-                        fontSize: 15,
-                      }}
+                    <Input
+                      labelText="GROUP NAME"
                       placeholder="Enter a name for your group"
-                      placeholderTextColor="#555"
                       value={newGroupName}
                       onChangeText={setNewGroupName}
+                      variant="outline"
                     />
                     <TouchableOpacity
                       onPress={() => {
@@ -570,7 +554,7 @@ export default function GroupMusicMobile() {
                         }
                       }}
                       style={{
-                        backgroundColor: "#fff",
+                        backgroundColor: colors.primary,
                         paddingVertical: 16,
                         borderRadius: 12,
                         marginTop: 24,
@@ -578,7 +562,7 @@ export default function GroupMusicMobile() {
                     >
                       <Text
                         style={{
-                          color: "#000",
+                          color: colors.primaryForeground,
                           fontWeight: "600",
                           textAlign: "center",
                         }}
@@ -589,24 +573,12 @@ export default function GroupMusicMobile() {
                   </View>
                 ) : (
                   <View style={{ marginTop: 8 }}>
-                    <Text
-                      style={{ color: "#888", fontSize: 13, marginBottom: 8 }}
-                    >
-                      GROUP ID
-                    </Text>
-                    <TextInput
-                      style={{
-                        backgroundColor: "#111",
-                        color: "#fff",
-                        paddingHorizontal: 16,
-                        paddingVertical: 14,
-                        borderRadius: 12,
-                        fontSize: 15,
-                      }}
+                    <Input
+                      labelText="GROUP ID"
                       placeholder="Enter the group ID to join"
-                      placeholderTextColor="#555"
                       value={groupId}
                       onChangeText={setGroupId}
+                      variant="outline"
                     />
                     <TouchableOpacity
                       onPress={() => {
@@ -616,7 +588,7 @@ export default function GroupMusicMobile() {
                         }
                       }}
                       style={{
-                        backgroundColor: "#fff",
+                        backgroundColor: colors.primary,
                         paddingVertical: 16,
                         borderRadius: 12,
                         marginTop: 24,
@@ -624,7 +596,7 @@ export default function GroupMusicMobile() {
                     >
                       <Text
                         style={{
-                          color: "#000",
+                          color: colors.primaryForeground,
                           fontWeight: "600",
                           textAlign: "center",
                         }}
@@ -634,7 +606,7 @@ export default function GroupMusicMobile() {
                     </TouchableOpacity>
                     <Text
                       style={{
-                        color: "#888",
+                        color: colors.mutedForeground,
                         fontSize: 12,
                         textAlign: "center",
                         marginTop: 4,
@@ -649,7 +621,7 @@ export default function GroupMusicMobile() {
                         setIsGroupModalOpen(false);
                       }}
                       style={{
-                        backgroundColor: "#fff",
+                        backgroundColor: colors.primary,
                         paddingVertical: 16,
                         borderRadius: 12,
                         marginTop: 24,
@@ -657,7 +629,7 @@ export default function GroupMusicMobile() {
                     >
                       <Text
                         style={{
-                          color: "#000",
+                          color: colors.primaryForeground,
                           fontWeight: "600",
                           textAlign: "center",
                         }}
@@ -672,7 +644,12 @@ export default function GroupMusicMobile() {
                   onPress={() => setIsGroupModalOpen(false)}
                   style={{ marginTop: 20, paddingVertical: 12 }}
                 >
-                  <Text style={{ color: "#888", textAlign: "center" }}>
+                  <Text
+                    style={{
+                      color: colors.mutedForeground,
+                      textAlign: "center",
+                    }}
+                  >
                     Cancel
                   </Text>
                 </TouchableOpacity>
@@ -701,40 +678,38 @@ export default function GroupMusicMobile() {
                       onPress={() => setShowSearchModal(false)}
                       style={{ paddingRight: 16 }}
                     >
-                      <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <View
-                      style={{
-                        flex: 1,
-                        backgroundColor: "#111",
-                        borderRadius: 12,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        paddingHorizontal: 12,
-                      }}
-                    >
-                      <Feather name="search" size={18} color="#888" />
-                      <TextInput
-                        style={{
-                          flex: 1,
-                          color: "#fff",
-                          paddingVertical: 12,
-                          paddingHorizontal: 12,
-                          fontSize: 15,
-                        }}
-                        placeholder="Search for songs..."
-                        placeholderTextColor="#555"
-                        value={searchQuery}
-                        onChangeText={handleSearchChange}
+                      <Ionicons
+                        name="arrow-back"
+                        size={24}
+                        color={colors.foreground}
                       />
-                      {searchQuery ? (
-                        <TouchableOpacity
-                          onPress={() => handleSearchChange("")}
-                        >
-                          <Feather name="x" size={18} color="#888" />
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
+                    </TouchableOpacity>
+                    <Input
+                      placeholder="Search for songs..."
+                      value={searchQuery}
+                      onChangeText={handleSearchChange}
+                      variant="outline"
+                      leftIcon={
+                        <Feather
+                          name="search"
+                          size={18}
+                          color={colors.mutedForeground}
+                        />
+                      }
+                      rightIcon={
+                        searchQuery ? (
+                          <TouchableOpacity
+                            onPress={() => handleSearchChange("")}
+                          >
+                            <Feather
+                              name="x"
+                              size={18}
+                              color={colors.mutedForeground}
+                            />
+                          </TouchableOpacity>
+                        ) : null
+                      }
+                    />
                   </View>
 
                   {isSearchLoading ? (
@@ -745,7 +720,7 @@ export default function GroupMusicMobile() {
                         alignItems: "center",
                       }}
                     >
-                      <ActivityIndicator size="large" color="#fff" />
+                      <ActivityIndicator size="large" color={colors.primary} />
                     </View>
                   ) : (
                     <FlatList
@@ -762,7 +737,7 @@ export default function GroupMusicMobile() {
                             alignItems: "center",
                             paddingVertical: 14,
                             borderBottomWidth: 1,
-                            borderBottomColor: "#222",
+                            borderBottomColor: colors.border,
                           }}
                         >
                           <Image
@@ -775,13 +750,13 @@ export default function GroupMusicMobile() {
                               width: 56,
                               height: 56,
                               borderRadius: 8,
-                              backgroundColor: "#222",
+                              backgroundColor: colors.secondary,
                             }}
                           />
                           <View style={{ marginLeft: 16, flex: 1 }}>
                             <Text
                               style={{
-                                color: "#fff",
+                                color: colors.foreground,
                                 fontWeight: "500",
                                 fontSize: 15,
                               }}
@@ -791,7 +766,7 @@ export default function GroupMusicMobile() {
                             </Text>
                             <Text
                               style={{
-                                color: "#888",
+                                color: colors.mutedForeground,
                                 fontSize: 13,
                                 marginTop: 4,
                               }}
@@ -803,7 +778,7 @@ export default function GroupMusicMobile() {
                           </View>
                           <View
                             style={{
-                              backgroundColor: "#333",
+                              backgroundColor: colors.secondary,
                               height: 36,
                               width: 36,
                               borderRadius: 18,
@@ -812,7 +787,11 @@ export default function GroupMusicMobile() {
                               marginLeft: 8,
                             }}
                           >
-                            <Feather name="plus" size={20} color="#fff" />
+                            <Feather
+                              name="plus"
+                              size={20}
+                              color={colors.foreground}
+                            />
                           </View>
                         </TouchableOpacity>
                       )}
@@ -824,10 +803,14 @@ export default function GroupMusicMobile() {
                               alignItems: "center",
                             }}
                           >
-                            <Feather name="search" size={40} color="#555" />
+                            <Feather
+                              name="search"
+                              size={40}
+                              color={colors.mutedForeground}
+                            />
                             <Text
                               style={{
-                                color: "#fff",
+                                color: colors.foreground,
                                 fontWeight: "500",
                                 marginTop: 16,
                                 fontSize: 16,
@@ -837,7 +820,7 @@ export default function GroupMusicMobile() {
                             </Text>
                             <Text
                               style={{
-                                color: "#888",
+                                color: colors.mutedForeground,
                                 fontSize: 14,
                                 marginTop: 4,
                                 textAlign: "center",
@@ -853,10 +836,14 @@ export default function GroupMusicMobile() {
                               alignItems: "center",
                             }}
                           >
-                            <Feather name="music" size={40} color="#555" />
+                            <Feather
+                              name="music"
+                              size={40}
+                              color={colors.mutedForeground}
+                            />
                             <Text
                               style={{
-                                color: "#fff",
+                                color: colors.foreground,
                                 fontWeight: "500",
                                 marginTop: 16,
                                 fontSize: 16,
@@ -866,7 +853,7 @@ export default function GroupMusicMobile() {
                             </Text>
                             <Text
                               style={{
-                                color: "#888",
+                                color: colors.mutedForeground,
                                 fontSize: 14,
                                 marginTop: 4,
                                 textAlign: "center",
@@ -894,7 +881,7 @@ export default function GroupMusicMobile() {
               <View style={{ padding: 20, alignItems: "center" }}>
                 <Text
                   style={{
-                    color: "#fff",
+                    color: colors.foreground,
                     fontSize: 20,
                     fontWeight: "700",
                     textAlign: "center",
@@ -906,7 +893,7 @@ export default function GroupMusicMobile() {
                 </Text>
                 <View
                   style={{
-                    backgroundColor: "#fff",
+                    backgroundColor: colors.card,
                     padding: 16,
                     borderRadius: 12,
                   }}
@@ -921,7 +908,7 @@ export default function GroupMusicMobile() {
                 </View>
                 <Text
                   style={{
-                    color: "#888",
+                    color: colors.mutedForeground,
                     fontSize: 14,
                     marginTop: 16,
                     textAlign: "center",
@@ -933,7 +920,12 @@ export default function GroupMusicMobile() {
                   onPress={() => setShowQRCodeModal(false)}
                   style={{ marginTop: 20, paddingVertical: 12 }}
                 >
-                  <Text style={{ color: "#888", textAlign: "center" }}>
+                  <Text
+                    style={{
+                      color: colors.mutedForeground,
+                      textAlign: "center",
+                    }}
+                  >
                     Close
                   </Text>
                 </TouchableOpacity>

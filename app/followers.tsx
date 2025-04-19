@@ -10,7 +10,11 @@ import {
   Text,
   TouchableOpacity,
   View,
+  RefreshControl,
 } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
+import Card from "@/components/ui/card";
+import { Ionicons } from "@expo/vector-icons";
 
 interface FollowerDetail {
   id: number;
@@ -25,46 +29,102 @@ export interface followersType {
 }
 
 const Followers = () => {
-  const { followers } = useUser();
+  const { followers, fetchFollowData } = useUser();
+  const { colors } = useTheme();
   const router = useRouter();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchFollowData();
+    setRefreshing(false);
+  }, [fetchFollowData]);
 
   const renderFollower = ({ item: follow }: { item: any }) => (
-    <TouchableOpacity
-      key={follow.id}
-      style={styles.followerItem}
-      onPress={() => {}}
-    >
-      <View style={styles.avatarContainer}>
-        {follow.followerDetail.profilepic ? (
-          <Image
-            source={{
-              uri: getProfileCloudinaryUrl(follow.followerDetail.profilepic),
-            }}
-            style={styles.avatar}
+    <Card variant="default" style={styles.followerCard}>
+      <TouchableOpacity
+        style={styles.followerItem}
+        onPress={() =>
+          router.push(`/profile/${follow.followerDetail.username}`)
+        }
+        activeOpacity={0.7}
+      >
+        <View style={[styles.avatarContainer, { borderColor: colors.border }]}>
+          {follow.followerDetail.profilepic ? (
+            <Image
+              source={{
+                uri: getProfileCloudinaryUrl(follow.followerDetail.profilepic),
+              }}
+              style={styles.avatar}
+            />
+          ) : (
+            <View
+              style={[styles.avatarFallback, { backgroundColor: colors.muted }]}
+            >
+              <Text
+                style={[
+                  styles.avatarFallbackText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                {follow.followerDetail.name.substring(0, 2).toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.userInfo}>
+          <Text
+            style={[styles.userName, { color: colors.foreground }]}
+            numberOfLines={1}
+          >
+            {follow.followerDetail.name}
+          </Text>
+          <Text
+            style={[styles.userHandle, { color: colors.mutedForeground }]}
+            numberOfLines={1}
+          >
+            @{follow.followerDetail.username}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.messageButton, { backgroundColor: colors.secondary }]}
+          onPress={() =>
+            router.push(`/messages/${follow.followerDetail.username}`)
+          }
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="paper-plane-outline"
+            size={18}
+            color={colors.primary}
           />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarFallbackText}>
-              {follow.followerDetail.name.substring(0, 2).toUpperCase()}
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{follow.followerDetail.name}</Text>
-        <Text style={styles.userHandle}>@{follow.followerDetail.username}</Text>
-      </View>
-    </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Card>
   );
 
   const ListEmptyComponent = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>No followers yet</Text>
+    <View
+      style={[styles.emptyContainer, { backgroundColor: colors.background }]}
+    >
+      <Ionicons
+        name="people-outline"
+        size={40}
+        color={colors.mutedForeground}
+      />
+      <Text style={[styles.emptyTextTitle, { color: colors.foreground }]}>
+        No Followers Yet
+      </Text>
+      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+        When people follow you, they'll appear here
+      </Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <FlatList
         data={followers}
         renderItem={renderFollower}
@@ -72,6 +132,13 @@ const Followers = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={ListEmptyComponent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       />
     </SafeAreaView>
   );
@@ -80,69 +147,79 @@ const Followers = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
   },
   listContent: {
     flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    padding: 12,
+  },
+  followerCard: {
+    marginBottom: 8,
+    borderRadius: 12,
   },
   followerItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2a2a2a",
-    marginBottom: 4,
+    padding: 8,
   },
   avatarContainer: {
-    height: 52,
-    width: 52,
-    borderRadius: 26,
+    height: 44,
+    width: 44,
+    borderRadius: 22,
     overflow: "hidden",
-    backgroundColor: "#2a2a2a",
+    borderWidth: 0.5,
   },
   avatar: {
-    height: 52,
-    width: 52,
-    borderRadius: 26,
+    height: 44,
+    width: 44,
+    borderRadius: 22,
   },
   avatarFallback: {
-    height: 52,
-    width: 52,
-    borderRadius: 26,
-    backgroundColor: "#444",
+    height: 44,
+    width: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarFallbackText: {
-    color: "#eee",
-    fontWeight: "bold",
-    fontSize: 16,
+    fontWeight: "600",
+    fontSize: 14,
   },
   userInfo: {
-    marginLeft: 16,
+    marginLeft: 12,
     flex: 1,
   },
   userName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#ffffff",
+    marginBottom: 1,
   },
   userHandle: {
-    fontSize: 14,
-    color: "#a0a0a0",
-    marginTop: 2,
+    fontSize: 13,
+  },
+  messageButton: {
+    height: 36,
+    width: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 40,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyTextTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 12,
+    marginBottom: 6,
   },
   emptyText: {
-    fontSize: 16,
-    color: "#a0a0a0",
+    fontSize: 15,
+    textAlign: "center",
   },
 });
 

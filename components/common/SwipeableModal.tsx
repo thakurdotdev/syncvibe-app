@@ -12,6 +12,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 const { height, width } = Dimensions.get("window");
 
@@ -19,7 +20,6 @@ interface SwipeableModalProps {
   isVisible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  backgroundColor?: string;
   maxHeight?: number | "auto" | `${number}%`;
   hideHandle?: boolean;
   backdropOpacity?: number;
@@ -33,7 +33,6 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
   isVisible,
   onClose,
   children,
-  backgroundColor = "#18181B",
   maxHeight = height * 0.8,
   hideHandle = false,
   backdropOpacity = 0.6,
@@ -42,12 +41,12 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
   useScrollView = false,
   onScroll,
 }) => {
+  const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [isAtScrollTop, setIsAtScrollTop] = useState(true);
 
   // Use Animated.Value for both position and backdrop opacity
   const animatedValue = useRef(new Animated.Value(0)).current;
-
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Consistent close animation method
@@ -93,7 +92,6 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offsetY = event.nativeEvent.contentOffset.y;
       setIsAtScrollTop(offsetY <= 0);
-
       onScroll?.(event);
     },
     [onScroll],
@@ -188,7 +186,7 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
           style={[
             styles.drawerContainer,
             {
-              backgroundColor,
+              backgroundColor: colors.card,
               maxHeight,
               transform: [{ translateY }],
             },
@@ -198,7 +196,12 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
         >
           {!hideHandle && (
             <View style={styles.handleContainer} {...panResponder.panHandlers}>
-              <View style={styles.handle} />
+              <View
+                style={[
+                  styles.handle,
+                  { backgroundColor: colors.mutedForeground },
+                ]}
+              />
             </View>
           )}
           {ContentWrapper(children)}
@@ -242,7 +245,6 @@ const styles = StyleSheet.create({
   handle: {
     width: 48,
     height: 4,
-    backgroundColor: "#52525B",
     borderRadius: 2,
   },
   scrollView: {

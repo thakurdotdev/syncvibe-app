@@ -451,6 +451,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                         console.error("Error adding to history:", err);
                       });
                     }
+
+                    // Remove the song from the playlist after it starts playing
+                    // This will update the React state but not affect current playback
+                    playlistDispatch({
+                      type: "REMOVE_FROM_PLAYLIST",
+                      payload: currentSong.id,
+                    });
                   }
 
                   // Pre-buffer next and previous songs for faster navigation
@@ -967,65 +974,30 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             // Get current queue and active track
             const currentQueue = await TrackPlayer.getQueue();
             const currentTrackIndex = await TrackPlayer.getActiveTrackIndex();
-
-            if (currentTrackIndex === undefined || currentTrackIndex === null) {
-              // If no active track, replace the queue
-              await TrackPlayer.reset();
-
-              // Process tracks in batches for better performance
-              const firstBatch = newPlaylistOrder.slice(
-                0,
-                Math.min(5, newPlaylistOrder.length),
-              );
-              const firstBatchTracks = await Promise.all(
-                firstBatch.map(convertSongToTrack),
-              );
-              const filteredFirstTracks = firstBatchTracks.filter(
-                (track) => track.url,
-              );
-
-              if (filteredFirstTracks.length > 0) {
-                await TrackPlayer.add(filteredFirstTracks);
-              }
-
-              // Process remaining songs in the background
-              if (newPlaylistOrder.length > firstBatch.length) {
-                setTimeout(async () => {
-                  const remainingBatch = newPlaylistOrder.slice(
-                    firstBatch.length,
-                  );
-                  const remainingTracks = await Promise.all(
-                    remainingBatch.map(convertSongToTrack),
-                  );
-                  const filteredRemainingTracks = remainingTracks.filter(
-                    (track) => track.url,
-                  );
-
-                  if (filteredRemainingTracks.length > 0) {
-                    await TrackPlayer.add(filteredRemainingTracks);
-                  }
-                }, 100);
-              }
-
-              return;
-            }
-
-            // Keep track of current song ID to maintain playback
-            const currentTrack = currentQueue[currentTrackIndex];
+            const currentTrack =
+              currentTrackIndex != null && currentTrackIndex >= 0
+                ? currentQueue[currentTrackIndex]
+                : undefined;
             const currentTrackId = currentTrack?.id;
 
-            // Pre-process the new order to maintain continuity
             // Find where the current track is in the new order
             const newCurrentIndex = newPlaylistOrder.findIndex(
               (song) => song.id === currentTrackId,
             );
 
             if (newCurrentIndex >= 0) {
-              // Optimize queue update to maintain current playback
-              // Remove tracks after current and add new ones
+              // Keep playing current track while updating queue
+              const currentPosition = await TrackPlayer.getProgress().then(
+                (progress) => progress.position,
+              );
+              const isPlaying = await TrackPlayer.getState().then(
+                (state) => state === State.Playing,
+              );
+
+              // Remove upcoming tracks and add new ones
               await TrackPlayer.removeUpcomingTracks();
 
-              // Add all tracks after the current one in the new order
+              // Add tracks after current position
               if (newCurrentIndex < newPlaylistOrder.length - 1) {
                 const tracksToAdd = await Promise.all(
                   newPlaylistOrder
@@ -1039,36 +1011,49 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 }
               }
 
+              // Restore playback state
+              if (isPlaying) {
+                await TrackPlayer.play();
+              }
+
               // Reset prebuffer tracking and start prebuffering with new order
               preBufferedSongs.current.clear();
-              if (newCurrentIndex >= 0) {
-                preBufferTracks(newPlaylistOrder, newCurrentIndex);
-              }
+              preBufferTracks(newPlaylistOrder, newCurrentIndex);
             } else {
-              // Current track not in new order, rebuild queue
-              await TrackPlayer.reset();
+              // Current track not in new order, handle gracefully
+              if (currentTrack) {
+                // Keep current track playing
+                const isPlaying = await TrackPlayer.getState().then(
+                  (state) => state === State.Playing,
+                );
 
-              const tracksToAdd = await Promise.all(
-                newPlaylistOrder.slice(0, 5).map(convertSongToTrack),
-              );
-              const filteredTracks = tracksToAdd.filter((track) => track.url);
-
-              if (filteredTracks.length > 0) {
-                await TrackPlayer.add(filteredTracks);
-              }
-
-              // Add remaining tracks in background
-              if (newPlaylistOrder.length > 5) {
+                // Add new tracks in background
                 setTimeout(async () => {
-                  const remainingTracks = await Promise.all(
-                    newPlaylistOrder.slice(5).map(convertSongToTrack),
+                  const tracksToAdd = await Promise.all(
+                    newPlaylistOrder.slice(0, 5).map(convertSongToTrack),
                   );
-                  const filteredRemaining = remainingTracks.filter(
+                  const filteredTracks = tracksToAdd.filter(
                     (track) => track.url,
                   );
 
-                  if (filteredRemaining.length > 0) {
-                    await TrackPlayer.add(filteredRemaining);
+                  if (filteredTracks.length > 0) {
+                    await TrackPlayer.add(filteredTracks);
+                  }
+
+                  // Add remaining tracks in background
+                  if (newPlaylistOrder.length > 5) {
+                    setTimeout(async () => {
+                      const remainingTracks = await Promise.all(
+                        newPlaylistOrder.slice(5).map(convertSongToTrack),
+                      );
+                      const filteredRemaining = remainingTracks.filter(
+                        (track) => track.url,
+                      );
+
+                      if (filteredRemaining.length > 0) {
+                        await TrackPlayer.add(filteredRemaining);
+                      }
+                    }, 100);
                   }
                 }, 100);
               }

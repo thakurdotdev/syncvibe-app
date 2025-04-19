@@ -1,3 +1,4 @@
+import React from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -17,6 +18,7 @@ import "../global.css";
 import { PlaybackService } from "../service";
 import * as Notifications from "expo-notifications";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -31,48 +33,66 @@ TrackPlayer.registerPlaybackService(() => PlaybackService);
 function RootLayout() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <UserProvider>
-          <ChatProvider>
-            <VideoCallProvider>
-              <NotificationProvider>
-                <MusicProvider>
-                  <GroupMusicProvider>
-                    <GestureHandlerRootView style={{ flex: 1 }}>
-                      <RootLayoutNav />
-                    </GestureHandlerRootView>
-                  </GroupMusicProvider>
-                </MusicProvider>
-              </NotificationProvider>
-            </VideoCallProvider>
-          </ChatProvider>
-        </UserProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <UserProvider>
+            <ChatProvider>
+              <VideoCallProvider>
+                <NotificationProvider>
+                  <MusicProvider>
+                    <GroupMusicProvider>
+                      <GestureHandlerRootView style={{ flex: 1 }}>
+                        <RootLayoutNav />
+                      </GestureHandlerRootView>
+                    </GroupMusicProvider>
+                  </MusicProvider>
+                </NotificationProvider>
+              </VideoCallProvider>
+            </ChatProvider>
+          </UserProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
 
 function RootLayoutNav() {
+  const { colors, theme } = useTheme();
   const { incomingCall, isInCall } = useVideoCall();
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar
+        barStyle={theme === "dark" ? "light-content" : "dark-content"}
+        backgroundColor={colors.background}
+        showHideTransition="none"
+      />
       <Stack
         screenOptions={{
           animation: "none",
-          presentation: "containedTransparentModal",
+          presentation: "card",
           headerStyle: {
-            backgroundColor: "#000",
+            backgroundColor: colors.background,
           },
-          headerTintColor: "#fff",
-          headerBlurEffect: "dark",
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            fontWeight: "600",
+            fontSize: 18,
+          },
+          headerShadowVisible: false,
+          headerBackVisible: true,
         }}
       >
         <Stack.Screen
+          name="index"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="login"
           options={{
-            navigationBarColor: "#000000",
+            navigationBarColor: colors.background,
             title: "Login",
             presentation: "modal",
             headerShown: false,
@@ -86,11 +106,10 @@ function RootLayoutNav() {
             gestureEnabled: false,
           }}
         />
-
         <Stack.Screen
           name="playlists"
           options={{
-            navigationBarColor: "#000000",
+            navigationBarColor: colors.background,
             title: "Playlist",
           }}
         />
@@ -103,21 +122,21 @@ function RootLayoutNav() {
         <Stack.Screen
           name="albums"
           options={{
-            navigationBarColor: "#000000",
+            navigationBarColor: colors.background,
             title: "Album",
           }}
         />
         <Stack.Screen
           name="artist"
           options={{
-            navigationBarColor: "#000000",
+            navigationBarColor: colors.background,
             title: "Artist",
           }}
         />
         <Stack.Screen
           name="user-playlist"
           options={{
-            navigationBarColor: "#000000",
+            navigationBarColor: colors.background,
             title: "User Playlist",
           }}
         />
@@ -131,14 +150,14 @@ function RootLayoutNav() {
         <Stack.Screen
           name="followers"
           options={{
-            navigationBarColor: "#000000",
+            navigationBarColor: colors.background,
             title: "Followers",
           }}
         />
         <Stack.Screen
           name="followings"
           options={{
-            navigationBarColor: "#000000",
+            navigationBarColor: colors.background,
             title: "Followings",
           }}
         />
@@ -168,17 +187,33 @@ function RootLayoutNav() {
             headerShown: false,
           }}
         />
-
         <Stack.Screen
           name="[...unmatched]"
           options={{
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="edit-profile"
+          options={{
+            title: "Edit Profile",
+          }}
+        />
+        <Stack.Screen
+          name="favorite-genres"
+          options={{
+            title: "Favorite Genres",
+          }}
+        />
+        <Stack.Screen
+          name="notification-settings"
+          options={{
+            title: "Notification Settings",
+          }}
+        />
       </Stack>
       {incomingCall && <IncomingCallModal />}
       {!incomingCall && isInCall && <CallScreen />}
-
       <Player />
     </>
   );

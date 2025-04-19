@@ -19,8 +19,11 @@ import { useChat } from "@/context/SocketContext";
 import useApi from "@/utils/hooks/useApi";
 import { useDebounce } from "@/utils/hooks/useDebounce";
 import { useUser } from "@/context/UserContext";
+import { useTheme } from "@/context/ThemeContext";
 import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
+import { TimeAgo } from "@/utils/TimeAgo";
 import LoginScreen from "@/app/login";
+import Card from "@/components/ui/card";
 
 const AVATAR_SIZE = 40;
 const ONLINE_INDICATOR_SIZE = 10;
@@ -30,11 +33,14 @@ interface User {
   name: string;
   profilepic?: string;
   isTyping?: boolean;
+  lastmessage?: string;
+  updatedat?: string;
 }
 
 const SearchUser: React.FC = () => {
   const { user } = useUser();
   const api = useApi();
+  const { colors, theme } = useTheme();
   const {
     users,
     loading,
@@ -169,35 +175,76 @@ const SearchUser: React.FC = () => {
       return (
         <TouchableOpacity
           onPress={() => handleUserSelect(item, isSearchResult)}
-          style={[styles.userCard, isOnline && styles.userCardOnline]}
           activeOpacity={0.7}
+          style={{ marginVertical: 4 }}
         >
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: getProfileCloudinaryUrl(user?.profilepic) }}
-              style={styles.avatar}
-            />
-            {isOnline && <View style={styles.onlineIndicator} />}
-          </View>
+          <Card
+            variant={isOnline ? "secondary" : "default"}
+            className="flex-row items-center p-3"
+          >
+            <View style={styles.avatarContainer}>
+              <Image
+                source={{ uri: getProfileCloudinaryUrl(user?.profilepic) }}
+                style={[
+                  styles.avatar,
+                  {
+                    backgroundColor: colors.muted,
+                    borderWidth: 2,
+                    borderColor: isOnline ? colors.primary : colors.muted,
+                  },
+                ]}
+              />
+              {isOnline && (
+                <View
+                  style={[
+                    styles.onlineIndicator,
+                    {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.background,
+                    },
+                  ]}
+                />
+              )}
+            </View>
 
-          <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {user?.name}
-            </Text>
+            <View style={styles.userInfo}>
+              <Text
+                style={[styles.userName, { color: colors.foreground }]}
+                numberOfLines={1}
+              >
+                {user?.name}
+              </Text>
 
-            {!isSearchResult &&
-              (isTyping ? (
-                <View style={styles.typingContainer}>
-                  <Text style={styles.typingText}>typing...</Text>
-                </View>
-              ) : (
-                <Text style={styles.lastMessage} numberOfLines={1}>
-                  {item?.lastmessage || ""}
-                </Text>
-              ))}
-          </View>
+              {!isSearchResult &&
+                (isTyping ? (
+                  <View style={styles.typingContainer}>
+                    <Text
+                      style={[styles.typingText, { color: colors.primary }]}
+                    >
+                      typing...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.lastMessage,
+                      { color: colors.mutedForeground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item?.lastmessage || ""}
+                  </Text>
+                ))}
+            </View>
 
-          <Ionicons name="chevron-forward" size={16} color="#8E8E93" />
+            {!isSearchResult && (
+              <Text
+                style={[styles.timeText, { color: colors.mutedForeground }]}
+              >
+                {item?.updatedat ? TimeAgo(item.updatedat) : ""}
+              </Text>
+            )}
+          </Card>
         </TouchableOpacity>
       );
     },
@@ -206,11 +253,15 @@ const SearchUser: React.FC = () => {
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="chatbubble-ellipses-outline" size={48} color="#8E8E93" />
-      <Text style={styles.emptyText}>
+      <Ionicons
+        name="chatbubble-ellipses-outline"
+        size={48}
+        color={colors.mutedForeground}
+      />
+      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
         {searchQuery.length > 0 ? "No users found" : "No conversations yet"}
       </Text>
-      <Text style={styles.emptySubText}>
+      <Text style={[styles.emptySubText, { color: colors.mutedForeground }]}>
         {searchQuery.length > 0
           ? "Try a different search term"
           : "Search for users to start messaging"}
@@ -220,7 +271,7 @@ const SearchUser: React.FC = () => {
 
   const renderListHeader = () => (
     <View style={styles.listHeaderContainer}>
-      <Text style={styles.listHeaderText}>
+      <Text style={[styles.listHeaderText, { color: colors.mutedForeground }]}>
         {searchResults.length > 0
           ? `Search Results (${searchResults.length})`
           : "Recent Conversations"}
@@ -233,18 +284,29 @@ const SearchUser: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["top"]}
+    >
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Messages
+        </Text>
       </View>
 
       <View style={styles.searchBarWrapper}>
-        <BlurView intensity={20} tint="dark" style={styles.searchBarBlur}>
-          <View style={styles.searchContainer}>
+        <BlurView
+          intensity={20}
+          tint={theme === "dark" ? "dark" : "light"}
+          style={styles.searchBarBlur}
+        >
+          <View
+            style={[styles.searchContainer, { backgroundColor: colors.muted }]}
+          >
             <Ionicons
               name="search"
               size={18}
-              color="#8E8E93"
+              color={colors.mutedForeground}
               style={styles.searchIcon}
             />
             <TextInput
@@ -252,8 +314,8 @@ const SearchUser: React.FC = () => {
               placeholder="Search for users..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              style={styles.searchInput}
-              placeholderTextColor="#8E8E93"
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholderTextColor={colors.mutedForeground}
               returnKeyType="search"
               autoCapitalize="none"
             />
@@ -262,7 +324,11 @@ const SearchUser: React.FC = () => {
                 onPress={clearSearch}
                 style={styles.clearButton}
               >
-                <Ionicons name="close-circle" size={18} color="#8E8E93" />
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={colors.mutedForeground}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -271,7 +337,7 @@ const SearchUser: React.FC = () => {
 
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#0A84FF" />
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       )}
 
@@ -304,7 +370,7 @@ const SearchUser: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    // backgroundColor value is applied dynamically through style prop
   },
   header: {
     paddingHorizontal: 16,
@@ -313,7 +379,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#FFFFFF",
+    // color value is applied dynamically through style prop
   },
   searchBarWrapper: {
     paddingHorizontal: 16,
@@ -326,7 +392,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 30, 30, 0.7)",
+    // backgroundColor value is applied dynamically through style prop
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 42,
@@ -337,7 +403,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: "#FFFFFF",
+    // color value is applied dynamically through style prop
     height: 42,
   },
   clearButton: {
@@ -362,19 +428,19 @@ const styles = StyleSheet.create({
   listHeaderText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#8E8E93",
+    // color value is applied dynamically through style prop
   },
   userCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 30, 30, 0.4)",
+    // backgroundColor value is applied dynamically through style prop
     borderRadius: 12,
     padding: 12,
     marginVertical: 4,
   },
   userCardOnline: {
     borderLeftWidth: 2,
-    borderLeftColor: "#30D158",
+    // borderLeftColor value is applied dynamically through style prop
   },
   avatarContainer: {
     position: "relative",
@@ -384,7 +450,7 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: "#2C2C2E",
+    // backgroundColor value is applied dynamically through style prop
   },
   onlineIndicator: {
     position: "absolute",
@@ -393,9 +459,8 @@ const styles = StyleSheet.create({
     width: ONLINE_INDICATOR_SIZE,
     height: ONLINE_INDICATOR_SIZE,
     borderRadius: ONLINE_INDICATOR_SIZE / 2,
-    backgroundColor: "#30D158",
+    // backgroundColor and borderColor values are applied dynamically through style prop
     borderWidth: 1.5,
-    borderColor: "#121212",
   },
   userInfo: {
     flex: 1,
@@ -404,7 +469,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#FFFFFF",
+    // color value is applied dynamically through style prop
     marginBottom: 2,
   },
   typingContainer: {
@@ -413,12 +478,12 @@ const styles = StyleSheet.create({
   },
   typingText: {
     fontSize: 13,
-    color: "#30D158",
+    // color value is applied dynamically through style prop
     fontWeight: "500",
   },
   lastMessage: {
     fontSize: 13,
-    color: "#8E8E93",
+    // color value is applied dynamically through style prop
   },
   emptyContainer: {
     alignItems: "center",
@@ -428,15 +493,21 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#8E8E93",
+    // color value is applied dynamically through style prop
     marginTop: 16,
   },
   emptySubText: {
     fontSize: 13,
-    color: "#636366",
+    // color value is applied dynamically through style prop
     marginTop: 8,
     textAlign: "center",
     maxWidth: "80%",
+  },
+  timeText: {
+    fontSize: 12,
+    marginLeft: 6,
+    fontWeight: "400",
+    alignSelf: "flex-start",
   },
 });
 

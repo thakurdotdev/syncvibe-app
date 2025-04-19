@@ -3,6 +3,7 @@ import StartCall from "@/components/video/StartCall";
 import SwipeableModal from "@/components/common/SwipeableModal";
 import { Message, useChat } from "@/context/SocketContext";
 import { useUser } from "@/context/UserContext";
+import { useTheme } from "@/context/ThemeContext";
 import { getOptimizedImageUrl } from "@/utils/Cloudinary";
 import useApi from "@/utils/hooks/useApi";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -19,10 +20,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Input from "@/components/ui/input";
 
 const MessageHeader = React.memo(
   ({
@@ -35,27 +36,53 @@ const MessageHeader = React.memo(
     user: any;
     isOnline: boolean;
     isTyping: boolean | undefined;
-  }) => (
-    <View style={styles.header}>
-      <Pressable onPress={onBack} hitSlop={10} style={styles.backButton}>
-        <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-      </Pressable>
+  }) => {
+    const { colors } = useTheme();
 
-      <View style={styles.userContainer}>
-        <View style={styles.avatarContainer}>
-          <Image source={{ uri: user?.profilepic }} style={styles.avatar} />
-          {isOnline && <View style={styles.onlineIndicator} />}
+    return (
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Pressable onPress={onBack} hitSlop={10} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+        </Pressable>
+
+        <View style={styles.userContainer}>
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{ uri: user?.profilepic }}
+              style={[
+                styles.avatar,
+                { borderColor: colors.muted, backgroundColor: colors.muted },
+              ]}
+            />
+            {isOnline && (
+              <View
+                style={[
+                  styles.onlineIndicator,
+                  {
+                    backgroundColor: colors.primary,
+                    borderColor: colors.background,
+                  },
+                ]}
+              />
+            )}
+          </View>
+
+          <View style={styles.userTextContainer}>
+            <Text style={[styles.username, { color: colors.foreground }]}>
+              {user?.name}
+            </Text>
+            {isTyping && (
+              <Text style={[styles.typingText, { color: colors.primary }]}>
+                typing...
+              </Text>
+            )}
+          </View>
         </View>
 
-        <View style={styles.userTextContainer}>
-          <Text style={styles.username}>{user?.name}</Text>
-          {isTyping && <Text style={styles.typingText}>typing...</Text>}
-        </View>
+        <StartCall />
       </View>
-
-      <StartCall />
-    </View>
-  ),
+    );
+  },
 );
 
 const DateSeparator = React.memo(({ date }: { date: string }) => (
@@ -75,64 +102,81 @@ const ChatMessage = React.memo(
     isOwn: boolean;
     onImagePress: (url: string) => void;
     onMessageLongPress: (message: Message) => void;
-  }) => (
-    <View
-      style={[
-        styles.messageBubbleContainer,
-        isOwn ? styles.ownMessageContainer : styles.otherMessageContainer,
-      ]}
-    >
-      {message.fileurl && (
-        <Pressable
-          onPress={() => message.fileurl && onImagePress(message.fileurl)}
-          style={styles.imageContainer}
-        >
-          <Image
-            source={{
-              uri: getOptimizedImageUrl(message.fileurl, { thumbnail: true }),
-            }}
-            style={styles.messageImage}
-            resizeMode="cover"
-          />
-        </Pressable>
-      )}
+  }) => {
+    const { colors } = useTheme();
 
-      {message.content && (
-        <Pressable
-          onLongPress={() => {
-            if (isOwn) {
-              onMessageLongPress(message);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }
-          }}
-          style={[
-            styles.messageBubble,
-            isOwn ? styles.ownMessageBubble : styles.otherMessageBubble,
-          ]}
-        >
-          <Text style={styles.messageText}>{message.content}</Text>
-        </Pressable>
-      )}
-
-      <View style={styles.messageFooter}>
-        <Text style={styles.timeText}>{formatTime(message.createdat)}</Text>
-
-        {isOwn && (
-          <View style={styles.readStatus}>
-            {message.isread ? (
-              <MaterialCommunityIcons
-                name="check-all"
-                size={14}
-                color="#60a5fa"
-              />
-            ) : (
-              <MaterialCommunityIcons name="check" size={14} color="#9ca3af" />
-            )}
-          </View>
+    return (
+      <View
+        style={[
+          styles.messageBubbleContainer,
+          isOwn ? styles.ownMessageContainer : styles.otherMessageContainer,
+        ]}
+      >
+        {message.fileurl && (
+          <Pressable
+            onPress={() => message.fileurl && onImagePress(message.fileurl)}
+            style={styles.imageContainer}
+          >
+            <Image
+              source={{
+                uri: getOptimizedImageUrl(message.fileurl, { thumbnail: true }),
+              }}
+              style={styles.messageImage}
+              resizeMode="cover"
+            />
+          </Pressable>
         )}
+
+        {message.content && (
+          <Pressable
+            onLongPress={() => {
+              if (isOwn) {
+                onMessageLongPress(message);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }
+            }}
+            style={[
+              styles.messageBubble,
+              isOwn
+                ? [styles.ownMessageBubble, { backgroundColor: colors.muted }]
+                : [
+                    styles.otherMessageBubble,
+                    { backgroundColor: colors.muted },
+                  ],
+            ]}
+          >
+            <Text style={[styles.messageText, { color: colors.foreground }]}>
+              {message.content}
+            </Text>
+          </Pressable>
+        )}
+
+        <View style={styles.messageFooter}>
+          <Text style={[styles.timeText, { color: colors.mutedForeground }]}>
+            {formatTime(message.createdat)}
+          </Text>
+
+          {isOwn && (
+            <View style={styles.readStatus}>
+              {message.isread ? (
+                <MaterialCommunityIcons
+                  name="check-all"
+                  size={14}
+                  color={colors.primary}
+                />
+              ) : (
+                <MaterialCommunityIcons
+                  name="check"
+                  size={14}
+                  color={colors.mutedForeground}
+                />
+              )}
+            </View>
+          )}
+        </View>
       </View>
-    </View>
-  ),
+    );
+  },
 );
 
 const InputToolbar = React.memo(
@@ -150,52 +194,71 @@ const InputToolbar = React.memo(
     onAttach: () => void;
     filePreview: string | null;
     onRemoveAttachment: () => void;
-  }) => (
-    <View style={styles.inputToolbar}>
-      {filePreview ? (
-        <View style={styles.attachmentPreview}>
-          <Image source={{ uri: filePreview }} style={styles.previewImage} />
+  }) => {
+    const { colors } = useTheme();
+
+    return (
+      <View style={[styles.inputToolbar, { borderTopColor: colors.border }]}>
+        {filePreview ? (
+          <View style={styles.attachmentPreview}>
+            <Image source={{ uri: filePreview }} style={styles.previewImage} />
+            <Pressable
+              style={[
+                styles.removeAttachmentButton,
+                { backgroundColor: colors.secondary },
+              ]}
+              onPress={onRemoveAttachment}
+            >
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color={colors.foreground}
+              />
+            </Pressable>
+          </View>
+        ) : null}
+
+        <View style={styles.inputContainer}>
+          <Pressable style={styles.attachButton} onPress={onAttach}>
+            <Ionicons name="image-outline" size={22} color={colors.primary} />
+          </Pressable>
+
+          <Input
+            value={message}
+            onChangeText={onChangeText}
+            placeholder="Message..."
+            variant="filled"
+            size="lg"
+            multiline
+            maxLength={500}
+            containerStyle={{ flex: 1, marginRight: 8 }}
+          />
+
           <Pressable
-            style={styles.removeAttachmentButton}
-            onPress={onRemoveAttachment}
+            style={[
+              styles.sendButton,
+              {
+                backgroundColor:
+                  message.trim() || filePreview ? colors.primary : colors.muted,
+              },
+            ]}
+            onPress={onSend}
+            disabled={!message.trim() && !filePreview}
           >
-            <Ionicons name="close-circle" size={20} color="#FFFFFF" />
+            <Ionicons
+              name="send"
+              size={18}
+              color={
+                message.trim() || filePreview
+                  ? colors.primaryForeground
+                  : colors.mutedForeground
+              }
+            />
           </Pressable>
         </View>
-      ) : null}
-
-      <View style={styles.inputContainer}>
-        <Pressable style={styles.attachButton} onPress={onAttach}>
-          <Ionicons name="image-outline" size={22} color="#60a5fa" />
-        </Pressable>
-
-        <TextInput
-          value={message}
-          onChangeText={onChangeText}
-          style={styles.textInput}
-          placeholder="Message..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          maxLength={500}
-        />
-
-        <Pressable
-          style={[
-            styles.sendButton,
-            message.trim() || filePreview ? styles.sendButtonActive : null,
-          ]}
-          onPress={onSend}
-          disabled={!message.trim() && !filePreview}
-        >
-          <Ionicons
-            name="send"
-            size={18}
-            color={message.trim() || filePreview ? "#FFFFFF" : "#9ca3af"}
-          />
-        </Pressable>
       </View>
-    </View>
-  ),
+    );
+  },
 );
 
 const formatTime = (dateString: string) => {
@@ -227,29 +290,35 @@ const MessageOptionItem = React.memo(
     icon,
     text,
     onPress,
-    color = "#FFFFFF",
+    color,
   }: {
     icon: any;
     text: string;
     onPress: () => void;
     color?: string;
-  }) => (
-    <Pressable
-      style={styles.optionItem}
-      onPress={() => {
-        onPress();
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }}
-    >
-      <Ionicons name={icon} size={22} color={color} />
-      <Text style={[styles.optionText, { color }]}>{text}</Text>
-    </Pressable>
-  ),
+  }) => {
+    const { colors } = useTheme();
+    const itemColor = color || colors.foreground;
+
+    return (
+      <Pressable
+        style={styles.optionItem}
+        onPress={() => {
+          onPress();
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }}
+      >
+        <Ionicons name={icon} size={22} color={itemColor} />
+        <Text style={[styles.optionText, { color: itemColor }]}>{text}</Text>
+      </Pressable>
+    );
+  },
 );
 
 const ChatWithUser = () => {
   const api = useApi();
   const { user } = useUser();
+  const { colors, theme } = useTheme();
   const loggedInUserId = user?.userid;
   const { currentChat, setCurrentChat, socket, onlineStatuses } = useChat();
 
@@ -683,9 +752,12 @@ const ChatWithUser = () => {
   const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ""];
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["top"]}
+    >
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
@@ -740,11 +812,12 @@ const ChatWithUser = () => {
               </Pressable>
             </View>
             <View style={styles.editInputContainer}>
-              <TextInput
+              <Input
                 value={editText}
                 onChangeText={setEditText}
-                style={styles.editTextInput}
-                autoFocus
+                placeholder="Edit message..."
+                variant="filled"
+                size="md"
                 multiline
                 maxLength={500}
               />
@@ -818,7 +891,6 @@ const ChatWithUser = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
   },
   header: {
     flexDirection: "row",
@@ -826,7 +898,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
   backButton: {
     padding: 8,
@@ -845,8 +916,6 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     borderWidth: 2,
-    borderColor: "#374151", // Darker border for the avatar
-    backgroundColor: "#1f2937", // Darker background for the avatar
     position: "relative",
   },
   onlineIndicator: {
@@ -856,9 +925,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#10b981",
     borderWidth: 1.5,
-    borderColor: "#111827",
   },
   userTextContainer: {
     marginLeft: 10,
@@ -866,11 +933,9 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#f9fafb",
   },
   typingText: {
     fontSize: 12,
-    color: "#10b981",
     fontWeight: "500",
   },
   loadingContainer: {
@@ -910,14 +975,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   ownMessageBubble: {
-    backgroundColor: "#1f2937", // Darker gray for own messages
+    // Background color applied dynamically
   },
   otherMessageBubble: {
-    backgroundColor: "#1f2937", // Darker gray for other messages
+    // Background color applied dynamically
   },
   messageText: {
     fontSize: 16,
-    color: "#f9fafb",
     lineHeight: 22,
   },
   imageContainer: {
@@ -938,7 +1002,6 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 11,
-    color: "rgba(255, 255, 255, 0.6)",
     marginRight: 4,
   },
   readStatus: {
@@ -947,7 +1010,6 @@ const styles = StyleSheet.create({
   inputToolbar: {
     padding: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
   },
   attachmentPreview: {
     marginBottom: 8,
@@ -976,28 +1038,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  textInput: {
-    flex: 1,
-    backgroundColor: "#1f2937",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    maxHeight: 120,
-    color: "#f9fafb",
-    fontSize: 16,
-    marginHorizontal: 8,
-  },
   sendButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#374151",
     justifyContent: "center",
     alignItems: "center",
   },
   sendButtonActive: {
-    backgroundColor: "#3b82f6",
+    // Background color applied dynamically
   },
   modalContent: {
     padding: 16,
@@ -1015,8 +1064,6 @@ const styles = StyleSheet.create({
   editContainer: {
     padding: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "#000000",
   },
   editHeader: {
     flexDirection: "row",
@@ -1027,22 +1074,10 @@ const styles = StyleSheet.create({
   editTitle: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#9ca3af",
   },
   editInputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
-  },
-  editTextInput: {
-    flex: 1,
-    backgroundColor: "#1f2937",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    maxHeight: 120,
-    color: "#f9fafb",
-    fontSize: 16,
-    marginRight: 8,
   },
 });
 

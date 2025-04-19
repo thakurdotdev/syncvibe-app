@@ -11,13 +11,16 @@ import {
   View,
   RefreshControl,
   Animated,
-  TextInput,
+  TextInput as RNTextInput,
   TouchableOpacity,
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SwipeableModal from "@/components/common/SwipeableModal";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import Input from "@/components/ui/input";
+import Button from "@/components/ui/button";
 
 const { width } = Dimensions.get("window");
 const ITEMS_PER_PAGE = 15;
@@ -56,6 +59,7 @@ const sortOptions: SortOption[] = [
 const SongHistory = () => {
   const api = useApi();
   const { user } = useUser();
+  const { colors } = useTheme();
   const [songHistory, setSongHistory] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,7 +75,7 @@ const SongHistory = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
   const [isFiltering, setIsFiltering] = useState(false);
 
-  const searchInputRef = useRef<TextInput>(null);
+  const searchInputRef = useRef<RNTextInput>(null);
   const scrollY = new Animated.Value(0);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -82,7 +86,10 @@ const SongHistory = () => {
     }
 
     debounceTimeout.current = setTimeout(() => {
-      setIsFiltering(true);
+      // Only set filtering state if this isn't the initial render
+      if (songHistory.length > 0 || searchQuery.length > 0) {
+        setIsFiltering(true);
+      }
       setDebouncedSearchQuery(searchQuery);
       setPage(1);
     }, 500);
@@ -92,11 +99,17 @@ const SongHistory = () => {
         clearTimeout(debounceTimeout.current);
       }
     };
-  }, [searchQuery]);
+  }, [searchQuery, songHistory.length]);
 
   // Fetch songs with updated parameters when search or sort changes
   useEffect(() => {
     if (user?.userid) {
+      // Only set isFiltering true if this isn't the initial load
+      // (when there was a change to search query, sort order, or sort by)
+      const isInitialLoad = page === 1 && !songHistory.length;
+      if (!isInitialLoad) {
+        setIsFiltering(true);
+      }
       getHistorySongs(1, false);
     }
   }, [debouncedSearchQuery, sortBy, sortOrder, user?.userid]);
@@ -204,26 +217,47 @@ const SongHistory = () => {
     });
 
     return (
-      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
+      <Animated.View
+        style={[
+          styles.header,
+          { opacity: headerOpacity },
+          { backgroundColor: colors.background },
+        ]}
+      >
         {!showSearch ? (
           <>
             <View>
-              <Text style={styles.headerTitle}>Your Listening History</Text>
-              <Text style={styles.headerSubtitle}>{totalSongs} tracks</Text>
+              <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+                Your Listening History
+              </Text>
+              <Text
+                style={[
+                  styles.headerSubtitle,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                {totalSongs} tracks
+              </Text>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.iconButton}
+              <Button
+                variant="ghost"
+                size="icon"
+                icon={
+                  <Feather name="search" size={22} color={colors.foreground} />
+                }
                 onPress={toggleSearch}
-              >
-                <Feather name="search" size={22} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.iconButton}
+                style={{ marginLeft: 8 }}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                icon={
+                  <Feather name="sliders" size={22} color={colors.foreground} />
+                }
                 onPress={() => setShowSortModal(true)}
-              >
-                <Feather name="sliders" size={22} color="white" />
-              </TouchableOpacity>
+                style={{ marginLeft: 8 }}
+              />
             </View>
           </>
         ) : (
@@ -231,26 +265,30 @@ const SongHistory = () => {
             style={[
               styles.searchContainer,
               { transform: [{ scale: searchScale }] },
+              { flexGrow: 1, width: "100%" },
             ]}
           >
-            <Feather
-              name="search"
-              size={20}
-              color="#888"
-              style={styles.searchIcon}
-            />
-            <TextInput
+            <Input
               ref={searchInputRef}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search songs..."
-              placeholderTextColor="#888"
-              style={styles.searchInput}
+              variant="filled"
+              leftIcon={
+                <Feather
+                  name="search"
+                  size={20}
+                  color={colors.mutedForeground}
+                />
+              }
+              rightIcon={
+                <TouchableOpacity onPress={toggleSearch}>
+                  <Feather name="x" size={20} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              }
+              className="flex-1"
               autoFocus
             />
-            <TouchableOpacity onPress={toggleSearch}>
-              <Feather name="x" size={20} color="#888" />
-            </TouchableOpacity>
           </Animated.View>
         )}
       </Animated.View>
@@ -264,8 +302,10 @@ const SongHistory = () => {
     if (!currentSort) return null;
 
     return (
-      <View style={styles.sortIndicator}>
-        <Text style={styles.sortText}>
+      <View
+        style={[styles.sortIndicator, { backgroundColor: colors.secondary }]}
+      >
+        <Text style={[styles.sortText, { color: colors.secondaryForeground }]}>
           Sorted by: {currentSort.label}
           {sortOrder === "ASC" ? " (A-Z)" : " (Z-A)"}
         </Text>
@@ -276,7 +316,7 @@ const SongHistory = () => {
           <Feather
             name={sortOrder === "ASC" ? "arrow-up" : "arrow-down"}
             size={16}
-            color="white"
+            color={colors.primary}
           />
         </TouchableOpacity>
       </View>
@@ -288,7 +328,7 @@ const SongHistory = () => {
 
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="white" />
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   };
@@ -297,13 +337,15 @@ const SongHistory = () => {
     if (loading) return null;
 
     return (
-      <View style={styles.emptyContainer}>
+      <View
+        style={[styles.emptyContainer, { backgroundColor: colors.background }]}
+      >
         {debouncedSearchQuery ? (
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             No songs found matching "{debouncedSearchQuery}"
           </Text>
         ) : (
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             You haven't listened to any songs yet.
           </Text>
         )}
@@ -313,26 +355,44 @@ const SongHistory = () => {
 
   if (loading && page === 1 && !isFiltering) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="white" />
-        <Text style={styles.loadingText}>Loading your music history...</Text>
+      <SafeAreaView
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.foreground }]}>
+          Loading your music history...
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {renderHeader()}
       {renderSortIndicator()}
 
       {isFiltering && (
-        <View style={styles.filteringIndicator}>
+        <View
+          style={[
+            styles.filteringIndicator,
+            { backgroundColor: `${colors.primary}CC` }, // CC adds 80% opacity
+          ]}
+        >
           <ActivityIndicator
             size="small"
-            color="white"
+            color={colors.primaryForeground}
             style={styles.filteringLoader}
           />
-          <Text style={styles.filteringText}>Updating results...</Text>
+          <Text
+            style={[styles.filteringText, { color: colors.primaryForeground }]}
+          >
+            Updating results...
+          </Text>
         </View>
       )}
 
@@ -349,12 +409,20 @@ const SongHistory = () => {
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyState}
+        ItemSeparatorComponent={() => (
+          <View
+            style={[
+              styles.separator,
+              { backgroundColor: `${colors.border}33` }, // 33 adds 20% opacity
+            ]}
+          />
+        )}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="white"
-            colors={["white"]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         onScroll={Animated.event(
@@ -371,25 +439,35 @@ const SongHistory = () => {
       <SwipeableModal
         isVisible={showSortModal}
         onClose={() => setShowSortModal(false)}
-        backgroundColor="#1E1E1E"
+        backgroundColor={colors.background}
         maxHeight="45%"
       >
         <View style={styles.sortModalContent}>
-          <Text style={styles.sortModalTitle}>Sort by</Text>
+          <Text style={[styles.sortModalTitle, { color: colors.foreground }]}>
+            Sort by
+          </Text>
 
           {sortOptions.map((option) => (
             <TouchableOpacity
               key={option.value}
               style={[
                 styles.sortOption,
-                sortBy === option.value && styles.sortOptionSelected,
+                sortBy === option.value && [
+                  styles.sortOptionSelected,
+                  { backgroundColor: colors.secondary },
+                ],
               ]}
               onPress={() => handleSortSelect(option.value)}
             >
-              <View style={styles.sortOptionIcon}>{option.icon}</View>
+              <View style={styles.sortOptionIcon}>
+                {React.cloneElement(option.icon, {
+                  color: colors.foreground,
+                })}
+              </View>
               <Text
                 style={[
                   styles.sortOptionText,
+                  { color: colors.foreground },
                   sortBy === option.value && styles.sortOptionTextSelected,
                 ]}
               >
@@ -404,19 +482,20 @@ const SongHistory = () => {
                   <Feather
                     name={sortOrder === "ASC" ? "arrow-up" : "arrow-down"}
                     size={20}
-                    color="white"
+                    color={colors.primary}
                   />
                 </TouchableOpacity>
               )}
             </TouchableOpacity>
           ))}
 
-          <TouchableOpacity
-            style={styles.closeModalButton}
+          <Button
+            variant="secondary"
+            title="Close"
             onPress={() => setShowSortModal(false)}
-          >
-            <Text style={styles.closeModalButtonText}>Close</Text>
-          </TouchableOpacity>
+            className="mt-6"
+            style={styles.closeModalButton}
+          />
         </View>
       </SwipeableModal>
     </SafeAreaView>
@@ -426,11 +505,9 @@ const SongHistory = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#121212",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -444,7 +521,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
-    backgroundColor: "#121212",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -478,10 +554,8 @@ const styles = StyleSheet.create({
   searchContainer: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#2A2A2A",
     borderRadius: 8,
     alignItems: "center",
-    paddingHorizontal: 10,
     height: 44,
   },
   searchIcon: {
@@ -533,8 +607,8 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    marginVertical: 8,
+    // backgroundColor: "rgba(255, 255, 255, 0.05)",
+    marginVertical: 4,
   },
   footerLoader: {
     paddingVertical: 20,

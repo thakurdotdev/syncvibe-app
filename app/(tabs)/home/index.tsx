@@ -6,9 +6,9 @@ import {
   TrendingSongs,
 } from "@/components/music/MusicLists";
 import { SONG_URL } from "@/constants";
+import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
-import { getGreeting } from "@/utils/getGreeting";
 import useApi from "@/utils/hooks/useApi";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -16,9 +16,14 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  Dimensions,
   RefreshControl,
   StatusBar,
   Text,
@@ -28,13 +33,17 @@ import {
 import Animated, {
   Extrapolation,
   FadeIn,
+  FadeInLeft,
+  FadeInRight,
+  FadeInUp,
   FadeOut,
   interpolate,
   LinearTransition,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withDelay,
+  withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -51,55 +60,124 @@ interface Recommendations {
   recentlyPlayed: Song[];
 }
 
-const { width } = Dimensions.get("window");
-
 const SkeletonLoader = () => {
+  const { theme } = useTheme();
+  const colors =
+    theme === "light"
+      ? {
+          bg: "bg-gray-100/80",
+          headerBg: "bg-gray-200/80",
+          shimmer: "bg-gray-200/50",
+        }
+      : {
+          bg: "bg-gray-800/70",
+          headerBg: "bg-gray-800",
+          shimmer: "bg-gray-700/50",
+        };
+
+  const shimmerAnimation = useSharedValue(0);
+
+  useEffect(() => {
+    shimmerAnimation.value = 0;
+    shimmerAnimation.value = withTiming(1, { duration: 1500 });
+  }, []);
+
+  const shimmerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateX: interpolate(shimmerAnimation.value, [0, 1], [-300, 300]),
+        },
+      ],
+    };
+  });
+
   return (
     <View className="px-4">
       {/* Greeting skeleton */}
-      <View className="w-2/3 h-7 bg-gray-800 rounded-md mb-8 mt-4" />
+      <Animated.View
+        entering={FadeInLeft.duration(600)}
+        className={`w-2/3 h-8 ${colors.headerBg} rounded-lg mb-8 mt-4 overflow-hidden`}
+      >
+        <Animated.View
+          className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+          style={shimmerStyle}
+        />
+      </Animated.View>
+
+      {/* Feature cards skeleton */}
+      <Animated.View
+        entering={FadeInUp.duration(600).delay(200)}
+        className="flex-row flex-wrap justify-between mb-8"
+      >
+        {[1, 2, 3, 4].map((i) => (
+          <View
+            key={i}
+            className={`w-[45%] h-[100px] mb-4 ${colors.bg} rounded-2xl overflow-hidden`}
+          >
+            <Animated.View
+              className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+              style={shimmerStyle}
+            />
+          </View>
+        ))}
+      </Animated.View>
 
       {/* Recently played section */}
-      <View className="mb-8">
-        <View className="w-1/2 h-6 bg-gray-800 rounded-md mb-4" />
+      <Animated.View
+        entering={FadeInRight.duration(600).delay(300)}
+        className="mb-8"
+      >
+        <View
+          className={`w-1/2 h-6 ${colors.headerBg} rounded-lg mb-4 overflow-hidden`}
+        >
+          <Animated.View
+            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+            style={shimmerStyle}
+          />
+        </View>
         <View className="flex-row">
           {[1, 2, 3].map((i) => (
             <View
               key={i}
-              className="w-36 h-56 mr-4 bg-gray-800/70 rounded-xl"
-              style={{ marginBottom: 12 }}
-            />
+              className={`w-36 h-56 mr-4 ${colors.bg} rounded-2xl overflow-hidden`}
+            >
+              <Animated.View
+                className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+                style={shimmerStyle}
+              />
+            </View>
           ))}
         </View>
-      </View>
+      </Animated.View>
 
       {/* Trending section */}
-      <View className="mb-8">
-        <View className="w-2/5 h-6 bg-gray-800/70 rounded-md mb-4" />
+      <Animated.View
+        entering={FadeInLeft.duration(600).delay(400)}
+        className="mb-8"
+      >
+        <View
+          className={`w-2/5 h-6 ${colors.headerBg} rounded-lg mb-4 overflow-hidden`}
+        >
+          <Animated.View
+            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+            style={shimmerStyle}
+          />
+        </View>
         <View className="flex-row">
           {[1, 2, 3].map((i) => (
             <View
               key={i}
-              className="w-36 h-56 mr-4 bg-gray-800/70 rounded-xl"
-              style={{ marginBottom: 12 }}
-            />
+              className={`w-36 h-56 mr-4 ${colors.bg} rounded-2xl overflow-hidden`}
+            >
+              <Animated.View
+                className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+                style={shimmerStyle}
+              />
+            </View>
           ))}
         </View>
-      </View>
-
-      {/* Playlists section */}
-      <View className="mb-8">
-        <View className="w-1/2 h-6 bg-gray-800/70 rounded-md mb-4" />
-        <View className="flex-row">
-          {[1, 2, 3].map((i) => (
-            <View
-              key={i}
-              className="w-36 h-48 mr-4 bg-gray-800/70 rounded-xl"
-              style={{ marginBottom: 12 }}
-            />
-          ))}
-        </View>
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -107,6 +185,7 @@ const SkeletonLoader = () => {
 export default function HomeScreen() {
   const api = useApi();
   const { selectedLanguages, user } = useUser();
+  const { colors, theme } = useTheme();
   const [homePageData, setHomePageData] = useState<HomePageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -115,17 +194,36 @@ export default function HomeScreen() {
     songs: [],
     recentlyPlayed: [],
   });
+  const scrollViewRef = useRef(null);
 
   // Animation values
   const scrollY = useSharedValue(0);
-  const headerHeight = 350;
+  const headerHeight = 360;
   const searchBarTranslateY = useSharedValue(0);
-  const greetingTranslateY = useSharedValue(8);
+  const contentOpacity = useSharedValue(1);
+  const headerScale = useSharedValue(1);
+
+  // Setup initial animations
+  useEffect(() => {
+    searchBarTranslateY.value = withTiming(0, { duration: 600 });
+  }, []);
 
   // Animated scroll handler
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
+      contentOpacity.value = interpolate(
+        event.contentOffset.y,
+        [0, headerHeight * 0.5],
+        [1, 0.9],
+        Extrapolation.CLAMP,
+      );
+      headerScale.value = interpolate(
+        event.contentOffset.y,
+        [0, headerHeight],
+        [1, 0.95],
+        Extrapolation.CLAMP,
+      );
     },
   });
 
@@ -140,10 +238,13 @@ export default function HomeScreen() {
       ),
       transform: [
         {
-          scale: interpolate(
+          scale: headerScale.value,
+        },
+        {
+          translateY: interpolate(
             scrollY.value,
             [0, headerHeight],
-            [1, 0.92],
+            [0, -30],
             Extrapolation.CLAMP,
           ),
         },
@@ -156,18 +257,13 @@ export default function HomeScreen() {
     return {
       transform: [
         {
-          translateY: interpolate(
-            scrollY.value,
-            [-50, 0],
-            [8, 0],
-            Extrapolation.CLAMP,
-          ),
+          translateY: searchBarTranslateY.value,
         },
         {
           scale: interpolate(
             scrollY.value,
             [-30, 0, 100],
-            [1.05, 1, 0.97],
+            [1.05, 1, 0.98],
             Extrapolation.CLAMP,
           ),
         },
@@ -175,29 +271,7 @@ export default function HomeScreen() {
       opacity: interpolate(
         scrollY.value,
         [-50, 0, 200],
-        [1, 1, 0.8],
-        Extrapolation.CLAMP,
-      ),
-    };
-  });
-
-  // Greeting animations
-  const greetingStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateY: interpolate(
-            scrollY.value,
-            [-30, 0],
-            [4, 0],
-            Extrapolation.CLAMP,
-          ),
-        },
-      ],
-      opacity: interpolate(
-        scrollY.value,
-        [0, 100],
-        [1, 0.7],
+        [1, 1, 0.9],
         Extrapolation.CLAMP,
       ),
     };
@@ -275,26 +349,38 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchData();
-    // Animate in the UI elements
-    searchBarTranslateY.value = withSpring(0, {
-      damping: 15,
-      stiffness: 100,
-    });
-    greetingTranslateY.value = withSpring(0, {
-      damping: 15,
-      stiffness: 100,
-    });
   }, [fetchData]);
 
+  // Define header gradient colors based on theme
+  const headerGradientColors = useMemo(() => {
+    return theme === "light"
+      ? (["#F0F9FF", "#E0F2FE", "#BAE6FD"] as const) // Light blue gradient for light mode
+      : (["#43354A", "#1B2935", "#121212"] as const); // Original dark gradient
+  }, [theme]);
+
+  const blurIntensity = useMemo(() => {
+    return theme === "light" ? 20 : 25;
+  }, [theme]);
+
+  const blurTint = useMemo(() => {
+    return theme === "light" ? "light" : "dark";
+  }, [theme]);
+
   return (
-    <View className="flex-1 bg-black">
+    <View
+      className="flex-1"
+      style={{
+        backgroundColor: colors.background,
+      }}
+    >
       <StatusBar
-        barStyle="light-content"
+        barStyle={theme === "light" ? "dark-content" : "light-content"}
         backgroundColor="transparent"
         translucent
       />
 
       <SafeAreaView className="flex-1">
+        {/* Animated gradient header */}
         <Animated.View
           style={[
             {
@@ -304,12 +390,15 @@ export default function HomeScreen() {
               right: 0,
               height: headerHeight,
               zIndex: 0,
+              borderBottomLeftRadius: 30,
+              borderBottomRightRadius: 30,
+              overflow: "hidden",
             },
             headerOpacity,
           ]}
         >
           <LinearGradient
-            colors={["#43354A", "#1B2935", "#121212"]}
+            colors={headerGradientColors}
             start={{ x: 0.1, y: 0.1 }}
             end={{ x: 0.8, y: 0.85 }}
             style={{
@@ -318,18 +407,20 @@ export default function HomeScreen() {
             }}
           />
           <BlurView
-            intensity={25}
-            tint="dark"
+            intensity={blurIntensity}
+            tint={blurTint}
             style={{ position: "absolute", width: "100%", height: "100%" }}
           />
         </Animated.View>
 
         {/* Content that appears on top of the gradient */}
-        <View style={{ zIndex: 1 }}>
+        <View className="z-10 pb-3">
           {/* Search Bar */}
-          <Animated.View className="px-4 pt-4" style={searchBarStyle}>
+          <Animated.View className="px-4 pt-2" style={searchBarStyle}>
             <TouchableOpacity
-              className="flex-row items-center bg-white/15 rounded-full px-4 h-12"
+              className={`flex-row items-center ${
+                theme === "light" ? "bg-white/90" : "bg-white/10"
+              } rounded-2xl px-4 h-11`}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push("/search");
@@ -337,29 +428,21 @@ export default function HomeScreen() {
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Search for songs"
-              style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 6,
-              }}
             >
-              <Ionicons name="search" size={20} color="#ffffff" />
+              <Ionicons
+                name="search"
+                size={20}
+                color={theme === "light" ? "#555555" : "#ffffff"}
+              />
               <Text
-                className="flex-1 h-12 px-3 text-gray-300 flex justify-center py-3"
+                className={`flex-1 h-11 px-3 ${
+                  theme === "light" ? "text-gray-600" : "text-gray-300"
+                } flex justify-center py-3`}
                 numberOfLines={1}
               >
                 Search for songs...
               </Text>
             </TouchableOpacity>
-          </Animated.View>
-
-          {/* Greeting */}
-          <Animated.View className="px-4 pt-3 pb-2" style={greetingStyle}>
-            <Text className="text-white text-xl font-bold">
-              {getGreeting()}
-            </Text>
           </Animated.View>
         </View>
 
@@ -373,79 +456,123 @@ export default function HomeScreen() {
           </Animated.View>
         ) : (
           <Animated.ScrollView
+            ref={scrollViewRef}
             className="flex-1"
             showsVerticalScrollIndicator={false}
             onScroll={scrollHandler}
             scrollEventThrottle={16}
+            contentContainerStyle={{ paddingBottom: 20, paddingTop: 20 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor="#ffffff"
-                progressBackgroundColor="#1e1e1e"
-                colors={["#ffffff", "#9333ea"]}
+                tintColor={theme === "light" ? "#555555" : "#ffffff"}
+                progressBackgroundColor={
+                  theme === "light" ? "#f5f5f5" : "#1e1e1e"
+                }
+                colors={
+                  theme === "light"
+                    ? ["#6366F1", "#8B5CF6"]
+                    : ["#ffffff", "#9333ea"]
+                }
               />
             }
           >
             <Animated.View
-              className="px-4 mb-20"
+              className="px-4 pb-10"
               entering={FadeIn.duration(500).delay(200)}
               layout={LinearTransition.springify()}
+              style={{ opacity: contentOpacity }}
             >
               {error ? (
-                <View className="py-4 my-2 rounded-xl bg-gray-900/80 items-center">
-                  <Text className="text-white text-center">{error}</Text>
+                <View
+                  className={`py-4 my-2 rounded-2xl ${
+                    theme === "light" ? "bg-gray-100/80" : "bg-gray-900/80"
+                  } items-center`}
+                >
+                  <Text
+                    className={
+                      theme === "light"
+                        ? "text-gray-800 text-center"
+                        : "text-white text-center"
+                    }
+                  >
+                    {error}
+                  </Text>
                   <TouchableOpacity
-                    className="mt-3 bg-white/10 px-4 py-2 rounded-full"
+                    className={`mt-3 ${
+                      theme === "light" ? "bg-indigo-100" : "bg-white/10"
+                    } px-4 py-2 rounded-full`}
                     onPress={onRefresh}
                   >
-                    <Text className="text-white">Try Again</Text>
+                    <Text
+                      className={
+                        theme === "light" ? "text-indigo-700" : "text-white"
+                      }
+                    >
+                      Try Again
+                    </Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
 
               {recommendations.recentlyPlayed.length > 0 && (
-                <RecommendationGrid
-                  recommendations={recommendations.recentlyPlayed}
-                  title="Recently Played"
-                  showMore={true}
-                />
+                <Animated.View entering={FadeInLeft.duration(600).delay(300)}>
+                  <RecommendationGrid
+                    recommendations={recommendations.recentlyPlayed}
+                    title="Recently Played"
+                    showMore={true}
+                  />
+                </Animated.View>
               )}
 
               {recommendations.songs.length > 0 && (
-                <RecommendationGrid
-                  recommendations={recommendations.songs}
-                  title="Mostly Listened Songs"
-                  showMore={true}
-                />
+                <Animated.View entering={FadeInRight.duration(600).delay(400)}>
+                  <RecommendationGrid
+                    recommendations={recommendations.songs}
+                    title="Mostly you listen to"
+                    showMore={true}
+                  />
+                </Animated.View>
               )}
+
               {trendingSongs.length > 0 && (
-                <TrendingSongs songs={trendingSongs} title="Trending Now" />
+                <Animated.View entering={FadeInLeft.duration(600).delay(500)}>
+                  <TrendingSongs songs={trendingSongs} title="Trending Now" />
+                </Animated.View>
               )}
 
               {homePageData?.playlists && homePageData.playlists.length > 0 && (
-                <PlaylistsGrid
-                  playlists={homePageData.playlists}
-                  title="Popular Playlists"
-                />
+                <Animated.View entering={FadeInRight.duration(600).delay(600)}>
+                  <PlaylistsGrid
+                    playlists={homePageData.playlists}
+                    title="Popular Playlists"
+                  />
+                </Animated.View>
               )}
 
               {homePageData?.charts && homePageData.charts.length > 0 && (
-                <PlaylistsGrid
-                  playlists={homePageData.charts}
-                  title="Top Charts"
-                />
+                <Animated.View entering={FadeInLeft.duration(600).delay(700)}>
+                  <PlaylistsGrid
+                    playlists={homePageData.charts}
+                    title="Top Charts"
+                  />
+                </Animated.View>
               )}
 
               {homePageData?.albums && homePageData.albums.length > 0 && (
-                <AlbumsGrid albums={homePageData.albums} title="New Albums" />
+                <Animated.View entering={FadeInRight.duration(600).delay(800)}>
+                  <AlbumsGrid albums={homePageData.albums} title="New Albums" />
+                </Animated.View>
               )}
 
               {homePageData?.artists && homePageData.artists.length > 0 && (
-                <ArtistGrid
-                  artists={homePageData.artists}
-                  title="Artists You'll Love"
-                />
+                <Animated.View entering={FadeInLeft.duration(600).delay(900)}>
+                  <ArtistGrid
+                    artists={homePageData.artists}
+                    title="Artists You'll Love"
+                  />
+                </Animated.View>
               )}
             </Animated.View>
           </Animated.ScrollView>

@@ -1,16 +1,21 @@
 import { useUser } from "@/context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Check, ChevronRight, Music, X } from "lucide-react-native";
-import React, { useState } from "react";
+import { Check, ChevronRight, Music, X, Search } from "lucide-react-native";
+import React, { useState, useMemo } from "react";
 import {
   Alert,
   Animated,
   ScrollView,
   Text,
-  TouchableOpacity,
   View,
+  TextInput,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/context/ThemeContext";
+
 const validLangs = [
   "hindi",
   "maithili",
@@ -31,12 +36,22 @@ const validLangs = [
   "assamese",
 ];
 
+const { width } = Dimensions.get("window");
+const BUTTON_WIDTH = (width - 48) / 2; // 48 = padding (16) * 2 + gap (16)
+
 const LanguagePreference = () => {
   const { selectedLanguages, setSelectedLanguages } = useUser();
-
+  const { colors } = useTheme();
   const [selectedLangs, setSelectedLangs] = useState(
     new Set(selectedLanguages.split(",") || ["hindi"]),
   );
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredLangs = useMemo(() => {
+    return validLangs.filter((lang) =>
+      lang.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [searchQuery]);
 
   const handleLanguageToggle = (lang: string) => {
     setSelectedLangs((prev) => {
@@ -62,96 +77,81 @@ const LanguagePreference = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
-      <Animated.View className="flex-1 px-6 py-6">
-        <View className="flex-row flex-wrap justify-center mb-8">
-          {Array.from(selectedLangs).map((lang) => (
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <Animated.View className="flex flex-col px-5">
+        <Card className="mb-4">
+          <CardHeader>
             <View
-              key={lang}
-              className="bg-gray-800 rounded-full px-4 py-2 m-1 flex-row items-center"
+              className="flex-row items-center px-3 py-2 rounded-lg mb-4"
+              style={{ backgroundColor: colors.secondary }}
             >
-              <Text className="text-purple-300 text-sm capitalize font-medium">
-                {lang}
-              </Text>
-              {selectedLangs.size > 1 && (
-                <TouchableOpacity
-                  onPress={() => handleLanguageToggle(lang)}
-                  className="ml-2"
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <X size={16} color="#d8b4fe" />
-                </TouchableOpacity>
-              )}
+              <Search size={18} color={colors.mutedForeground} />
+              <TextInput
+                className="flex-1 ml-2 text-base"
+                placeholder="Search languages..."
+                placeholderTextColor={colors.mutedForeground}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                style={{ color: colors.foreground }}
+              />
             </View>
-          ))}
-        </View>
+          </CardHeader>
 
-        <View className="bg-gray-900 rounded-2xl p-5 shadow-lg mb-8">
-          <View className="flex-row items-center mb-5 border-b border-gray-800 pb-3">
-            <Music size={20} color="#d8b4fe" />
-            <Text className="text-white text-xl font-semibold ml-2">
-              Choose Your Music Languages
-            </Text>
-          </View>
-
-          <ScrollView className="h-96" showsVerticalScrollIndicator={false}>
-            <View className="flex-row flex-wrap gap-3">
-              {validLangs.map((lang) => (
-                <TouchableOpacity
-                  key={lang}
-                  onPress={() => handleLanguageToggle(lang)}
-                  className={`mb-3 p-4 rounded-xl ${
-                    selectedLangs.has(lang) ? "bg-purple-700" : "bg-gray-800"
-                  }`}
-                  style={{ width: "31%" }}
-                >
-                  <View className="flex-row items-center justify-center gap-2">
-                    <Text
-                      className={`capitalize font-medium text-center ${
-                        selectedLangs.has(lang) ? "text-white" : "text-gray-300"
-                      }`}
+          <CardContent>
+            <ScrollView
+              className="h-[55vh]"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 16 }}
+            >
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {filteredLangs.map((lang) => (
+                  <View key={lang} style={{ width: "48%" }}>
+                    <Button
+                      variant={selectedLangs.has(lang) ? "default" : "outline"}
+                      size="lg"
+                      onPress={() => handleLanguageToggle(lang)}
+                      icon={
+                        selectedLangs.has(lang) ? (
+                          <View
+                            className="bg-white rounded-full p-1"
+                            style={{ marginLeft: 8 }}
+                          >
+                            <Check size={14} color={colors.primary} />
+                          </View>
+                        ) : undefined
+                      }
+                      iconPosition="right"
                     >
-                      {lang}
-                    </Text>
-                    {selectedLangs.has(lang) && (
-                      <View className=" bg-purple-400 rounded-full p-1">
-                        <Check size={12} color="#000" />
-                      </View>
-                    )}
+                      <Text
+                        className="capitalize text-base"
+                        style={{
+                          color: selectedLangs.has(lang)
+                            ? colors.primaryForeground
+                            : colors.primary,
+                        }}
+                      >
+                        {lang}
+                      </Text>
+                    </Button>
                   </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
+                ))}
+              </View>
+            </ScrollView>
+          </CardContent>
+        </Card>
 
-        {/* Action Buttons */}
-        <View className="mt-4">
-          <TouchableOpacity
-            onPress={handleContinue}
-            className="bg-purple-600 rounded-full py-4 px-6"
-            activeOpacity={0.8}
-          >
-            <View className="flex-row justify-center items-center">
-              <Text className="text-white text-center font-bold text-lg">
-                Save Preferences
-              </Text>
-              <ChevronRight size={20} color="#fff" className="ml-1" />
-            </View>
-          </TouchableOpacity>
-
-          {/* <TouchableOpacity
-            onPress={handleSkip}
-            className="py-3 mt-3"
-            activeOpacity={0.6}
-          >
-            <Text className="text-gray-400 text-center font-medium">
-              Skip for now
-            </Text>
-          </TouchableOpacity> */}
-        </View>
+        <Button
+          variant="default"
+          size="lg"
+          onPress={handleContinue}
+          className="mt-4"
+          icon={<ChevronRight size={20} color={colors.primaryForeground} />}
+          iconPosition="right"
+        >
+          Save Preferences
+        </Button>
       </Animated.View>
-    </SafeAreaView>
+    </View>
   );
 };
 

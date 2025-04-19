@@ -37,7 +37,6 @@ const LoginScreen = () => {
       "752661424495-r0jl8s9kc6h4dsvd9ur121hci61vnch9.apps.googleusercontent.com",
     webClientId:
       "752661424495-hdf62mg8mfuje1c2f5pkoimj2rch0hjl.apps.googleusercontent.com",
-    selectAccount: true,
   });
 
   useEffect(() => {
@@ -147,10 +146,7 @@ const LoginScreen = () => {
               style={[styles.googleButton, loading && styles.buttonDisabled]}
               onPress={() => {
                 setError("");
-                promptAsync({ showInRecents: true }).catch((err) => {
-                  console.error("Error launching auth:", err);
-                  setError(`Launch error: ${err.message}`);
-                });
+                promptAsync();
               }}
               disabled={!request || loading}
               activeOpacity={0.8}

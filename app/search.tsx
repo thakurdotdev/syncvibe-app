@@ -1,5 +1,6 @@
 import { SongCard } from "@/components/music/MusicCards";
 import { usePlayer } from "@/context/MusicContext";
+import { useTheme } from "@/context/ThemeContext";
 import { Song } from "@/types/song";
 import { searchSongs } from "@/utils/api/getSongs";
 import { useDebounce } from "@/utils/hooks/useDebounce";
@@ -14,19 +15,30 @@ import {
   TouchableOpacity,
   View,
   StyleSheet,
-  Animated,
+  Animated as RNAnimated,
   Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInRight,
+  SlideOutLeft,
+  LinearTransition,
+} from "react-native-reanimated";
+import { router } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
 export default function SearchMusic() {
+  const { colors, theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const scrollY = new Animated.Value(0);
+  const scrollY = new RNAnimated.Value(0);
   const inputRef = useRef<TextInput>(null);
 
   const debouncedSearch = useDebounce(async (query: string) => {
@@ -59,6 +71,10 @@ export default function SearchMusic() {
     inputRef.current?.focus();
   };
 
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.setValue(event.nativeEvent.contentOffset.y);
+  };
+
   const renderHeader = () => {
     const headerOpacity = scrollY.interpolate({
       inputRange: [0, 80, 120],
@@ -73,27 +89,54 @@ export default function SearchMusic() {
     });
 
     return (
-      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
-        <Text style={styles.headerSubtitle}>Find your favorite songs</Text>
+      <RNAnimated.View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.background,
+            opacity: headerOpacity,
+          },
+        ]}
+      >
+        <View className="flex-row items-center mb-4">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="mr-4"
+            style={[styles.backButton]}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+          </TouchableOpacity>
+          <Text
+            style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
+          >
+            Find your favorite songs
+          </Text>
+        </View>
 
-        <Animated.View
+        <RNAnimated.View
           style={[
             styles.searchContainer,
-            { transform: [{ scale: searchScale }] },
+            {
+              transform: [{ scale: searchScale }],
+              backgroundColor:
+                theme === "light"
+                  ? "rgba(0, 0, 0, 0.05)"
+                  : "rgba(255, 255, 255, 0.05)",
+            },
           ]}
         >
           <Feather
             name="search"
             size={20}
-            color="#888"
+            color={colors.mutedForeground}
             style={styles.searchIcon}
           />
           <TextInput
             ref={inputRef}
             className="flex-1"
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="Search for songs..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={handleSearch}
             returnKeyType="search"
@@ -101,85 +144,156 @@ export default function SearchMusic() {
             autoFocus
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+            <TouchableOpacity
+              onPress={clearSearch}
+              style={[styles.clearButton]}
+            >
               <View style={styles.clearButtonInner}>
-                <Feather name="x" size={16} color="#fff" />
+                <Feather name="x" size={16} color={colors.foreground} />
               </View>
             </TouchableOpacity>
           ) : null}
-        </Animated.View>
-      </Animated.View>
+        </RNAnimated.View>
+      </RNAnimated.View>
     );
   };
 
   const renderEmptyState = () => {
     if (searchQuery) {
       return (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconContainer}>
-            <Feather name="search" size={32} color="#d1d1d1" />
+        <Animated.View
+          style={styles.emptyContainer}
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(200)}
+        >
+          <View
+            style={[
+              styles.emptyIconContainer,
+              { backgroundColor: colors.secondary },
+            ]}
+          >
+            <Feather name="search" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>No results for "{searchQuery}"</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+            No results for "{searchQuery}"
+          </Text>
+          <Text
+            style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
+          >
             Try different keywords or check your spelling
           </Text>
-        </View>
+        </Animated.View>
       );
     }
 
     return (
-      <View style={styles.emptyContainer}>
-        <View style={styles.emptyIconContainer}>
-          <Ionicons name="musical-notes" size={32} color="#f1f1f1" />
+      <Animated.View
+        style={styles.emptyContainer}
+        entering={FadeIn.duration(300)}
+        exiting={FadeOut.duration(200)}
+      >
+        <View
+          style={[
+            styles.emptyIconContainer,
+            { backgroundColor: colors.secondary },
+          ]}
+        >
+          <Ionicons name="musical-notes" size={32} color={colors.primary} />
         </View>
-        <Text style={styles.emptyTitle}>Search for music</Text>
-        <Text style={styles.emptySubtitle}>
+        <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+          Search for music
+        </Text>
+        <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
           Find artists, songs, and albums
         </Text>
-      </View>
+      </Animated.View>
     );
   };
 
+  const renderItem = ({ item, index }: { item: Song; index: number }) => (
+    <Animated.View
+      entering={SlideInRight.delay(index * 50)}
+      exiting={SlideOutLeft}
+      layout={LinearTransition.springify()}
+    >
+      <SongCard song={item} />
+    </Animated.View>
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <StatusBar
+        barStyle={theme === "light" ? "dark-content" : "light-content"}
+        backgroundColor="transparent"
+        translucent
+      />
 
       {renderHeader()}
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#ffffff" />
-          <Text style={styles.loadingText}>Searching...</Text>
-        </View>
+        <Animated.View
+          style={styles.loadingContainer}
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(200)}
+        >
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+            Searching...
+          </Text>
+        </Animated.View>
       ) : error ? (
-        <View style={styles.errorContainer}>
-          <View style={styles.errorIconContainer}>
-            <Ionicons name="alert-circle" size={32} color="#f1f1f1" />
+        <Animated.View
+          style={styles.errorContainer}
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(200)}
+        >
+          <View
+            style={[
+              styles.errorIconContainer,
+              { backgroundColor: colors.secondary },
+            ]}
+          >
+            <Ionicons name="alert-circle" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.errorTitle}>{error}</Text>
+          <Text style={[styles.errorTitle, { color: colors.foreground }]}>
+            {error}
+          </Text>
           <TouchableOpacity
-            style={styles.retryButton}
+            style={[
+              styles.retryButton,
+              {
+                backgroundColor:
+                  theme === "light"
+                    ? "rgba(0, 0, 0, 0.05)"
+                    : "rgba(255, 255, 255, 0.05)",
+              },
+            ]}
             onPress={() => handleSearch(searchQuery)}
           >
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text
+              style={[styles.retryButtonText, { color: colors.foreground }]}
+            >
+              Try Again
+            </Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       ) : (
         <FlatList
           data={songs}
-          renderItem={({ item }) => <SongCard song={item} />}
+          renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyState}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: false },
-          )}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           removeClippedSubviews={true}
           initialNumToRender={10}
           maxToRenderPerBatch={5}
           windowSize={10}
+          ItemSeparatorComponent={() => <View className="h-3" />}
         />
       )}
     </SafeAreaView>
@@ -189,24 +303,20 @@ export default function SearchMusic() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 15,
     paddingBottom: 10,
-    backgroundColor: "#121212",
   },
   headerSubtitle: {
-    color: "white",
     opacity: 0.7,
     fontSize: 16,
     fontWeight: "500",
-    marginBottom: 20,
+    flex: 1,
   },
   searchContainer: {
     flexDirection: "row",
-    backgroundColor: "#2A2A2A",
     borderRadius: 12,
     alignItems: "center",
     paddingHorizontal: 12,
@@ -218,7 +328,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "white",
     fontSize: 16,
     padding: 8,
   },
@@ -228,7 +337,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   clearButtonInner: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 12,
     padding: 4,
     width: 24,
@@ -243,7 +351,6 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
   loadingText: {
-    color: "#BBBBBB",
     marginTop: 12,
     fontSize: 15,
     fontWeight: "500",
@@ -256,7 +363,6 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
   errorIconContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     width: 70,
     height: 70,
     borderRadius: 35,
@@ -265,21 +371,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorTitle: {
-    color: "white",
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 15,
   },
   retryButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 30,
     marginTop: 10,
   },
   retryButtonText: {
-    color: "white",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -294,7 +397,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   emptyIconContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     width: 70,
     height: 70,
     borderRadius: 35,
@@ -303,21 +405,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    color: "white",
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 10,
   },
   emptySubtitle: {
-    color: "#BBBBBB",
     fontSize: 15,
     textAlign: "center",
     maxWidth: width * 0.7,
   },
-  separator: {
-    height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
-    marginVertical: 10,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

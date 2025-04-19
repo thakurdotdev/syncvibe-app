@@ -1,6 +1,8 @@
 import { SongCard } from "@/components/music/MusicCards";
+import Button from "@/components/ui/button";
 import { SONG_URL } from "@/constants";
 import { usePlayer } from "@/context/MusicContext";
+import { useTheme } from "@/context/ThemeContext";
 import { Song } from "@/types/song";
 import { convertToHttps, ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,6 +43,7 @@ interface AlbumData {
 }
 
 export default function AlbumScreen() {
+  const { colors, theme } = useTheme();
   const { id } = useLocalSearchParams();
   const [albumData, setAlbumData] = useState<AlbumData | null>(null);
   const { addToPlaylist, playSong } = usePlayer();
@@ -136,7 +139,7 @@ export default function AlbumScreen() {
   const newSongs = useMemo(() => {
     if (!albumData?.songs) return [];
     return albumData?.songs?.map(ensureHttpsForSongUrls) || [];
-  }, [albumData?.songs, ensureHttpsForSongUrls]);
+  }, [albumData?.songs]);
 
   const handlePlayAll = () => {
     if (newSongs?.length) {
@@ -164,37 +167,53 @@ export default function AlbumScreen() {
     }
   };
 
+  // Get gradient colors based on theme
+  const getGradientColors = useMemo(() => {
+    return theme === "dark"
+      ? colors.gradients.background
+      : ["rgba(30, 30, 30, 0.9)", "rgba(18, 18, 18, 0.95)"];
+  }, [theme, colors]);
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="white" />
-        <Text style={styles.loadingText}>Loading album...</Text>
+      <SafeAreaView
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>
+          Loading album...
+        </Text>
       </SafeAreaView>
     );
   }
 
   if (!albumData) {
     return (
-      <SafeAreaView style={styles.emptyContainer}>
-        <Music2Icon size={100} color="white" />
-        <Text style={styles.emptyText}>No album found</Text>
-        <Pressable style={styles.retryButton} onPress={fetchAlbumData}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </Pressable>
+      <SafeAreaView
+        style={[styles.emptyContainer, { backgroundColor: colors.background }]}
+      >
+        <Music2Icon size={100} color={colors.primary} />
+        <Text style={[styles.emptyText, { color: colors.text }]}>
+          No album found
+        </Text>
+        <Button variant="default" title="Retry" onPress={fetchAlbumData} />
       </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.FlatList
         data={newSongs}
-        renderItem={({ item, index }) => <SongCard song={item} />}
+        renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => <View style={[styles.separator]} />}
         contentContainerStyle={styles.listContent}
-        style={{ paddingHorizontal: 20 }}
+        style={{ paddingHorizontal: 10 }}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         ListHeaderComponent={
@@ -207,15 +226,19 @@ export default function AlbumScreen() {
               ]}
             >
               <LinearGradient
-                colors={["#1E1E1E", "#121212"]}
+                colors={getGradientColors}
                 style={[styles.headerGradient, { height: headerHeight }]}
               >
                 <Image
                   source={{ uri: convertToHttps(albumCoverUrl) }}
                   style={[styles.backgroundImage, { height: headerHeight }]}
-                  blurRadius={25}
+                  blurRadius={30}
                 />
-                <BlurView intensity={70} style={styles.blurOverlay}>
+                <BlurView
+                  intensity={80}
+                  tint={theme === "dark" ? "dark" : "light"}
+                  style={styles.blurOverlay}
+                >
                   <View style={styles.headerContent}>
                     <Animated.View
                       style={[styles.albumCoverContainer, imageAnimatedStyle]}
@@ -230,11 +253,20 @@ export default function AlbumScreen() {
                       />
                     </Animated.View>
                     <View style={styles.infoContainer}>
-                      <Text style={styles.albumTitle} numberOfLines={2}>
+                      <Text
+                        style={[styles.albumTitle, { color: colors.text }]}
+                        numberOfLines={2}
+                      >
                         {albumData.name}
                       </Text>
                       {artistName && (
-                        <Text style={styles.artistName} numberOfLines={2}>
+                        <Text
+                          style={[
+                            styles.artistName,
+                            { color: colors.mutedForeground },
+                          ]}
+                          numberOfLines={2}
+                        >
                           {artistName}
                         </Text>
                       )}
@@ -244,9 +276,14 @@ export default function AlbumScreen() {
                             <Ionicons
                               name="calendar-outline"
                               size={14}
-                              color="rgba(255,255,255,0.6)"
+                              color={colors.mutedForeground}
                             />
-                            <Text style={styles.statText}>
+                            <Text
+                              style={[
+                                styles.statText,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
                               {albumData.year}
                             </Text>
                           </View>
@@ -255,9 +292,14 @@ export default function AlbumScreen() {
                           <Ionicons
                             name="musical-note"
                             size={14}
-                            color="rgba(255,255,255,0.6)"
+                            color={colors.mutedForeground}
                           />
-                          <Text style={styles.statText}>
+                          <Text
+                            style={[
+                              styles.statText,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
                             {albumData.songcount}{" "}
                             {albumData.songcount === 1 ? "song" : "songs"}
                           </Text>
@@ -271,32 +313,37 @@ export default function AlbumScreen() {
 
             {/* Action buttons */}
             <View style={styles.actionsContainer}>
-              <Pressable
-                style={[styles.button, styles.playButton]}
+              <Button
                 onPress={handlePlayAll}
                 disabled={!albumData?.songs?.length}
-              >
-                <Ionicons name="play" size={22} color="black" />
-                <Text style={styles.buttonText} className="text-black">
-                  Play All
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.button, styles.shuffleButton]}
+                title="Play All"
+                icon={
+                  <Ionicons
+                    name="play"
+                    size={22}
+                    color={colors.primaryForeground}
+                  />
+                }
+                iconPosition="left"
+                variant="default"
+                size="default"
+              />
+              <Button
                 onPress={handleShuffle}
                 disabled={!albumData?.songs?.length}
-              >
-                <Ionicons name="shuffle" size={22} color="white" />
-                <Text style={styles.buttonText} className="text-white">
-                  Shuffle
-                </Text>
-              </Pressable>
+                title="Shuffle"
+                icon={<Ionicons name="shuffle" size={22} color={colors.text} />}
+                iconPosition="left"
+                variant="outline"
+                size="default"
+              />
             </View>
 
             {/* Songs header */}
             <View style={styles.songsHeader}>
-              <Text style={styles.songsHeaderText}>Tracks</Text>
+              <Text style={[styles.songsHeaderText, { color: colors.text }]}>
+                Tracks
+              </Text>
             </View>
           </View>
         }
@@ -308,42 +355,26 @@ export default function AlbumScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#121212",
     alignItems: "center",
     justifyContent: "center",
   },
   loadingText: {
-    color: "white",
     marginTop: 16,
     fontSize: 16,
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: "#121212",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
   },
   emptyText: {
-    color: "white",
     fontSize: 18,
     marginTop: 16,
     marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: "#1DB954",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 50,
-  },
-  retryButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
   headerContainer: {
     width: "100%",
@@ -391,7 +422,6 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   albumTitle: {
-    color: "white",
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 8,
@@ -400,7 +430,6 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   artistName: {
-    color: "rgba(255, 255, 255, 0.9)",
     fontSize: 16,
     fontWeight: "500",
     marginBottom: 12,
@@ -416,7 +445,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statText: {
-    color: "rgba(255, 255, 255, 0.6)",
     fontSize: 14,
   },
   actionsContainer: {
@@ -427,35 +455,11 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     gap: 16,
   },
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 50,
-    minWidth: 140,
-    gap: 8,
-  },
-  playButton: {
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-  },
-  shuffleButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  buttonText: {
-    // color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
   songsHeader: {
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
   songsHeaderText: {
-    color: "white",
     fontSize: 22,
     fontWeight: "bold",
     letterSpacing: 0.5,
@@ -465,7 +469,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    marginHorizontal: 20,
+    marginVertical: 5,
   },
 });

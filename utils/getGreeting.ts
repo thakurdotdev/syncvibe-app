@@ -3,11 +3,12 @@ export function getGreeting() {
 
   if (hour >= 23 || hour < 5) {
     const lateNightMessages = [
-      "Still awake? Poor life choices. 🌙",
-      "Insomnia or regrets? Either way, vibe on. 🎧",
-      "3 AM thoughts hitting hard, huh? 🔥",
-      "Sleep is a myth. So is happiness. 💤",
-      "Too late to fix your life, but not too late for music. 🎶",
+      "Still debugging at this hour? Respect. 🌙",
+      "console.log('Why am I still awake?'); 💤",
+      "When your code runs at 3 AM but you don't know why. 🔥",
+      "Git commit -m 'fixed bugs and created new ones' 🐛",
+      "while(awake) { listenToMusic(); } 🎧",
+      "404: Sleep not found. 💻",
     ];
     return lateNightMessages[
       Math.floor(Math.random() * lateNightMessages.length)
@@ -16,22 +17,24 @@ export function getGreeting() {
 
   if (hour < 12) {
     const morningMessages = [
-      "Morning! Time to fake productivity. ☀️",
-      "Another day, another mistake waiting to happen. 😴",
-      "Rise and regret. I mean… shine. ☕",
-      "You survived the night. Barely. 🎉",
-      "Sun’s up. Just like your stress levels. 📈",
+      "Morning! Time to turn coffee into code. ☕",
+      "System.out.println('Good Morning!'); ☀️",
+      "import java.util.Coffee; // Required to function 🧠",
+      "if(coffee > 0) { startCoding(); } else { getCoffee(); } ☕",
+      "Ah, nothing like the smell of semicolons in the morning. 💻",
+      "class Morning extends Pain implements Suffering {}",
     ];
     return morningMessages[Math.floor(Math.random() * morningMessages.length)];
   }
 
   if (hour < 18) {
     const afternoonMessages = [
-      "Midday check-in: Still broke, still tired. 🔄",
-      "That ‘afternoon slump’ is just life. 💀",
-      "You call it working, I call it suffering. ⏳",
-      "Your deadlines are laughing at you. 😂",
-      "Productivity? Never heard of it. 🎵",
+      "Stack overflow: too many meetings, not enough code. 📈",
+      "function afternoon() { return 'Why am I so tired?'; } 😴",
+      "Your code is running but so is your deadline. ⏱️",
+      "const mood = ['focused', 'caffeinated', 'confused']; 🧠",
+      "try { beProductive(); } catch(e) { listenToMusic(); } 🎵",
+      "Afternoon.js has stopped working. 💻",
     ];
     return afternoonMessages[
       Math.floor(Math.random() * afternoonMessages.length)
@@ -40,21 +43,23 @@ export function getGreeting() {
 
   if (hour < 21) {
     const eveningMessages = [
-      "You survived another day. But at what cost? 🌇",
-      "Dinner? More like eating your feelings. 🍕",
-      "Sun’s down, motivation’s gone. 😵",
-      "Almost bedtime. Almost. 😑",
-      "Your patience is lower than your phone battery. 🔋",
+      "git commit -m 'Finally fixed that bug from this morning' 🐞",
+      "select * from music where stress > productivity; 🎧",
+      "Time to push your code and your limits. 💪",
+      "console.log('End of day brain: null'); 🧠",
+      "for(let hour = 5; hour < 9; hour++) { relaxMode = true; } 🌇",
+      "while(true) { if(dayEnded) break; else panic(); } 😅",
     ];
     return eveningMessages[Math.floor(Math.random() * eveningMessages.length)];
   }
 
   const nightMessages = [
-    "Dark outside, darker inside. 🎶",
-    "Time to overthink every bad decision. 🌙",
-    "Bedtime? Nah, let’s spiral instead. 🤡",
-    "Sleep is calling. You keep declining. 📵",
-    "Tomorrow’s a new day… to mess up again. 🔄",
+    "if(brain === 'fried') { return music.play(); } 🧠",
+    "TypeError: Cannot read property 'energy' of null 🔋",
+    "async function sleep() { // Promise never resolves 😴",
+    "switch(mood) { case 'tired': return music.volume(100); } 🎵",
+    "let tomorrow = new Promise((resolve) => setTimeout(resolve, 8 * 3600000)); 🌙",
+    "sudo apt-get install motivation 💻",
   ];
   return nightMessages[Math.floor(Math.random() * nightMessages.length)];
 }
