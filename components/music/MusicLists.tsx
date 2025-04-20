@@ -31,6 +31,7 @@ import Animated, {
   FadeIn,
   FadeOut,
   Layout,
+  LinearTransition,
   SlideInRight,
 } from "react-native-reanimated";
 import {
@@ -237,9 +238,22 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
     <DraggableFlatList
       ref={scrollRef}
       data={playlist}
-      renderItem={({ item, drag, isActive }: RenderItemParams<Song>) => (
-        <SongCardQueue song={item} drag={drag} isActive={isActive} />
-      )}
+      renderItem={({
+        item,
+        getIndex,
+        drag,
+        isActive,
+      }: RenderItemParams<Song>) => {
+        const index = getIndex();
+        return (
+          <Animated.View
+            entering={FadeIn.duration(400).delay(index * 100)}
+            layout={LinearTransition.springify()}
+          >
+            <SongCardQueue song={item} drag={drag} isActive={isActive} />
+          </Animated.View>
+        );
+      }}
       keyExtractor={(item) => item.id}
       contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 8 }}
       showsVerticalScrollIndicator={false}
@@ -314,7 +328,7 @@ export const SimilarSongs = memo(
         renderItem={({ item, index }) => (
           <Animated.View
             entering={FadeIn.duration(400).delay(index * 100)}
-            layout={Layout.springify()}
+            layout={LinearTransition.springify()}
           >
             <SongCard song={item} />
           </Animated.View>

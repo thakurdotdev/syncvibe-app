@@ -352,7 +352,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
     setPlayerDrawerOpen(true);
   };
 
-  const accentColor = colors.primary || "rgb(99, 102, 241)";
+  const accentColor = colors.background || "rgb(99, 102, 241)";
 
   return (
     <>
@@ -389,32 +389,10 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
               <Ionicons
                 name={isCurrentSong && isPlaying ? "pause" : "play"}
                 size={24}
-                color="white"
+                color={colors.text}
               />
             </View>
           </View>
-
-          {isCurrentSong && (
-            <View
-              style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                height: 24,
-                width: 24,
-                borderRadius: 12,
-                backgroundColor: accentColor,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name={isPlaying ? "musical-note" : "pause"}
-                size={12}
-                color="white"
-              />
-            </View>
-          )}
 
           <View className="pt-1">
             <Text

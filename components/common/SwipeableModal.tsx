@@ -169,14 +169,7 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
       animationType="fade"
       onRequestClose={closeModal}
     >
-      <Animated.View
-        style={[
-          styles.modalContainer,
-          {
-            backgroundColor: `rgba(0, 0, 0, ${backdropOpacityAnim})`,
-          },
-        ]}
-      >
+      <Animated.View style={[styles.modalContainer]}>
         <TouchableOpacity
           style={styles.backdropTouchable}
           activeOpacity={1}

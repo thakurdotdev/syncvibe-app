@@ -1,4 +1,5 @@
 import LoginScreen from "@/app/login";
+import DeveloperProfileModal from "@/components/DeveloperProfileModal";
 import Card from "@/components/ui/card";
 import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
@@ -7,7 +8,11 @@ import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import {
+  BellIcon,
   ChevronRightIcon,
+  Code2Icon,
+  EditIcon,
+  HeartIcon,
   LanguagesIcon,
   LaptopIcon,
   LogOutIcon,
@@ -15,28 +20,21 @@ import {
   Music2Icon,
   ShieldCheckIcon,
   SunIcon,
-  Settings2Icon,
   UserIcon,
-  BellIcon,
-  HeartIcon,
-  MoreVerticalIcon,
-  EditIcon,
 } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Image,
   Pressable,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
@@ -420,6 +418,7 @@ export default function ProfileScreen() {
   const { colors, theme } = useTheme();
   const [avatarScale] = useState(new Animated.Value(1));
   const [open, setOpen] = useState(false);
+  const [showDeveloperModal, setShowDeveloperModal] = useState(false);
   const scrollY = new Animated.Value(0);
 
   const headerHeight = insets.top + 60;
@@ -501,18 +500,11 @@ export default function ProfileScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Sticky Header */}
-      <Animated.View
+      {/* Fixed Header */}
+      <View
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
           height: headerHeight,
           backgroundColor: colors.background,
-          opacity: headerOpacity,
-          transform: [{ translateY: headerTranslateY }],
-          zIndex: 1000,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
           flexDirection: "row",
@@ -533,42 +525,24 @@ export default function ProfileScreen() {
           >
             <Image
               source={{
-                uri: getProfileCloudinaryUrl(user?.profilepic),
+                uri: "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp",
               }}
               style={{ width: "100%", height: "100%" }}
               resizeMode="cover"
             />
           </View>
-          <View>
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "600",
-                color: colors.foreground,
-              }}
-            >
-              {user?.name}
-            </Text>
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.mutedForeground,
-              }}
-            >
-              @{user?.username}
-            </Text>
-          </View>
         </View>
         <TouchableOpacity
+          onPress={() => setShowDeveloperModal(true)}
           style={{
             padding: 8,
             borderRadius: 20,
             backgroundColor: colors.secondary,
           }}
         >
-          <MoreVerticalIcon size={20} color={colors.foreground} />
+          <Code2Icon size={20} color={colors.primary} />
         </TouchableOpacity>
-      </Animated.View>
+      </View>
 
       <Animated.ScrollView
         onScroll={Animated.event(
@@ -577,7 +551,7 @@ export default function ProfileScreen() {
         )}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingTop: insets.top + 20,
+          paddingTop: 20,
           paddingBottom: Math.max(insets.bottom, 30),
         }}
         showsVerticalScrollIndicator={false}
@@ -888,6 +862,12 @@ export default function ProfileScreen() {
           </Text>
         </View>
       </Animated.ScrollView>
+
+      {/* Developer Profile Modal */}
+      <DeveloperProfileModal
+        isVisible={showDeveloperModal}
+        onClose={() => setShowDeveloperModal(false)}
+      />
     </View>
   );
 }

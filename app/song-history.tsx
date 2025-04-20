@@ -86,10 +86,6 @@ const SongHistory = () => {
     }
 
     debounceTimeout.current = setTimeout(() => {
-      // Only set filtering state if this isn't the initial render
-      if (songHistory.length > 0 || searchQuery.length > 0) {
-        setIsFiltering(true);
-      }
       setDebouncedSearchQuery(searchQuery);
       setPage(1);
     }, 500);
@@ -101,15 +97,8 @@ const SongHistory = () => {
     };
   }, [searchQuery, songHistory.length]);
 
-  // Fetch songs with updated parameters when search or sort changes
   useEffect(() => {
     if (user?.userid) {
-      // Only set isFiltering true if this isn't the initial load
-      // (when there was a change to search query, sort order, or sort by)
-      const isInitialLoad = page === 1 && !songHistory.length;
-      if (!isInitialLoad) {
-        setIsFiltering(true);
-      }
       getHistorySongs(1, false);
     }
   }, [debouncedSearchQuery, sortBy, sortOrder, user?.userid]);
@@ -439,7 +428,6 @@ const SongHistory = () => {
       <SwipeableModal
         isVisible={showSortModal}
         onClose={() => setShowSortModal(false)}
-        backgroundColor={colors.background}
         maxHeight="45%"
       >
         <View style={styles.sortModalContent}>
@@ -460,16 +448,12 @@ const SongHistory = () => {
               onPress={() => handleSortSelect(option.value)}
             >
               <View style={styles.sortOptionIcon}>
-                {React.cloneElement(option.icon, {
+                {React.cloneElement(option.icon as React.ReactElement, {
                   color: colors.foreground,
                 })}
               </View>
               <Text
-                style={[
-                  styles.sortOptionText,
-                  { color: colors.foreground },
-                  sortBy === option.value && styles.sortOptionTextSelected,
-                ]}
+                style={[styles.sortOptionText, { color: colors.foreground }]}
               >
                 {option.label}
               </Text>
@@ -494,7 +478,6 @@ const SongHistory = () => {
             title="Close"
             onPress={() => setShowSortModal(false)}
             className="mt-6"
-            style={styles.closeModalButton}
           />
         </View>
       </SwipeableModal>
@@ -674,18 +657,6 @@ const styles = StyleSheet.create({
   },
   sortDirectionButton: {
     padding: 8,
-  },
-  closeModalButton: {
-    marginTop: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 25,
-    padding: 14,
-    alignItems: "center",
-  },
-  closeModalButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
 

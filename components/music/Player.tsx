@@ -5,7 +5,7 @@ import { Song } from "@/types/song";
 import { ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { useFocusEffect, usePathname, useRouter } from "expo-router";
+import { useFocusEffect, usePathname } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -23,7 +23,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { PanGestureHandler } from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
   Extrapolation,
@@ -31,7 +31,6 @@ import Animated, {
   FadeOut,
   interpolate,
   runOnJS,
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -39,16 +38,35 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrackPlayer from "react-native-track-player";
+import Button from "../ui/button";
 import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 import NewPlayerDrawer from "./NewPlayerDrawer";
-import Button from "../ui/button";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 const { height, width } = Dimensions.get("window");
 const ANIMATION_DURATION = 300;
 const TAB_ANIMATION_DURATION = 200;
 const SWIPE_THRESHOLD = 150;
+const HORIZONTAL_SWIPE_THRESHOLD = 50;
+
+// Tab constants for easier reference
+const TABS = ["player", "queue", "recommendations"] as const;
+type TabType = (typeof TABS)[number];
+
+// Helper function to get next/previous tab
+const getAdjacentTab = (
+  currentTab: TabType,
+  direction: "next" | "prev",
+): TabType => {
+  const currentIndex = TABS.indexOf(currentTab);
+  if (direction === "next") {
+    return currentIndex < TABS.length - 1
+      ? TABS[currentIndex + 1]
+      : TABS[currentIndex];
+  } else {
+    return currentIndex > 0 ? TABS[currentIndex - 1] : TABS[currentIndex];
+  }
+};
 
 const PlayerTab = React.memo(
   ({
@@ -138,13 +156,19 @@ export default function Player() {
   const { currentSong, isPlaying, isLoading } = usePlayerState();
   const { playlist } = usePlaylist();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "player" | "queue" | "recommendations"
-  >("player");
+  const [activeTab, setActiveTab] = useState<TabType>("player");
   const insets = useSafeAreaInsets();
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
   const [isPlayerVisible, setIsPlayerVisible] = useState(true);
   const lastPathRef = useRef("");
+
+  // Prevent multiple tab changes in quick succession
+  const isTabChanging = useRef(false);
+
+  // For horizontal swiping between tabs
+  const horizontalGestureTranslateX = useSharedValue(0);
+  const horizontalStartX = useSharedValue(0);
+  const isSwiping = useSharedValue(false);
 
   const handlePlayPauseSong = async () => {
     if (isPlaying) {
@@ -266,12 +290,30 @@ export default function Player() {
   }, [translateY, miniPlayerOpacity, gestureTranslateY, scale]);
 
   const handleTabPress = useCallback(
-    (tab: "player" | "queue" | "recommendations") => {
-      if (tab !== activeTab) {
+    (tab: TabType) => {
+      if (tab !== activeTab && !isTabChanging.current) {
+        isTabChanging.current = true;
         setActiveTab(tab);
+
+        // Reset after animation
+        setTimeout(() => {
+          isTabChanging.current = false;
+        }, TAB_ANIMATION_DURATION + 50);
       }
     },
     [activeTab],
+  );
+
+  const handleTabSwitch = useCallback(
+    (direction: "next" | "prev") => {
+      if (isTabChanging.current) return;
+
+      const nextTab = getAdjacentTab(activeTab, direction);
+      if (nextTab !== activeTab) {
+        handleTabPress(nextTab);
+      }
+    },
+    [activeTab, handleTabPress],
   );
 
   const artistName = useMemo(
@@ -283,7 +325,8 @@ export default function Player() {
     [currentSong],
   );
 
-  const gesture = Gesture.Pan()
+  // Vertical gesture for expanding/collapsing player
+  const verticalGesture = Gesture.Pan()
     .onStart(() => {
       "worklet";
       startY.value = gestureTranslateY.value;
@@ -305,6 +348,63 @@ export default function Player() {
           stiffness: 300,
           mass: 0.8,
         });
+      }
+    });
+
+  // Horizontal gesture for tab switching
+  const horizontalGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15]) // Start recognizing after small horizontal movement
+    .failOffsetY([-20, 20]) // Fail if vertical movement is detected first
+    .onStart(() => {
+      "worklet";
+      horizontalStartX.value = horizontalGestureTranslateX.value;
+      isSwiping.value = true;
+    })
+    .onUpdate((e) => {
+      "worklet";
+      // Apply dampening at edges to provide resistance feedback
+      const currentIndex = TABS.indexOf(activeTab as TabType);
+      const isAtLeftEdge = currentIndex === 0 && e.translationX > 0;
+      const isAtRightEdge =
+        currentIndex === TABS.length - 1 && e.translationX < 0;
+
+      if (isAtLeftEdge || isAtRightEdge) {
+        // Apply stronger dampening at edges
+        horizontalGestureTranslateX.value =
+          horizontalStartX.value + e.translationX * 0.2;
+      } else {
+        horizontalGestureTranslateX.value =
+          horizontalStartX.value + e.translationX;
+      }
+    })
+    .onEnd((e) => {
+      "worklet";
+      isSwiping.value = false;
+
+      // Reset horizontal position with animation
+      horizontalGestureTranslateX.value = withSpring(0, {
+        damping: 20,
+        stiffness: 300,
+      });
+
+      // Determine if swipe was intentional
+      if (
+        Math.abs(e.velocityX) > 500 ||
+        Math.abs(e.translationX) > HORIZONTAL_SWIPE_THRESHOLD
+      ) {
+        const currentIndex = TABS.indexOf(activeTab as TabType);
+        const isAtLeftEdge = currentIndex === 0 && e.translationX > 0;
+        const isAtRightEdge =
+          currentIndex === TABS.length - 1 && e.translationX < 0;
+
+        // Don't switch tabs if at edge
+        if (!isAtLeftEdge && !isAtRightEdge) {
+          if (e.translationX > 0) {
+            runOnJS(handleTabSwitch)("prev");
+          } else {
+            runOnJS(handleTabSwitch)("next");
+          }
+        }
       }
     });
 
@@ -341,6 +441,13 @@ export default function Player() {
           ),
         },
       ],
+    };
+  });
+
+  const tabContentStyle = useAnimatedStyle(() => {
+    return {
+      flex: 1,
+      transform: [{ translateX: horizontalGestureTranslateX.value }],
     };
   });
 
@@ -496,7 +603,7 @@ export default function Player() {
           },
         ]}
       >
-        <GestureDetector gesture={gesture}>
+        <GestureDetector gesture={verticalGesture}>
           <Animated.View>
             <View style={styles.header}>
               <Button onPress={closePlayer} variant="ghost" size="icon">
@@ -525,14 +632,12 @@ export default function Player() {
         <View
           style={[styles.tabsContainer, { borderBottomColor: colors.border }]}
         >
-          {["player", "queue", "recommendations"].map((tab) => (
+          {TABS.map((tab) => (
             <Button
               key={tab}
-              variant="ghost"
+              variant={activeTab === tab ? "secondary" : "ghost"}
               style={styles.tab}
-              onPress={() =>
-                handleTabPress(tab as "player" | "queue" | "recommendations")
-              }
+              onPress={() => handleTabPress(tab)}
             >
               <Text
                 style={[
@@ -565,7 +670,11 @@ export default function Player() {
           ))}
         </View>
 
-        <View style={styles.contentContainer}>{tabContents[activeTab]}</View>
+        <GestureDetector gesture={horizontalGesture}>
+          <Animated.View style={[styles.contentContainer, tabContentStyle]}>
+            {tabContents[activeTab]}
+          </Animated.View>
+        </GestureDetector>
       </View>
     </Animated.View>
   );
