@@ -218,7 +218,7 @@ export default function Player() {
   const startY = useSharedValue(0);
 
   const getRecommendations = useCallback(async () => {
-    if (!currentSong?.id || playlist.length > 2) return;
+    if (!currentSong?.id) return;
 
     try {
       setLoading(true);
@@ -230,19 +230,25 @@ export default function Player() {
           ensureHttpsForSongUrls,
         );
         setRecommendations(newRecommendations);
-        if (playlist.length < 2 && newRecommendations.length > 0) {
+
+        // Only add to queue if we have 0 or 1 songs in playlist
+        if (playlist.length <= 1 && newRecommendations.length > 0) {
+          // Filter out songs that are already in playlist or current song
           const filteredRecommendations = newRecommendations.filter(
             (rec: Song) =>
               rec.id !== currentSong.id &&
               !playlist.some((item) => item.id === rec.id),
           );
 
+          // If we have valid recommendations after filtering
           if (filteredRecommendations.length > 0) {
-            const randomIndex = Math.floor(
-              Math.random() * filteredRecommendations.length,
-            );
-            const songToAdd = filteredRecommendations[randomIndex];
-            addToQueue(songToAdd);
+            // Add up to 2 random songs if queue is empty, or 1 if queue has 1 song
+            const songsToAdd = playlist.length === 0 ? 2 : 1;
+            const shuffledRecommendations = [...filteredRecommendations]
+              .sort(() => Math.random() - 0.5)
+              .slice(0, songsToAdd);
+
+            addToQueue(shuffledRecommendations);
           }
         }
       }
@@ -251,7 +257,7 @@ export default function Player() {
     } finally {
       setLoading(false);
     }
-  }, [currentSong?.id]);
+  }, [currentSong?.id, playlist.length, addToQueue]);
 
   useEffect(() => {
     getRecommendations();

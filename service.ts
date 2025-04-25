@@ -214,61 +214,70 @@ export async function PlaybackService() {
       // First try to reload the current track
       const currentTrackIndex = await TrackPlayer.getActiveTrackIndex();
       if (currentTrackIndex !== undefined) {
-        // Try to reload the current track first
+        // Get current state before attempting recovery
         const wasPlaying = (await getPlaybackState()).state === State.Playing;
+        const currentPosition = await TrackPlayer.getProgress().then(
+          (progress) => progress.position,
+        );
 
         // Try multiple recovery strategies
+        let recovered = false;
+
+        // Strategy 1: Try to seek to current position
         try {
-          // Strategy 1: Skip to same track to reload it
-          await TrackPlayer.skip(currentTrackIndex);
-
+          await TrackPlayer.seekTo(currentPosition);
           if (wasPlaying) {
-            // Try to resume playback
-            await TrackPlayer.play().catch(() => {
-              // If direct resume fails, try with delay
-              setTimeout(() => TrackPlayer.play(), 300);
-            });
+            await TrackPlayer.play();
           }
-        } catch (recoveryError) {
-          console.error("First recovery attempt failed:", recoveryError);
+          recovered = true;
+        } catch (seekError) {
+          console.log("Seek recovery failed:", seekError);
+        }
 
+        // Strategy 2: If seek failed, try to reload the track
+        if (!recovered) {
           try {
-            // Strategy 2: Get the track and re-add it
+            await TrackPlayer.skip(currentTrackIndex);
+            if (wasPlaying) {
+              await TrackPlayer.play();
+            }
+            recovered = true;
+          } catch (skipError) {
+            console.log("Skip recovery failed:", skipError);
+          }
+        }
+
+        // Strategy 3: If both failed, try to re-add the track
+        if (!recovered) {
+          try {
             const currentTrack = await TrackPlayer.getTrack(currentTrackIndex);
             if (currentTrack) {
               await TrackPlayer.remove(currentTrackIndex);
               await TrackPlayer.add(currentTrack, currentTrackIndex);
-
               if (wasPlaying) {
                 await TrackPlayer.skip(currentTrackIndex);
                 await TrackPlayer.play();
               }
+              recovered = true;
             }
-          } catch (secondRecoveryError) {
-            console.error(
-              "Second recovery attempt failed:",
-              secondRecoveryError,
-            );
+          } catch (readdError) {
+            console.log("Re-add recovery failed:", readdError);
           }
         }
 
-        // If still in error state after brief delay, try next track
-        setTimeout(async () => {
-          const newState = await getPlaybackState();
-          if (newState.state === State.Error) {
-            const queue = await TrackPlayer.getQueue();
-            if (currentTrackIndex < queue.length - 1) {
-              await TrackPlayer.skipToNext();
-              await TrackPlayer.play();
+        // Only move to next track if all recovery attempts failed
+        if (!recovered) {
+          // Wait a bit before trying next track to prevent rapid skipping
+          setTimeout(async () => {
+            const newState = await getPlaybackState();
+            if (newState.state === State.Error) {
+              const queue = await TrackPlayer.getQueue();
+              if (currentTrackIndex < queue.length - 1) {
+                await TrackPlayer.skipToNext();
+                await TrackPlayer.play();
+              }
             }
-          }
-        }, 500);
-      } else {
-        // No active track index, try to recover by playing the first track
-        const queue = await TrackPlayer.getQueue();
-        if (queue.length > 0) {
-          await TrackPlayer.skip(0);
-          await TrackPlayer.play();
+          }, 1000); // Increased delay to prevent rapid skipping
         }
       }
     } catch (error) {
@@ -307,7 +316,7 @@ export async function PlaybackService() {
     }
   });
 
-  // Enhanced active track change handling with pre-buffering of next tracks
+  // Enhanced active track change handling to prevent unintended skips
   TrackPlayer.addEventListener(
     Event.PlaybackActiveTrackChanged,
     async (event) => {
@@ -317,27 +326,37 @@ export async function PlaybackService() {
             `Now playing: ${event.track.title} by ${event.track.artist}`,
           );
 
-          // Pre-buffer next track when a new track starts playing
-          const currentIndex = await TrackPlayer.getActiveTrackIndex();
-          if (currentIndex !== undefined) {
-            const queue = await TrackPlayer.getQueue();
+          // Add a small delay before pre-buffering to ensure stable playback
+          setTimeout(async () => {
+            try {
+              const currentIndex = await TrackPlayer.getActiveTrackIndex();
+              if (currentIndex !== undefined) {
+                const queue = await TrackPlayer.getQueue();
+                const currentState = await TrackPlayer.getState();
 
-            // Pre-buffer next track
-            if (currentIndex < queue.length - 1) {
-              nextTrackCache = queue[currentIndex + 1];
-            } else if (queue.length > 0) {
-              // If we're on the last track, cache the first one for loop playback
-              nextTrackCache = queue[0];
-            }
+                // Only pre-buffer if we're actually playing
+                if (currentState === State.Playing) {
+                  // Pre-buffer next track
+                  if (currentIndex < queue.length - 1) {
+                    nextTrackCache = queue[currentIndex + 1];
+                  } else if (queue.length > 0) {
+                    // If we're on the last track, cache the first one for loop playback
+                    nextTrackCache = queue[0];
+                  }
 
-            // Pre-buffer previous track
-            if (currentIndex > 0) {
-              previousTrackCache = queue[currentIndex - 1];
-            } else if (queue.length > 1) {
-              // If we're on the first track, cache the last one for wrap-around
-              previousTrackCache = queue[queue.length - 1];
+                  // Pre-buffer previous track
+                  if (currentIndex > 0) {
+                    previousTrackCache = queue[currentIndex - 1];
+                  } else if (queue.length > 1) {
+                    // If we're on the first track, cache the last one for wrap-around
+                    previousTrackCache = queue[queue.length - 1];
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error in pre-buffering:", error);
             }
-          }
+          }, 500);
         }
       } catch (error) {
         console.error("Error in active track changed handler:", error);

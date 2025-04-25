@@ -22,6 +22,7 @@ import TrackPlayer, {
   State,
   Track,
   useTrackPlayerEvents,
+  RepeatMode,
 } from "react-native-track-player";
 import { getPlaybackState } from "react-native-track-player/lib/src/trackPlayer";
 import { useUser } from "./UserContext";
@@ -596,6 +597,12 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         if (!song?.id) return;
 
         try {
+          // Prevent multiple simultaneous play operations
+          if (playbackStateRef.current.isLoading) {
+            console.log("Already loading a song, ignoring request");
+            return;
+          }
+
           playbackDispatch({ type: "SET_CURRENT_SONG", payload: song });
           playbackDispatch({ type: "SET_LOADING", payload: true });
           playbackDispatch({ type: "SET_PLAYING", payload: true });
@@ -604,6 +611,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             try {
               // Reset the player first to clear any existing queue
               await TrackPlayer.reset();
+              preBufferedSongs.current.clear(); // Clear pre-buffered songs cache
 
               // Convert the selected song to a track
               const track = await convertSongToTrack(song);
@@ -619,6 +627,9 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 (s) => s.id === song.id,
               );
 
+              // Set repeat mode to off by default
+              await TrackPlayer.setRepeatMode(RepeatMode.Off);
+
               if (songIndex >= 0) {
                 // Get the remaining songs in the playlist (including the current one)
                 const remainingPlaylist =
@@ -627,7 +638,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 // For better performance, only add the first few songs immediately
                 const initialBatch = remainingPlaylist.slice(
                   0,
-                  Math.min(5, remainingPlaylist.length),
+                  Math.min(3, remainingPlaylist.length),
                 );
 
                 // Convert and add initial batch
@@ -636,9 +647,9 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 );
                 const filteredTracks = tracksToAdd.filter((track) => track.url);
 
-                // Add initial tracks to queue
                 if (filteredTracks.length > 0) {
                   await TrackPlayer.add(filteredTracks);
+                  await TrackPlayer.skip(0); // Ensure we're at the first track
                 }
 
                 // Add remaining songs in the background
@@ -664,58 +675,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                   }, 100);
                 }
               } else {
-                // If the song isn't in the playlist, add it first
+                // If the song isn't in the playlist, just add and play it
                 await TrackPlayer.add([track]);
-
-                // Add other songs in the background for continuous playback
-                if (playlistState.playlist.length > 0) {
-                  setTimeout(async () => {
-                    try {
-                      const playlistSongs = playlistState.playlist.filter(
-                        (s) => s.id !== song.id,
-                      );
-
-                      // For better performance, only convert a batch of songs first
-                      const initialBatch = playlistSongs.slice(
-                        0,
-                        Math.min(5, playlistSongs.length),
-                      );
-
-                      // Convert and add initial batch
-                      const playlistTracks = await Promise.all(
-                        initialBatch.map(convertSongToTrack),
-                      );
-                      const filteredTracks = playlistTracks.filter(
-                        (track) => track.url,
-                      );
-
-                      if (filteredTracks.length > 0) {
-                        await TrackPlayer.add(filteredTracks);
-                      }
-
-                      // Process remaining tracks in the background
-                      if (playlistSongs.length > initialBatch.length) {
-                        setTimeout(async () => {
-                          const remainingBatch = playlistSongs.slice(
-                            initialBatch.length,
-                          );
-                          const remainingTracks = await Promise.all(
-                            remainingBatch.map(convertSongToTrack),
-                          );
-                          const filteredRemainingTracks =
-                            remainingTracks.filter((track) => track.url);
-
-                          if (filteredRemainingTracks.length > 0) {
-                            await TrackPlayer.add(filteredRemainingTracks);
-                          }
-                        }, 200);
-                      }
-                    } catch (error) {
-                      console.error("Error adding playlist tracks:", error);
-                    }
-                  }, 100);
-                }
+                await TrackPlayer.skip(0); // Ensure we're at the first track
               }
+
+              // Start playback
+              await TrackPlayer.play();
 
               if (user?.userid && song.id) {
                 addToHistory(song, 10).catch((err: any) => {
@@ -723,20 +689,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 });
               }
 
-              await TrackPlayer.play();
-
-              if (playlistState.playlist.length > 1) {
-                if (songIndex >= 0) {
-                  preBufferTracks(playlistState.playlist, songIndex);
-                }
-              }
-
               playbackDispatch({ type: "SET_LOADING", payload: false });
             } catch (error) {
               console.error("Error in play operation:", error);
               playbackDispatch({ type: "SET_LOADING", payload: false });
 
-              if (playlistState.playlist.length > 0) {
+              // Only try next song if we're in a playlist and there was a real error
+              if (playlistState.playlist.length > 0 && error instanceof Error) {
                 setTimeout(() => controls.handleNextSong(), 300);
               }
             }

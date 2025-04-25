@@ -241,9 +241,9 @@ export default function GroupMusicMobile() {
             <View style={{ flex: 1 }}>
               {/* Group Info */}
               <Card variant="outline" className="m-4">
-                <CardHeader>
+                <CardContent className="flex-row justify-between items-center">
                   <CardTitle>{currentGroup.name}</CardTitle>
-                  <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
                     <TouchableOpacity
                       onPress={handleCopyGroupId}
                       style={{
@@ -299,7 +299,7 @@ export default function GroupMusicMobile() {
                       </Text>
                     </TouchableOpacity>
                   </View>
-                </CardHeader>
+                </CardContent>
               </Card>
 
               {/* Current Song Display */}
