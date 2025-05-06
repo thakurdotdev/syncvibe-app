@@ -1,14 +1,13 @@
+import { Platform } from "react-native";
 import TrackPlayer, {
-  Capability,
-  AppKilledPlaybackBehavior,
   AndroidAudioContentType,
+  AppKilledPlaybackBehavior,
+  Capability,
   IOSCategory,
-  IOSCategoryOptions,
   IOSCategoryMode,
+  IOSCategoryOptions,
   RepeatMode,
 } from "react-native-track-player";
-import { Platform } from "react-native";
-import * as Network from "expo-network";
 
 let setupPromise: Promise<boolean> | null = null;
 
@@ -31,13 +30,6 @@ export const setupPlayer = async (): Promise<boolean> => {
         console.log("Initializing TrackPlayer...");
       }
 
-      // Check network connection to determine optimal buffer settings
-      const networkState = await Network.getNetworkStateAsync();
-      const isWifi = networkState.type === Network.NetworkStateType.WIFI;
-      const isGoodConnection =
-        networkState.isConnected &&
-        (isWifi || networkState.isInternetReachable);
-
       // Initialize the player with optimized settings
       // Following strictly the documentation: https://rntp.dev/docs/api/objects/player-options
       await TrackPlayer.setupPlayer({
@@ -49,14 +41,7 @@ export const setupPlayer = async (): Promise<boolean> => {
 
         // Platform-specific audio settings
         ...(Platform.OS === "android" && {
-          // Set content type to music for better audio focus handling
           androidAudioContentType: AndroidAudioContentType.Music,
-
-          // Android-specific buffer settings - optimize based on connection quality
-          minBuffer: isGoodConnection ? 30 : 15, // Increased buffer for better experience
-          maxBuffer: isGoodConnection ? 120 : 60, // Increased maximum buffer
-          playBuffer: 1.5, // Start playback faster after buffering begins (reduced from 3)
-          backBuffer: 30, // Increase back buffer to 30 seconds for smoother rewind experience
         }),
 
         ...(Platform.OS === "ios" && {
@@ -78,9 +63,6 @@ export const setupPlayer = async (): Promise<boolean> => {
 
         // Handle audio interruptions automatically (calls, alarms, etc.)
         autoHandleInterruptions: true,
-
-        // Optimize buffering strategy - changed to false for immediate playback
-        waitForBuffer: false,
       });
 
       // Set initial repeat mode
@@ -145,22 +127,4 @@ export const setupPlayer = async (): Promise<boolean> => {
   })();
 
   return setupPromise;
-};
-
-// New helper function to dynamically select audio quality based on network conditions
-export const getOptimalAudioQuality = async () => {
-  try {
-    const networkState = await Network.getNetworkStateAsync();
-    const isWifi = networkState.type === Network.NetworkStateType.WIFI;
-    const isGoodConnection =
-      networkState.isConnected && (isWifi || networkState.isInternetReachable);
-
-    // Return index for optimal audio quality (0 = lowest, 2 = highest)
-    if (isWifi) return 2; // High quality on WiFi
-    if (isGoodConnection) return 1; // Medium quality on good cellular
-    return 0; // Low quality on poor connections
-  } catch (error) {
-    console.error("Error getting network info:", error);
-    return 1; // Default to medium quality
-  }
 };

@@ -2,15 +2,22 @@ import Card from "@/components/ui/card";
 import { usePlayer, usePlayerState } from "@/context/MusicContext";
 import { useTheme } from "@/context/ThemeContext";
 import { Song } from "@/types/song";
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import {
   ChevronRightIcon,
+  GripVerticalIcon,
   RefreshCcwIcon,
   Trash2Icon,
 } from "lucide-react-native";
-import React, { memo, useCallback, useMemo, useRef } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -29,8 +36,6 @@ import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import Animated, {
   FadeIn,
-  FadeOut,
-  Layout,
   LinearTransition,
   SlideInRight,
 } from "react-native-reanimated";
@@ -73,8 +78,8 @@ const SongCardQueue = memo(
     drag: () => void;
     isActive: boolean;
   }) => {
-    const { colors, theme } = useTheme();
-    const { playSong, addToQueue, removeFromQueue } = usePlayer();
+    const { colors } = useTheme();
+    const { playSong, removeFromQueue } = usePlayer();
     const { currentSong } = usePlayerState();
     const isCurrentSong = currentSong?.id === song.id;
     const swipeableRef = useRef<Swipeable>(null);
@@ -83,7 +88,13 @@ const SongCardQueue = memo(
       playSong(song);
     }, [song, playSong]);
 
-    const songImage = useMemo(() => song.image[0]?.link, [song.image]);
+    const handleDelete = useCallback(() => {
+      removeFromQueue(song.id);
+      swipeableRef.current?.close();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }, [removeFromQueue, song.id]);
+
+    const songImage = useMemo(() => song.image[1]?.link, [song.image]);
     const songName = useMemo(() => song.name, [song.name]);
     const songArtist = useMemo(
       () => song.subtitle || song.artist_map?.artists?.[0]?.name,
@@ -91,20 +102,16 @@ const SongCardQueue = memo(
     );
 
     const renderRightActions = useCallback(
-      (progressAnimatedValue: any, dragAnimatedValue: any) => {
+      (progress: any, dragX: any) => {
         return (
           <RectButton
-            onPress={() => {
-              removeFromQueue(song.id);
-              swipeableRef.current?.close();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }}
+            onPress={handleDelete}
             style={{
               backgroundColor: "#dc2626",
               justifyContent: "center",
               alignItems: "center",
-              width: 80,
-              marginBottom: 8,
+              width: 60,
+              height: "100%",
             }}
           >
             <View style={{ alignItems: "center", justifyContent: "center" }}>
@@ -114,7 +121,7 @@ const SongCardQueue = memo(
           </RectButton>
         );
       },
-      [removeFromQueue, song],
+      [handleDelete],
     );
 
     return (
@@ -125,10 +132,17 @@ const SongCardQueue = memo(
             renderRightActions={renderRightActions}
             friction={2}
             rightThreshold={40}
+            overshootRight={false}
+            containerStyle={{
+              marginHorizontal: 8,
+              marginVertical: 4,
+              overflow: "hidden",
+            }}
           >
             <Animated.View
               entering={SlideInRight.duration(400)}
-              layout={Layout.springify()}
+              layout={LinearTransition.springify()}
+              style={{ backgroundColor: colors.card }}
             >
               <Pressable
                 onLongPress={() => {
@@ -141,28 +155,16 @@ const SongCardQueue = memo(
               >
                 <Card
                   variant={isCurrentSong ? "secondary" : "default"}
-                  className="w-full flex-row rounded-2xl p-3 my-1"
+                  className="w-full flex-row rounded-none h-[60px]"
                 >
                   <View className="relative">
                     <Image
                       source={{ uri: songImage }}
-                      className="w-14 h-14 rounded-xl"
-                      style={{ width: 56, height: 56, borderRadius: 12 }}
+                      style={{ width: 56, height: 60 }}
                     />
-                    {isCurrentSong && (
-                      <View
-                        className="absolute bottom-0 right-0 w-4 h-4 rounded-full items-center justify-center"
-                        style={{ backgroundColor: colors.primary }}
-                      >
-                        <View
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: colors.primaryForeground }}
-                        />
-                      </View>
-                    )}
                   </View>
 
-                  <View className="flex-1 px-4 justify-center">
+                  <View className="flex-1 p-3 px-4 justify-center">
                     <Text
                       style={{ color: colors.cardForeground }}
                       className="font-semibold text-base"
@@ -179,28 +181,13 @@ const SongCardQueue = memo(
                     </Text>
                   </View>
 
-                  {isActive ? (
-                    <View className="justify-center">
-                      <Ionicons
-                        name="menu"
-                        size={24}
-                        color={colors.cardForeground}
-                      />
-                    </View>
-                  ) : (
-                    <View className="justify-center">
-                      <View
-                        className="h-8 w-8 rounded-full items-center justify-center"
-                        style={{ backgroundColor: colors.muted }}
-                      >
-                        <Ionicons
-                          name="reorder-three"
-                          size={20}
-                          color={colors.mutedForeground}
-                        />
-                      </View>
-                    </View>
-                  )}
+                  {/* Drag Handle Area */}
+                  <View className="justify-center pl-2">
+                    <GripVerticalIcon
+                      size={24}
+                      color={isActive ? colors.primary : colors.mutedForeground}
+                    />
+                  </View>
                 </Card>
               </Pressable>
             </Animated.View>
@@ -215,16 +202,22 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
   const { colors } = useTheme();
   const { reorderPlaylist } = usePlayer();
   const scrollRef = useRef(null);
+  const [localPlaylist, setLocalPlaylist] = useState<Song[]>(playlist);
+
+  useEffect(() => {
+    setLocalPlaylist(playlist);
+  }, [playlist]);
 
   const handleDragEnd = useCallback(
     ({ data }: { data: Song[] }) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setLocalPlaylist(data);
       reorderPlaylist(data);
     },
     [reorderPlaylist],
   );
 
-  if (!playlist.length) {
+  if (!localPlaylist.length) {
     return (
       <View className="items-center justify-center py-10">
         <Text className="text-lg" style={{ color: colors.text }}>
@@ -237,7 +230,7 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
   return (
     <DraggableFlatList
       ref={scrollRef}
-      data={playlist}
+      data={localPlaylist}
       renderItem={({
         item,
         getIndex,
@@ -334,7 +327,7 @@ export const SimilarSongs = memo(
           </Animated.View>
         )}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 50 }}
+        contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 8 }}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View className="h-2" />}
         scrollEnabled={true}
@@ -361,7 +354,7 @@ export const AlbumsGrid = ({ albums, title }: AlbumsGridProps) => {
         renderItem={({ item, index }) => (
           <Animated.View
             entering={FadeIn.duration(400).delay(index * 100)}
-            layout={Layout.springify()}
+            layout={LinearTransition.springify()}
           >
             <AlbumCard album={item} />
           </Animated.View>
@@ -392,7 +385,7 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
         renderItem={({ item, index }) => (
           <Animated.View
             entering={FadeIn.duration(400).delay(index * 100)}
-            layout={Layout.springify()}
+            layout={LinearTransition.springify()}
           >
             <PlaylistCard playlist={item} isUser={false} />
           </Animated.View>
@@ -441,7 +434,7 @@ export const RecommendationGrid = ({
         renderItem={({ item, index }) => (
           <Animated.View
             entering={FadeIn.duration(400).delay(index * 100)}
-            layout={Layout.springify()}
+            layout={LinearTransition.springify()}
           >
             <NewSongCard song={item} />
           </Animated.View>
@@ -477,7 +470,7 @@ export const TrendingSongs = memo(
           renderItem={({ item, index }) => (
             <Animated.View
               entering={FadeIn.duration(400).delay(index * 100)}
-              layout={Layout.springify()}
+              layout={LinearTransition.springify()}
             >
               <NewSongCard song={item} />
             </Animated.View>
@@ -509,7 +502,7 @@ export const ArtistGrid = memo(({ artists, title }: ArtistGridProps) => {
         renderItem={({ item, index }) => (
           <Animated.View
             entering={FadeIn.duration(400).delay(index * 100)}
-            layout={Layout.springify()}
+            layout={LinearTransition.springify()}
           >
             <ArtistCard artist={item} />
           </Animated.View>

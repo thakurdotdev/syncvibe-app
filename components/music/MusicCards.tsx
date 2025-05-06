@@ -140,24 +140,24 @@ export const SongCard = memo(
     }, []);
 
     return (
-      <Card variant="default">
-        <Card.Content>
+      <Card variant="default" className="h-[60px] p-0 rounded-none">
+        <Card.Content className="p-0 rounded-none">
           <Pressable
             onPress={handlePress}
             onLongPress={disableOnLongPress ? undefined : handleLongPress}
-            className="flex-row items-center rounded-none overflow-hidden"
+            className="w-full flex-row rounded-none h-[60px]"
           >
             <View className="relative">
               <Image
-                source={{ uri: securedSong.image[0]?.link }}
-                className="w-14 h-14 rounded-lg"
+                source={{ uri: securedSong.image[1]?.link }}
+                style={{ width: 56, height: 60 }}
                 alt="Song cover"
                 fadeDuration={0}
                 resizeMode="cover"
               />
             </View>
 
-            <View className="flex-1 px-4 justify-center">
+            <View className="flex-1 p-3 px-4 justify-center">
               <Text
                 style={{ color: colors.text, fontWeight: "600", fontSize: 16 }}
                 numberOfLines={1}

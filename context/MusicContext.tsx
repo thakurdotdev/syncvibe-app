@@ -6,8 +6,9 @@ import {
   PlaylistState,
 } from "@/types/music";
 import { Song } from "@/types/song";
+import { playbackHistory } from "@/utils/playbackHistory";
 import useApi from "@/utils/hooks/useApi";
-import { setupPlayer, getOptimalAudioQuality } from "@/utils/playerSetup";
+import { setupPlayer } from "@/utils/playerSetup";
 import {
   createContext,
   ReactNode,
@@ -17,26 +18,16 @@ import {
   useReducer,
   useRef,
 } from "react";
+import { AppState } from "react-native";
 import TrackPlayer, {
   Event,
+  RepeatMode,
   State,
   Track,
   useTrackPlayerEvents,
-  RepeatMode,
 } from "react-native-track-player";
 import { getPlaybackState } from "react-native-track-player/lib/src/trackPlayer";
 import { useUser } from "./UserContext";
-import { addToHistory } from "@/utils/api/addToHistory";
-import { AppState } from "react-native";
-import * as Network from "expo-network";
-
-const CUSTOM_EVENTS = {
-  REMOTE_NEXT_TRIGGERED: "remote-next-triggered",
-  REMOTE_PREV_TRIGGERED: "remote-prev-triggered",
-};
-
-// Use a global cache for tracks to improve performance
-const trackCache = new Map<string, Track>();
 
 // Context definitions remain unchanged
 const PlayerControlsContext = createContext<PlayerControls | undefined>(
@@ -127,45 +118,15 @@ export const usePlaylist = (): PlaylistContextValue => {
   return context;
 };
 
-// Optimized function to convert songs to tracks with dynamic quality selection based on network
 const convertSongToTrack = async (song: Song): Promise<Track> => {
-  // Check if we already have this track in cache
-  const cachedTrack = trackCache.get(song.id);
-  if (cachedTrack) {
-    return cachedTrack;
-  }
+  const audioUrl =
+    song.download_url[3]?.link ||
+    song.download_url[2]?.link ||
+    song.download_url[1]?.link ||
+    song.download_url[0]?.link;
 
-  // Determine optimal audio quality based on network conditions
-  const qualityIndex = await getOptimalAudioQuality();
-
-  // Select audio URL based on quality and availability
-  let audioUrl = "";
-  if (song.download_url) {
-    if (qualityIndex === 2 && song.download_url[3]?.link) {
-      // High quality
-      audioUrl = song.download_url[3].link;
-    } else if (qualityIndex === 1 && song.download_url[2]?.link) {
-      // Medium quality
-      audioUrl = song.download_url[2].link;
-    } else if (song.download_url[1]?.link) {
-      // Low quality
-      audioUrl = song.download_url[1].link;
-    } else {
-      // Fallback to any available quality
-      audioUrl =
-        song.download_url[3]?.link ||
-        song.download_url[2]?.link ||
-        song.download_url[1]?.link ||
-        song.download_url[0]?.link;
-    }
-  }
-
-  // Select image quality based on device screen density
-  let artwork = "";
-  if (song.image) {
-    // Choose the best quality image available
-    artwork = song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
-  }
+  const artwork =
+    song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
 
   const track = {
     id: song.id,
@@ -176,9 +137,6 @@ const convertSongToTrack = async (song: Song): Promise<Track> => {
     artwork: artwork,
     duration: song.duration || 0,
   };
-
-  // Store in cache to avoid redundant conversions
-  trackCache.set(song.id, track);
 
   return track;
 };
@@ -200,9 +158,8 @@ export function MusicProvider({ children }: PlayerProviderProps) {
   const playerSetupPromise = useRef<Promise<boolean> | null>(null);
   const queueUpdateInProgress = useRef(false);
   const pendingPlayAction = useRef<(() => Promise<void>) | null>(null);
-  const lastNetworkState = useRef({ isConnected: true, isWifi: true });
-  const preBufferedSongs = useRef<Set<string>>(new Set());
   const isSwitchingTracks = useRef(false);
+  const appStateRef = useRef(AppState.currentState);
 
   const [playbackState, playbackDispatch] = useReducer(playbackReducer, {
     currentSong: null,
@@ -214,69 +171,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     playlist: [] as Song[],
     userPlaylist: [] as Song[],
   });
-
-  useEffect(() => {
-    playbackStateRef.current = playbackState;
-  }, [playbackState]);
-
-  // Network monitoring for adaptive quality
-  useEffect(() => {
-    const monitorNetwork = async () => {
-      const networkState = await Network.getNetworkStateAsync();
-      lastNetworkState.current = {
-        isConnected: networkState.isConnected || false,
-        isWifi: networkState.type === Network.NetworkStateType.WIFI,
-      };
-
-      // Clear track cache when network changes significantly to allow quality adaptation
-      if (
-        networkState.type === Network.NetworkStateType.WIFI &&
-        !lastNetworkState.current.isWifi
-      ) {
-        trackCache.clear();
-        preBufferedSongs.current.clear();
-      }
-    };
-
-    const subscription = Network.addNetworkStateListener(monitorNetwork);
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  // Pre-buffer logic - more efficient track preloading
-  const preBufferTracks = async (songs: Song[], currentIndex: number) => {
-    try {
-      if (!songs.length || songs.length <= 1) return;
-
-      // Pre-buffer next track
-      const nextIndex = (currentIndex + 1) % songs.length;
-      const nextSong = songs[nextIndex];
-
-      // Only pre-buffer if we haven't already
-      if (nextSong && !preBufferedSongs.current.has(nextSong.id)) {
-        const nextTrack = await convertSongToTrack(nextSong);
-        preBufferedSongs.current.add(nextSong.id);
-      }
-
-      // Pre-buffer previous track (for faster back navigation)
-      const prevIndex = currentIndex > 0 ? currentIndex - 1 : songs.length - 1;
-      const prevSong = songs[prevIndex];
-
-      // Only pre-buffer if we haven't already
-      if (
-        prevSong &&
-        currentIndex !== prevIndex &&
-        !preBufferedSongs.current.has(prevSong.id)
-      ) {
-        const prevTrack = await convertSongToTrack(prevSong);
-        preBufferedSongs.current.add(prevSong.id);
-      }
-    } catch (error) {
-      console.error("Error pre-buffering tracks:", error);
-    }
-  };
 
   // Initialize TrackPlayer once with optimized settings
   useEffect(() => {
@@ -317,52 +211,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     };
   }, []);
 
-  // Listen for app state changes to optimize background/foreground transitions
-  useEffect(() => {
-    const subscription = AppState.addEventListener(
-      "change",
-      async (nextAppState) => {
-        if (nextAppState === "active") {
-          try {
-            // App came to foreground
-            if (
-              playbackStateRef.current.currentSong &&
-              playerSetupComplete.current
-            ) {
-              // Refresh the player state for better sync with notification controls
-              const playerState = await getPlaybackState();
-              playbackDispatch({
-                type: "SET_PLAYING",
-                payload: playerState.state === State.Playing,
-              });
-
-              // Pre-buffer tracks again if needed
-              if (
-                playlistState.playlist.length > 0 &&
-                playbackStateRef.current.currentSong
-              ) {
-                const currentIndex = playlistState.playlist.findIndex(
-                  (song) =>
-                    song.id === playbackStateRef.current.currentSong?.id,
-                );
-
-                if (currentIndex >= 0) {
-                  preBufferTracks(playlistState.playlist, currentIndex);
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Error handling app state change:", error);
-          }
-        }
-      },
-    );
-
-    return () => {
-      subscription.remove();
-    };
-  }, [playlistState.playlist]);
-
   // Handle TrackPlayer events with improved responsiveness
   useTrackPlayerEvents(
     [
@@ -380,9 +228,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
       Event.RemoteJumpForward,
       Event.RemoteJumpBackward,
       Event.PlaybackProgressUpdated,
-      // Listen for custom events from service.ts for faster UI updates
-      CUSTOM_EVENTS.REMOTE_NEXT_TRIGGERED as any,
-      CUSTOM_EVENTS.REMOTE_PREV_TRIGGERED as any,
     ],
     async (event) => {
       try {
@@ -446,23 +291,58 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                       payload: currentSong,
                     });
 
-                    // Add song to history in background
+                    // Use only playbackHistory for tracking instead of direct addToHistory
                     if (user?.userid && currentSong.id) {
-                      addToHistory(currentSong, 10).catch((err: any) => {
-                        console.error("Error adding to history:", err);
-                      });
+                      const duration = currentSong.duration || 0;
+                      playbackHistory
+                        .updatePlaybackProgress(currentSong, 0, duration)
+                        .catch((err) => {
+                          console.error(
+                            "Error updating playback history:",
+                            err,
+                          );
+                        });
                     }
 
-                    // Remove the song from the playlist after it starts playing
-                    // This will update the React state but not affect current playback
-                    playlistDispatch({
-                      type: "REMOVE_FROM_PLAYLIST",
-                      payload: currentSong.id,
-                    });
-                  }
+                    // Log when track changes
+                    console.log(
+                      `Now playing: ${currentSong.name} by ${
+                        currentSong?.artist_map?.primary_artists?.[0]?.name ||
+                        "Unknown Artist"
+                      }`,
+                    );
 
-                  // Pre-buffer next and previous songs for faster navigation
-                  preBufferTracks(playlistState.playlist, songIndex);
+                    // Remove all songs up to and including the current song from playlist state
+                    const updatedPlaylist = playlistState.playlist.slice(
+                      songIndex + 1,
+                    );
+                    playlistDispatch({
+                      type: "SET_PLAYLIST",
+                      payload: updatedPlaylist,
+                    });
+
+                    // Also remove tracks before the current one from TrackPlayer queue
+                    // We need to do this in a setTimeout to avoid affecting current playback
+                    const currentIndex = event.index;
+                    if (typeof currentIndex === "number" && currentIndex > 0) {
+                      setTimeout(async () => {
+                        try {
+                          // Remove tracks before the current one
+                          for (let i = 0; i < currentIndex; i++) {
+                            await TrackPlayer.remove(0);
+                          }
+                          console.log(
+                            `Removed ${currentIndex} previous tracks from queue`,
+                          );
+                        } catch (error) {
+                          console.error(
+                            "Error removing tracks from queue:",
+                            error,
+                          );
+                        }
+                      }, 500);
+                    }
+                  }
                 }
               }
             }
@@ -503,23 +383,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               if (wasPlaying) {
                 await TrackPlayer.play();
               }
-            }
-            break;
-
-          // Optimized for immediate UI feedback
-          case CUSTOM_EVENTS.REMOTE_NEXT_TRIGGERED as any:
-            // Show immediate UI feedback before the track actually changes
-            if (!isSwitchingTracks.current) {
-              isSwitchingTracks.current = true;
-              playbackDispatch({ type: "SET_LOADING", payload: true });
-            }
-            break;
-
-          case CUSTOM_EVENTS.REMOTE_PREV_TRIGGERED as any:
-            // Show immediate UI feedback before the track actually changes
-            if (!isSwitchingTracks.current) {
-              isSwitchingTracks.current = true;
-              playbackDispatch({ type: "SET_LOADING", payload: true });
             }
             break;
 
@@ -581,6 +444,27 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               Math.max(0, currentPositionBackward - (event.interval || 10)),
             );
             break;
+
+          case Event.PlaybackProgressUpdated:
+            // Save playback progress every ~10 seconds
+            if (
+              event.position &&
+              event.position > 0 &&
+              playbackStateRef.current.currentSong
+            ) {
+              // Save progress only if we're at least 5 seconds into the song and have at least 5 seconds remaining
+              if (event.position > 5 && event.duration - event.position > 5) {
+                // Only save every ~10 seconds to avoid excessive updates
+                if (Math.floor(event.position) % 10 === 0) {
+                  playbackHistory.updatePlaybackProgress(
+                    playbackStateRef.current.currentSong,
+                    event.position,
+                    event.duration,
+                  );
+                }
+              }
+            }
+            break;
         }
       } catch (error) {
         console.error("Error handling TrackPlayer event:", error);
@@ -590,6 +474,57 @@ export function MusicProvider({ children }: PlayerProviderProps) {
       }
     },
   );
+
+  // Update our ref whenever playback state changes
+  useEffect(() => {
+    playbackStateRef.current = playbackState;
+  }, [playbackState]);
+
+  // Monitor app state changes to ensure playback history is saved
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        const previousAppState = appStateRef.current;
+        appStateRef.current = nextAppState;
+
+        // App is going to background, save current playback position
+        if (
+          previousAppState === "active" &&
+          nextAppState.match(/inactive|background/)
+        ) {
+          try {
+            if (
+              playbackStateRef.current.currentSong?.id &&
+              trackPlayerInitialized.current
+            ) {
+              const { position, duration } = await TrackPlayer.getProgress();
+              if (position > 0 && duration > 0) {
+                // Save current position when app goes to background
+                await playbackHistory.updatePlaybackProgress(
+                  playbackStateRef.current.currentSong,
+                  position,
+                  duration,
+                );
+                console.log(
+                  `Saved position ${position}s before app went to background`,
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Error saving playback position on app state change:",
+              error,
+            );
+          }
+        }
+      },
+    );
+
+    return () => {
+      appStateSubscription.remove();
+    };
+  }, []);
 
   const controls: PlayerControls = useMemo(
     () => ({
@@ -611,7 +546,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             try {
               // Reset the player first to clear any existing queue
               await TrackPlayer.reset();
-              preBufferedSongs.current.clear(); // Clear pre-buffered songs cache
 
               // Convert the selected song to a track
               const track = await convertSongToTrack(song);
@@ -620,6 +554,27 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 console.error("Song has no playable URL:", song.id);
                 playbackDispatch({ type: "SET_LOADING", payload: false });
                 return;
+              }
+
+              // Check for previous playback position
+              let initialPosition = 0;
+              try {
+                const savedProgress = await playbackHistory.getPlaybackProgress(
+                  song.id,
+                );
+                if (savedProgress) {
+                  // Only resume if we're not at the end and have more than 10 seconds left
+                  const timeRemaining =
+                    savedProgress.duration - savedProgress.position;
+                  if (timeRemaining > 10 && savedProgress.position > 5) {
+                    initialPosition = savedProgress.position;
+                    console.log(
+                      `Resuming playback from position ${initialPosition} seconds`,
+                    );
+                  }
+                }
+              } catch (error) {
+                console.error("Error retrieving playback history:", error);
               }
 
               // Find the selected song's index in the playlist
@@ -635,58 +590,43 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 const remainingPlaylist =
                   playlistState.playlist.slice(songIndex);
 
-                // For better performance, only add the first few songs immediately
-                const initialBatch = remainingPlaylist.slice(
-                  0,
-                  Math.min(3, remainingPlaylist.length),
+                // Convert all tracks in one operation for better reliability
+                const allTracks = await Promise.all(
+                  remainingPlaylist.map(convertSongToTrack),
                 );
 
-                // Convert and add initial batch
-                const tracksToAdd = await Promise.all(
-                  initialBatch.map(convertSongToTrack),
-                );
-                const filteredTracks = tracksToAdd.filter((track) => track.url);
+                // Filter out tracks with no URL
+                const validTracks = allTracks.filter((track) => track.url);
 
-                if (filteredTracks.length > 0) {
-                  await TrackPlayer.add(filteredTracks);
-                  await TrackPlayer.skip(0); // Ensure we're at the first track
-                }
+                if (validTracks.length > 0) {
+                  // Add all tracks to the queue at once
+                  await TrackPlayer.add(validTracks);
 
-                // Add remaining songs in the background
-                if (remainingPlaylist.length > initialBatch.length) {
-                  setTimeout(async () => {
-                    try {
-                      const remainingBatch = remainingPlaylist.slice(
-                        initialBatch.length,
-                      );
-                      const remainingTracks = await Promise.all(
-                        remainingBatch.map(convertSongToTrack),
-                      );
-                      const filteredRemainingTracks = remainingTracks.filter(
-                        (track) => track.url,
-                      );
-
-                      if (filteredRemainingTracks.length > 0) {
-                        await TrackPlayer.add(filteredRemainingTracks);
-                      }
-                    } catch (error) {
-                      console.error("Error adding remaining tracks:", error);
-                    }
-                  }, 100);
+                  // Ensure we start playing the first track (the requested song)
+                  await TrackPlayer.skip(0);
                 }
               } else {
                 // If the song isn't in the playlist, just add and play it
                 await TrackPlayer.add([track]);
-                await TrackPlayer.skip(0); // Ensure we're at the first track
+              }
+
+              // Seek to the saved position if needed
+              if (initialPosition > 0) {
+                await TrackPlayer.seekTo(initialPosition);
               }
 
               // Start playback
               await TrackPlayer.play();
 
+              // Log removed from here to prevent duplicate with track change event
+
               if (user?.userid && song.id) {
-                addToHistory(song, 10).catch((err: any) => {
-                  console.error("Error adding to history:", err);
-                });
+                // Use playbackHistory instead of addToHistory
+                playbackHistory
+                  .updatePlaybackProgress(song, 0, song.duration || 0)
+                  .catch((err: any) => {
+                    console.error("Error updating playback history:", err);
+                  });
               }
 
               playbackDispatch({ type: "SET_LOADING", payload: false });
@@ -728,7 +668,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           if (trackPlayerInitialized.current) {
             await TrackPlayer.stop();
             await TrackPlayer.reset();
-            preBufferedSongs.current.clear();
           }
         } catch (error) {
           console.error("Stop song error:", error);
@@ -773,23 +712,35 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         }
       },
 
-      addToPlaylist: (songs: Song | Song[]) => {
+      addToPlaylist: async (songs: Song | Song[]) => {
         const newSongs = Array.isArray(songs) ? songs : [songs];
+        console.log(`Adding ${newSongs.length} songs to playlist state`);
+
+        // Combine the existing playlist with the new songs
+        const updatedPlaylist = [...playlistState.playlist, ...newSongs];
+
+        // Update playlist state
         playlistDispatch({
           type: "SET_PLAYLIST",
-          payload: [...playlistState.playlist, ...newSongs],
+          payload: updatedPlaylist,
         });
 
-        // Pre-buffer a few songs in the background for faster playback
-        if (playbackStateRef.current.currentSong) {
-          setTimeout(() => {
-            const currentIndex = playlistState.playlist.findIndex(
-              (song) => song.id === playbackStateRef.current.currentSong?.id,
+        // Add to TrackPlayer queue if initialized
+        if (trackPlayerInitialized.current) {
+          try {
+            // Convert all tracks at once
+            const tracksToAdd = await Promise.all(
+              newSongs.map(convertSongToTrack),
             );
-            if (currentIndex >= 0) {
-              preBufferTracks(playlistState.playlist, currentIndex);
+            const validTracks = tracksToAdd.filter((track) => track.url);
+
+            if (validTracks.length > 0) {
+              await TrackPlayer.add(validTracks);
+              console.log(`Added ${validTracks.length} tracks to player queue`);
             }
-          }, 100);
+          } catch (error) {
+            console.error("Error adding tracks to player queue:", error);
+          }
         }
       },
 
@@ -803,8 +754,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         if (trackPlayerInitialized.current) {
           await TrackPlayer.reset();
           playbackDispatch({ type: "STOP_SONG" });
-          // Clear pre-buffer tracking
-          preBufferedSongs.current.clear();
         }
       },
 
@@ -814,7 +763,9 @@ export function MusicProvider({ children }: PlayerProviderProps) {
 
         try {
           const newSongs = Array.isArray(songs) ? songs : [songs];
+          console.log(`Adding ${newSongs.length} songs to queue`);
 
+          // Filter out songs that are already in the playlist
           const currentSongId = playbackStateRef.current.currentSong?.id;
           const uniqueNewSongs = newSongs.filter(
             (song) =>
@@ -829,50 +780,31 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               payload: uniqueNewSongs,
             });
 
-            // Start pre-buffering the first new song
-            if (uniqueNewSongs.length > 0) {
-              convertSongToTrack(uniqueNewSongs[0]);
-            }
-
             // Add to player queue if ready
             if (trackPlayerInitialized.current) {
-              // Process in batches for better performance
-              const processBatch = async (batch: Song[]) => {
-                // Filter out tracks with no URL
-                const tracksToAdd = await Promise.all(
-                  batch.map(convertSongToTrack),
-                );
-                const filteredTracks = tracksToAdd.filter((track) => track.url);
-
-                if (filteredTracks.length > 0) {
-                  await TrackPlayer.add(filteredTracks);
-                }
-              };
-
-              // Process first few songs immediately for best responsiveness
-              const firstBatch = uniqueNewSongs.slice(
-                0,
-                Math.min(3, uniqueNewSongs.length),
+              // Convert all tracks at once for better reliability
+              const tracksToAdd = await Promise.all(
+                uniqueNewSongs.map(convertSongToTrack),
               );
-              await processBatch(firstBatch);
+              const validTracks = tracksToAdd.filter((track) => track.url);
 
-              // Process remaining songs in background
-              if (uniqueNewSongs.length > firstBatch.length) {
-                setTimeout(async () => {
-                  const remainingBatch = uniqueNewSongs.slice(
-                    firstBatch.length,
-                  );
-                  await processBatch(remainingBatch);
-                }, 100);
+              if (validTracks.length > 0) {
+                // Get current queue state to ensure we're adding to the right position
+                const currentQueue = await TrackPlayer.getQueue();
+
+                // Add all tracks to the player queue
+                await TrackPlayer.add(validTracks);
+
+                console.log(
+                  `Added ${validTracks.length} tracks to player queue`,
+                );
               }
             }
           }
         } catch (error) {
           console.error("Queue addition error:", error);
         } finally {
-          setTimeout(() => {
-            queueUpdateInProgress.current = false;
-          }, 100);
+          queueUpdateInProgress.current = false;
         }
       },
 
@@ -911,9 +843,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 console.error("Error removing from player queue:", error);
               }
             }
-
-            // Update prebuffer tracking
-            preBufferedSongs.current.delete(songId);
           }
         } catch (error) {
           console.error("Queue removal error:", error);
@@ -974,10 +903,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               if (isPlaying) {
                 await TrackPlayer.play();
               }
-
-              // Reset prebuffer tracking and start prebuffering with new order
-              preBufferedSongs.current.clear();
-              preBufferTracks(newPlaylistOrder, newCurrentIndex);
             } else {
               // Current track not in new order, handle gracefully
               if (currentTrack) {
@@ -1042,44 +967,48 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           const queue = await TrackPlayer.getQueue();
           const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
-          // If we have a valid index and it's not the last track
-          if (currentIndex !== undefined && currentIndex < queue.length - 1) {
-            // Use TrackPlayer's built-in skipToNext for better performance
-            await TrackPlayer.skipToNext();
+          // Make sure we have a valid index
+          if (currentIndex === undefined) {
+            isSwitchingTracks.current = false;
+            playbackDispatch({ type: "SET_LOADING", payload: false });
+            return;
+          }
 
-            // Update UI state - PlaybackActiveTrackChanged will update current song
+          // If we have a valid index and it's not the last track
+          if (currentIndex < queue.length - 1) {
+            console.log(
+              `Skipping from track ${currentIndex} to ${currentIndex + 1}`,
+            );
+
+            // For more reliability, use explicit skip rather than skipToNext
+            await TrackPlayer.skip(currentIndex + 1);
+            await TrackPlayer.play();
+
+            // Update UI state
             playbackDispatch({ type: "SET_PLAYING", payload: true });
 
-            // Pre-buffer upcoming tracks for even faster transitions
-            const nextIndex = currentIndex + 1;
-            if (nextIndex < queue.length - 1) {
-              // Update pre-buffer tracking for next track
-              const songId = queue[nextIndex + 1].id as string;
-              if (songId && !preBufferedSongs.current.has(songId)) {
-                preBufferedSongs.current.add(songId);
-              }
-            }
+            // Track change logging will be handled by PlaybackActiveTrackChanged event
           } else if (queue.length > 0) {
             // We're at the end - restart from beginning
+            console.log("Reached end of queue, restarting from beginning");
             await TrackPlayer.skip(0);
             await TrackPlayer.play();
 
-            // Pre-buffer second track if available
-            if (queue.length > 1) {
-              const songId = queue[1].id as string;
-              if (songId && !preBufferedSongs.current.has(songId)) {
-                preBufferedSongs.current.add(songId);
-              }
-            }
+            // Track change logging will be handled by PlaybackActiveTrackChanged event
           } else if (playlistState.playlist.length > 0) {
             // If queue is empty but we have songs in React state
+            console.log(
+              "Queue empty but playlist has songs, playing first song",
+            );
             const nextSong = playlistState.playlist[0];
             await controls.playSong(nextSong);
           } else {
             // No more songs
+            console.log("No more songs in queue or playlist");
             playbackDispatch({ type: "STOP_SONG" });
             await TrackPlayer.stop();
             isSwitchingTracks.current = false;
+            playbackDispatch({ type: "SET_LOADING", payload: false });
           }
         } catch (error) {
           console.error("Next song error:", error);
@@ -1094,6 +1023,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             if (playerSetupPromise.current) {
               await playerSetupPromise.current;
             } else {
+              playbackDispatch({ type: "SET_LOADING", payload: false });
               return;
             }
           }
@@ -1108,31 +1038,38 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           );
           const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
+          // Make sure we have a valid index
+          if (currentIndex === undefined) {
+            isSwitchingTracks.current = false;
+            playbackDispatch({ type: "SET_LOADING", payload: false });
+            return;
+          }
+
           // If we're more than 3 seconds into the song, just restart it
           if (position > 3) {
+            console.log("Restarting current track (position > 3s)");
             await TrackPlayer.seekTo(0);
             isSwitchingTracks.current = false;
             playbackDispatch({ type: "SET_LOADING", payload: false });
           }
           // If we have a valid index and it's not the first track
-          else if (currentIndex !== undefined && currentIndex > 0) {
-            // Use TrackPlayer's built-in skipToPrevious
-            await TrackPlayer.skipToPrevious();
+          else if (currentIndex > 0) {
+            console.log(
+              `Skipping from track ${currentIndex} to ${currentIndex - 1}`,
+            );
 
-            // Pre-buffer for faster navigation
-            if (currentIndex > 1) {
-              const queue = await TrackPlayer.getQueue();
-              const prevIndex = currentIndex - 1;
-              if (prevIndex > 0) {
-                const songId = queue[prevIndex - 1].id as string;
-                if (songId && !preBufferedSongs.current.has(songId)) {
-                  preBufferedSongs.current.add(songId);
-                }
-              }
-            }
+            // For more reliability, use explicit skip rather than skipToPrevious
+            await TrackPlayer.skip(currentIndex - 1);
+            await TrackPlayer.play();
+
+            // Update UI state will be handled by track change event
+            playbackDispatch({ type: "SET_PLAYING", payload: true });
+
+            // Track change logging will be handled by PlaybackActiveTrackChanged event
           }
           // If we're at the first track and repeating is desired
           else if (currentIndex === 0) {
+            console.log("At first track, restarting");
             const queue = await TrackPlayer.getQueue();
             if (queue.length > 0) {
               // Restart current song
@@ -1141,12 +1078,8 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               isSwitchingTracks.current = false;
               playbackDispatch({ type: "SET_LOADING", payload: false });
             }
-          } else if (playlistState.playlist.length > 0) {
-            // Fallback - play the last song in the playlist
-            const lastSong =
-              playlistState.playlist[playlistState.playlist.length - 1];
-            await controls.playSong(lastSong);
           } else {
+            console.log("No previous track available");
             isSwitchingTracks.current = false;
             playbackDispatch({ type: "SET_LOADING", payload: false });
           }
@@ -1199,16 +1132,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     getPlaylists,
     setPlaylist: (playlist: Song[]) => {
       playlistDispatch({ type: "SET_PLAYLIST", payload: playlist });
-
-      // Pre-cache first few songs for faster playback
-      if (playlist.length > 0) {
-        setTimeout(() => {
-          playlist.slice(0, 3).forEach((song) => {
-            convertSongToTrack(song);
-            preBufferedSongs.current.add(song.id);
-          });
-        }, 100);
-      }
     },
     setUserPlaylist: (playlist: Song[]) => {
       playlistDispatch({ type: "SET_USER_PLAYLIST", payload: playlist });

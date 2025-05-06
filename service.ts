@@ -53,6 +53,7 @@ export async function PlaybackService() {
       // Mark as processing to prevent duplicate actions
       if (global.processingNextTrack) return;
       global.processingNextTrack = true;
+
       // Preemptively fire UI state update for instant feedback
       // By sending an event that will be picked up in MusicContext
       DeviceEventEmitter.emit("remote-next-triggered");
@@ -61,34 +62,20 @@ export async function PlaybackService() {
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
       if (currentIndex !== undefined && currentIndex < queue.length - 1) {
-        // Start transition animation/indicator in UI
+        // Get the next track index
         const nextIndex = currentIndex + 1;
+        console.log(
+          `Service: Skipping from track ${currentIndex} to ${nextIndex}`,
+        );
 
-        // Pre-buffer next track if not already done
-        if (nextTrackCache?.id !== queue[nextIndex]?.id) {
-          nextTrackCache = queue[nextIndex];
-        }
-
-        // Skip to next track with optimized performance
-        await TrackPlayer.skipToNext();
-
-        // Immediately try to prepare/buffer the new "next" track for even faster subsequent skips
-        if (nextIndex + 1 < queue.length) {
-          // Update next track cache
-          nextTrackCache = queue[nextIndex + 1];
-
-          // Preload the next track in background
-          TrackPlayer.setQueue([...queue]);
-        }
+        // Skip directly to the next track for reliability
+        await TrackPlayer.skip(nextIndex);
+        await TrackPlayer.play();
       } else if (queue.length > 0) {
         // Loop back to beginning with smooth transition
+        console.log("Service: Reached end of queue, looping to beginning");
         await TrackPlayer.skip(0);
         await TrackPlayer.play();
-
-        // Pre-buffer second track if available
-        if (queue.length > 1) {
-          nextTrackCache = queue[1];
-        }
       }
     } catch (error) {
       console.error("Error handling next track:", error);
@@ -101,6 +88,7 @@ export async function PlaybackService() {
         if (currentIndex !== undefined && currentIndex + 1 < queue.length) {
           // Try direct skip instead
           await TrackPlayer.skip(currentIndex + 1);
+          await TrackPlayer.play();
         }
       } catch (recoveryError) {
         console.error("Recovery attempt failed:", recoveryError);
@@ -119,36 +107,35 @@ export async function PlaybackService() {
       // Mark as processing to prevent duplicate actions
       if (global.processingPrevTrack) return;
       global.processingPrevTrack = true;
+
       // Preemptively fire UI state update for instant feedback
       DeviceEventEmitter.emit("remote-prev-triggered");
 
+      const currentPosition = await TrackPlayer.getProgress().then(
+        (progress) => progress.position,
+      );
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
-      // Always go to previous track regardless of current position
-      if (currentIndex !== undefined && currentIndex > 0) {
-        const queue = await TrackPlayer.getQueue();
+      if (currentPosition > 3) {
+        // If more than 3 seconds in, just restart current track
+        console.log("Service: Restarting current track (position > 3s)");
+        await TrackPlayer.seekTo(0);
+        await TrackPlayer.play();
+      } else if (currentIndex !== undefined && currentIndex > 0) {
+        // Skip to previous track
         const prevIndex = currentIndex - 1;
+        console.log(
+          `Service: Skipping from track ${currentIndex} to ${prevIndex}`,
+        );
 
-        // Pre-buffer previous track if not already done
-        if (previousTrackCache?.id !== queue[prevIndex]?.id) {
-          previousTrackCache = queue[prevIndex];
-        }
-
-        // Skip to previous track with optimized performance
-        await TrackPlayer.skipToPrevious();
-
-        // Update cache for faster navigation
-        if (prevIndex > 0) {
-          previousTrackCache = queue[prevIndex - 1];
-        }
-
-        // If we're now at the first track, cache the last track for wrap-around
-        if (prevIndex === 0 && queue.length > 1) {
-          previousTrackCache = queue[queue.length - 1];
-        }
+        // Skip directly to the previous track for reliability
+        await TrackPlayer.skip(prevIndex);
+        await TrackPlayer.play();
       } else {
         // If we're on the first track, just restart it
+        console.log("Service: At first track, restarting");
         await TrackPlayer.seekTo(0);
+        await TrackPlayer.play();
       }
     } catch (error) {
       console.error("Error handling previous track:", error);
@@ -158,8 +145,10 @@ export async function PlaybackService() {
         const currentIndex = await TrackPlayer.getActiveTrackIndex();
         if (currentIndex !== undefined && currentIndex > 0) {
           await TrackPlayer.skip(currentIndex - 1);
+          await TrackPlayer.play();
         } else {
           await TrackPlayer.seekTo(0);
+          await TrackPlayer.play();
         }
       } catch (recoveryError) {
         console.error("Recovery attempt failed:", recoveryError);
