@@ -9,7 +9,22 @@ import TrackPlayer, {
   RepeatMode,
 } from "react-native-track-player";
 
+// Function to register service only once
+let isServiceRegistered = false;
+
+export function registerPlaybackService() {
+  if (isServiceRegistered) {
+    return;
+  }
+
+  isServiceRegistered = true;
+
+  TrackPlayer.registerPlaybackService(() => require("../service").default);
+}
+
 let setupPromise: Promise<boolean> | null = null;
+let setupRetryCount = 0;
+const MAX_SETUP_RETRIES = 3;
 
 export const setupPlayer = async (): Promise<boolean> => {
   // If setup is already in progress, return the existing promise
@@ -30,13 +45,18 @@ export const setupPlayer = async (): Promise<boolean> => {
         console.log("Initializing TrackPlayer...");
       }
 
-      // Initialize the player with optimized settings
-      // Following strictly the documentation: https://rntp.dev/docs/api/objects/player-options
+      // Setup with optimized configuration
       await TrackPlayer.setupPlayer({
-        // Maximum cache size for smoother playback with less buffering
-        maxCacheSize: 1024 * 1024 * 500, // Increase to 500 MB cache for better experience
+        // Increase cache for better offline experience
+        maxCacheSize: 1024 * 1024 * 750, // 750MB cache
 
-        // Enable automatic metadata updates for notifications/control center
+        // Improved buffering for better playback experience
+        minBuffer: 1000, // 1 second minimum buffer
+        maxBuffer: 600000, // 10 minutes maximum buffer
+        playBuffer: 200, // Start playback after 200ms of buffering
+        backBuffer: 3000, // Keep 3 seconds of audio before current position
+
+        // Ensure metadata updates automatically
         autoUpdateMetadata: true,
 
         // Platform-specific audio settings
@@ -50,57 +70,49 @@ export const setupPlayer = async (): Promise<boolean> => {
 
           // iOS audio session category options
           iosCategoryOptions: [
-            IOSCategoryOptions.MixWithOthers,
-            IOSCategoryOptions.DuckOthers,
             IOSCategoryOptions.AllowAirPlay,
             IOSCategoryOptions.AllowBluetooth,
             IOSCategoryOptions.AllowBluetoothA2DP,
+            IOSCategoryOptions.MixWithOthers, // Allow other audio to continue in background
           ],
 
           // iOS audio session category mode
-          iosCategoryMode: IOSCategoryMode.SpokenAudio, // Changed to SpokenAudio for better background playback
+          iosCategoryMode: IOSCategoryMode.SpokenAudio, // Better for both music and podcasts
         }),
 
-        // Handle audio interruptions automatically (calls, alarms, etc.)
+        // Handle audio interruptions automatically
         autoHandleInterruptions: true,
       });
 
       // Set initial repeat mode
-      await TrackPlayer.setRepeatMode(RepeatMode.Off);
+      await TrackPlayer.setRepeatMode(RepeatMode.Queue);
 
-      // Configure capabilities for background and lock screen controls
-      // Following strictly the documentation for updateOptions
+      // Configure capabilities with optimized settings
       await TrackPlayer.updateOptions({
-        // Full capabilities when app is in foreground
+        // Media controls capabilities
         capabilities: [
           Capability.Play,
           Capability.Pause,
           Capability.Stop,
           Capability.SkipToNext,
           Capability.SkipToPrevious,
-          Capability.JumpForward, // For 10-second skip forward
-          Capability.JumpBackward, // For 10-second skip backward
           Capability.SeekTo,
         ],
 
-        // Capabilities for compact view (e.g. notification collapsed)
+        // Capabilities for compact view
         compactCapabilities: [
           Capability.Play,
           Capability.Pause,
           Capability.SkipToNext,
-          Capability.SkipToPrevious,
         ],
 
         // Notification/Control Center capabilities
         notificationCapabilities: [
           Capability.Play,
           Capability.Pause,
-          Capability.Stop,
           Capability.SkipToNext,
           Capability.SkipToPrevious,
           Capability.SeekTo,
-          Capability.JumpForward,
-          Capability.JumpBackward,
         ],
 
         // Android-specific configuration
@@ -112,19 +124,61 @@ export const setupPlayer = async (): Promise<boolean> => {
           alwaysPauseOnInterruption: true,
         },
 
-        // Set progress update interval for PlaybackProgressUpdated event
-        progressUpdateEventInterval: 0.5, // Update twice per second for smoother UI updates
+        // Set progress update interval (battery-optimized)
+        progressUpdateEventInterval: 2, // Update every 2 seconds for better battery life
       });
+
+      // Reset retry count on successful setup
+      setupRetryCount = 0;
 
       console.log("TrackPlayer setup complete");
       return true;
     } catch (error) {
       console.error("Error setting up TrackPlayer:", error);
-      // Reset the promise so we can try again
+
+      // Implement retry logic
+      setupRetryCount++;
+      console.log(`Setup retry count: ${setupRetryCount}`);
+
+      if (setupRetryCount < MAX_SETUP_RETRIES) {
+        // Reset the promise so we can try again
+        setupPromise = null;
+
+        // Try again after a delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        return setupPlayer();
+      }
+
+      // Reset the promise so we can try again later
       setupPromise = null;
       return false;
     }
   })();
 
   return setupPromise;
+};
+
+/**
+ * Helper function to reset the player completely
+ * Use this when playback is in a bad state and needs to be reset
+ */
+export const resetPlayer = async (): Promise<boolean> => {
+  try {
+    // Reset existing setup
+    setupPromise = null;
+    setupRetryCount = 0;
+
+    // Try to reset the player if it exists
+    try {
+      await TrackPlayer.reset();
+    } catch (e) {
+      // Ignore errors during reset/destroy
+    }
+
+    // Setup again
+    return setupPlayer();
+  } catch (error) {
+    console.error("Error resetting player:", error);
+    return false;
+  }
 };

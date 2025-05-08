@@ -1,32 +1,13 @@
-import TrackPlayer, {
-  Event,
-  State,
-  RepeatMode,
-  Track,
-} from "react-native-track-player";
+import TrackPlayer, { Event, State } from "react-native-track-player";
 import { getPlaybackState } from "react-native-track-player/lib/src/trackPlayer";
-import { AppState } from "react-native";
-import { DeviceEventEmitter } from "react-native";
-
-// Declare global types for the properties we're using
-declare global {
-  var processingNextTrack: boolean;
-  var processingPrevTrack: boolean;
-}
-
-// Cache to store next track data for instant playback
-let nextTrackCache: Track | null = null;
-let previousTrackCache: Track | null = null;
 
 export async function PlaybackService() {
-  // Basic remote control event handlers with optimized performance
   TrackPlayer.addEventListener(Event.RemotePlay, async () => {
     try {
       await TrackPlayer.play();
       console.log("Remote play triggered");
     } catch (error) {
       console.error("Remote play error:", error);
-      // Attempt recovery
       setTimeout(() => TrackPlayer.play(), 200);
     }
   });
@@ -47,28 +28,18 @@ export async function PlaybackService() {
     }
   });
 
-  // Optimized next track handler with pre-caching
   TrackPlayer.addEventListener(Event.RemoteNext, async () => {
     try {
-      // Mark as processing to prevent duplicate actions
-      if (global.processingNextTrack) return;
-      global.processingNextTrack = true;
-
-      // Preemptively fire UI state update for instant feedback
-      // By sending an event that will be picked up in MusicContext
-      DeviceEventEmitter.emit("remote-next-triggered");
-
       const queue = await TrackPlayer.getQueue();
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
       if (currentIndex !== undefined && currentIndex < queue.length - 1) {
-        // Get the next track index
         const nextIndex = currentIndex + 1;
         console.log(
           `Service: Skipping from track ${currentIndex} to ${nextIndex}`,
         );
 
-        // Skip directly to the next track for reliability
+        // Skip directly to the next track
         await TrackPlayer.skip(nextIndex);
         await TrackPlayer.play();
       } else if (queue.length > 0) {
@@ -80,41 +51,40 @@ export async function PlaybackService() {
     } catch (error) {
       console.error("Error handling next track:", error);
 
-      // Recovery attempt
+      // More reliable recovery approach
       try {
         const queue = await TrackPlayer.getQueue();
         const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
-        if (currentIndex !== undefined && currentIndex + 1 < queue.length) {
-          // Try direct skip instead
+        if (currentIndex === undefined) {
+          // If no active track, play the first track
+          if (queue.length > 0) {
+            await TrackPlayer.skip(0);
+            await TrackPlayer.play();
+          }
+        } else if (currentIndex + 1 < queue.length) {
+          // Simple skip to next track
           await TrackPlayer.skip(currentIndex + 1);
+          await TrackPlayer.play();
+        } else if (queue.length > 0) {
+          // Loop back to first track
+          await TrackPlayer.skip(0);
           await TrackPlayer.play();
         }
       } catch (recoveryError) {
         console.error("Recovery attempt failed:", recoveryError);
       }
-    } finally {
-      // Reset processing flag with short delay
-      setTimeout(() => {
-        global.processingNextTrack = false;
-      }, 300);
     }
   });
 
-  // Optimized previous track handler
+  // Improved previous track handler with better position check
   TrackPlayer.addEventListener(Event.RemotePrevious, async () => {
     try {
-      // Mark as processing to prevent duplicate actions
-      if (global.processingPrevTrack) return;
-      global.processingPrevTrack = true;
-
-      // Preemptively fire UI state update for instant feedback
-      DeviceEventEmitter.emit("remote-prev-triggered");
-
       const currentPosition = await TrackPlayer.getProgress().then(
         (progress) => progress.position,
       );
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
+      const queue = await TrackPlayer.getQueue();
 
       if (currentPosition > 3) {
         // If more than 3 seconds in, just restart current track
@@ -128,10 +98,9 @@ export async function PlaybackService() {
           `Service: Skipping from track ${currentIndex} to ${prevIndex}`,
         );
 
-        // Skip directly to the previous track for reliability
         await TrackPlayer.skip(prevIndex);
         await TrackPlayer.play();
-      } else {
+      } else if (queue.length > 0) {
         // If we're on the first track, just restart it
         console.log("Service: At first track, restarting");
         await TrackPlayer.seekTo(0);
@@ -140,24 +109,29 @@ export async function PlaybackService() {
     } catch (error) {
       console.error("Error handling previous track:", error);
 
-      // Recovery attempt
+      // More reliable recovery approach
       try {
         const currentIndex = await TrackPlayer.getActiveTrackIndex();
-        if (currentIndex !== undefined && currentIndex > 0) {
+        const queue = await TrackPlayer.getQueue();
+
+        if (currentIndex === undefined) {
+          // If no active track, play the first track
+          if (queue.length > 0) {
+            await TrackPlayer.skip(0);
+            await TrackPlayer.play();
+          }
+        } else if (currentIndex > 0) {
+          // Simple skip to previous track
           await TrackPlayer.skip(currentIndex - 1);
           await TrackPlayer.play();
-        } else {
+        } else if (queue.length > 0) {
+          // Restart first track
           await TrackPlayer.seekTo(0);
           await TrackPlayer.play();
         }
       } catch (recoveryError) {
         console.error("Recovery attempt failed:", recoveryError);
       }
-    } finally {
-      // Reset processing flag with short delay
-      setTimeout(() => {
-        global.processingPrevTrack = false;
-      }, 300);
     }
   });
 
@@ -195,160 +169,15 @@ export async function PlaybackService() {
     }
   });
 
-  // Improved playback error handling with smart recovery
-  TrackPlayer.addEventListener(Event.PlaybackError, async (event) => {
-    console.error(`Playback error: ${event.code} - ${event.message}`);
-
-    try {
-      // First try to reload the current track
-      const currentTrackIndex = await TrackPlayer.getActiveTrackIndex();
-      if (currentTrackIndex !== undefined) {
-        // Get current state before attempting recovery
-        const wasPlaying = (await getPlaybackState()).state === State.Playing;
-        const currentPosition = await TrackPlayer.getProgress().then(
-          (progress) => progress.position,
-        );
-
-        // Try multiple recovery strategies
-        let recovered = false;
-
-        // Strategy 1: Try to seek to current position
-        try {
-          await TrackPlayer.seekTo(currentPosition);
-          if (wasPlaying) {
-            await TrackPlayer.play();
-          }
-          recovered = true;
-        } catch (seekError) {
-          console.log("Seek recovery failed:", seekError);
-        }
-
-        // Strategy 2: If seek failed, try to reload the track
-        if (!recovered) {
-          try {
-            await TrackPlayer.skip(currentTrackIndex);
-            if (wasPlaying) {
-              await TrackPlayer.play();
-            }
-            recovered = true;
-          } catch (skipError) {
-            console.log("Skip recovery failed:", skipError);
-          }
-        }
-
-        // Strategy 3: If both failed, try to re-add the track
-        if (!recovered) {
-          try {
-            const currentTrack = await TrackPlayer.getTrack(currentTrackIndex);
-            if (currentTrack) {
-              await TrackPlayer.remove(currentTrackIndex);
-              await TrackPlayer.add(currentTrack, currentTrackIndex);
-              if (wasPlaying) {
-                await TrackPlayer.skip(currentTrackIndex);
-                await TrackPlayer.play();
-              }
-              recovered = true;
-            }
-          } catch (readdError) {
-            console.log("Re-add recovery failed:", readdError);
-          }
-        }
-
-        // Only move to next track if all recovery attempts failed
-        if (!recovered) {
-          // Wait a bit before trying next track to prevent rapid skipping
-          setTimeout(async () => {
-            const newState = await getPlaybackState();
-            if (newState.state === State.Error) {
-              const queue = await TrackPlayer.getQueue();
-              if (currentTrackIndex < queue.length - 1) {
-                await TrackPlayer.skipToNext();
-                await TrackPlayer.play();
-              }
-            }
-          }, 1000); // Increased delay to prevent rapid skipping
-        }
-      }
-    } catch (error) {
-      console.error("Error recovering from playback error:", error);
-    }
-  });
-
-  // Intelligent queue end handling for better loop playback
-  TrackPlayer.addEventListener(Event.PlaybackQueueEnded, async (event) => {
-    try {
-      // Check if we have repeat mode enabled
-      const repeatMode = await TrackPlayer.getRepeatMode();
-
-      if (repeatMode === RepeatMode.Queue) {
-        // If repeat queue mode is on, restart from the beginning with preloading
-        const queue = await TrackPlayer.getQueue();
-        if (queue.length > 0) {
-          // Pre-buffer the first track before skipping
-          nextTrackCache = queue[0];
-
-          await TrackPlayer.skip(0);
-          await TrackPlayer.play();
-
-          // After playing first track, preload second track if available
-          if (queue.length > 1) {
-            nextTrackCache = queue[1];
-          }
-        }
-      } else if (repeatMode === RepeatMode.Track && event.track) {
-        // If repeat track mode is on, replay current track
-        await TrackPlayer.seekTo(0);
-        await TrackPlayer.play();
-      }
-    } catch (error) {
-      console.error("Error handling queue ended:", error);
-    }
-  });
-
-  // Enhanced active track change handling to prevent unintended skips
+  // Update to use PlaybackActiveTrackChanged instead of deprecated PlaybackTrackChanged
   TrackPlayer.addEventListener(
     Event.PlaybackActiveTrackChanged,
     async (event) => {
-      try {
-        if (event.track) {
-          console.log(
-            `Now playing: ${event.track.title} by ${event.track.artist}`,
-          );
-
-          // Add a small delay before pre-buffering to ensure stable playback
-          setTimeout(async () => {
-            try {
-              const currentIndex = await TrackPlayer.getActiveTrackIndex();
-              if (currentIndex !== undefined) {
-                const queue = await TrackPlayer.getQueue();
-                const currentState = await TrackPlayer.getState();
-
-                // Only pre-buffer if we're actually playing
-                if (currentState === State.Playing) {
-                  // Pre-buffer next track
-                  if (currentIndex < queue.length - 1) {
-                    nextTrackCache = queue[currentIndex + 1];
-                  } else if (queue.length > 0) {
-                    // If we're on the last track, cache the first one for loop playback
-                    nextTrackCache = queue[0];
-                  }
-
-                  // Pre-buffer previous track
-                  if (currentIndex > 0) {
-                    previousTrackCache = queue[currentIndex - 1];
-                  } else if (queue.length > 1) {
-                    // If we're on the first track, cache the last one for wrap-around
-                    previousTrackCache = queue[queue.length - 1];
-                  }
-                }
-              }
-            } catch (error) {
-              console.error("Error in pre-buffering:", error);
-            }
-          }, 500);
-        }
-      } catch (error) {
-        console.error("Error in active track changed handler:", error);
+      // This helps track internal track changes by TrackPlayer
+      if (event.track) {
+        console.log(
+          `Service: Track changed to ${event.track.title} by ${event.track.artist}`,
+        );
       }
     },
   );
@@ -373,33 +202,6 @@ export async function PlaybackService() {
       }
     } catch (error) {
       console.error("Error handling audio focus change:", error);
-    }
-  });
-
-  // Monitor app state changes to optimize performance
-  AppState.addEventListener("change", async (nextAppState) => {
-    try {
-      if (nextAppState === "active") {
-        // App came to foreground, check if we need to restore playback
-        const state = await getPlaybackState();
-
-        // Refresh the queue if needed to ensure it's up to date
-        const queue = await TrackPlayer.getQueue();
-        if (queue.length > 0) {
-          const currentIndex = await TrackPlayer.getActiveTrackIndex();
-          if (currentIndex !== undefined) {
-            // Update caches
-            if (currentIndex < queue.length - 1) {
-              nextTrackCache = queue[currentIndex + 1];
-            }
-            if (currentIndex > 0) {
-              previousTrackCache = queue[currentIndex - 1];
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error handling app state change:", error);
     }
   });
 }

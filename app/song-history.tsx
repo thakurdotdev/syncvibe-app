@@ -1,28 +1,26 @@
+import SwipeableModal from "@/components/common/SwipeableModal";
 import { SongCard } from "@/components/music/MusicCards";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
 import { Song } from "@/types/song";
 import useApi from "@/utils/hooks/useApi";
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
+  RefreshControl,
+  TextInput as RNTextInput,
   StyleSheet,
   Text,
-  View,
-  RefreshControl,
-  Animated,
-  TextInput as RNTextInput,
   TouchableOpacity,
-  Dimensions,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import SwipeableModal from "@/components/common/SwipeableModal";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import { useTheme } from "@/context/ThemeContext";
-import Input from "@/components/ui/input";
-import Button from "@/components/ui/button";
 
-const { width } = Dimensions.get("window");
 const ITEMS_PER_PAGE = 15;
 
 type SortOption = {
@@ -62,9 +60,9 @@ const SongHistory = () => {
   const { colors } = useTheme();
   const [songHistory, setSongHistory] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true); // New state for initial loading
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
   const [totalSongs, setTotalSongs] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,6 +72,8 @@ const SongHistory = () => {
   const [sortBy, setSortBy] = useState("lastPlayedAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
   const [isFiltering, setIsFiltering] = useState(false);
+
+  const [currentDataPage, setCurrentDataPage] = useState(1);
 
   const searchInputRef = useRef<RNTextInput>(null);
   const scrollY = new Animated.Value(0);
@@ -87,7 +87,6 @@ const SongHistory = () => {
 
     debounceTimeout.current = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      setPage(1);
     }, 500);
 
     return () => {
@@ -108,8 +107,17 @@ const SongHistory = () => {
       if (!user?.userid) return;
 
       try {
-        if (!append && !isFiltering) {
+        // Only set full loading state on initial load
+        if (pageNum === 1 && !append && initialLoading) {
           setLoading(true);
+        } else if (
+          !append &&
+          (debouncedSearchQuery ||
+            sortBy !== "lastPlayedAt" ||
+            sortOrder !== "DESC")
+        ) {
+          // Show the filtering indicator for search and sort operations
+          setIsFiltering(true);
         }
 
         if (append) {
@@ -142,25 +150,25 @@ const SongHistory = () => {
         console.error("Error fetching song history:", error);
       } finally {
         setLoading(false);
+        setInitialLoading(false); // Initial loading is done
         setIsFiltering(false);
         setRefreshing(false);
         setLoadingMore(false);
       }
     },
-    [user?.userid, api, debouncedSearchQuery, sortBy, sortOrder, isFiltering],
+    [
+      user?.userid,
+      api,
+      debouncedSearchQuery,
+      sortBy,
+      sortOrder,
+      initialLoading,
+    ],
   );
-
-  const handleLoadMore = useCallback(() => {
-    if (loadingMore || !hasMore) return;
-
-    const nextPage = page + 1;
-    setPage(nextPage);
-    getHistorySongs(nextPage, true);
-  }, [page, loadingMore, hasMore, getHistorySongs]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    setPage(1);
+    setCurrentDataPage(1);
     getHistorySongs(1, false);
   }, [getHistorySongs]);
 
@@ -191,6 +199,14 @@ const SongHistory = () => {
       return newState;
     });
   }, []);
+
+  const loadMoreSongs = () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = currentDataPage + 1;
+    setCurrentDataPage(nextPage);
+    getHistorySongs(nextPage, true);
+  };
 
   const renderHeader = () => {
     const headerOpacity = scrollY.interpolate({
@@ -342,7 +358,8 @@ const SongHistory = () => {
     );
   };
 
-  if (loading && page === 1 && !isFiltering) {
+  // Only show the full-screen loader for the initial load
+  if (loading && initialLoading) {
     return (
       <SafeAreaView
         style={[
@@ -365,7 +382,8 @@ const SongHistory = () => {
       {renderHeader()}
       {renderSortIndicator()}
 
-      {isFiltering && (
+      {/* Common loader for search and filtering */}
+      {(isFiltering || (loading && !initialLoading)) && (
         <View
           style={[
             styles.filteringIndicator,
@@ -380,7 +398,7 @@ const SongHistory = () => {
           <Text
             style={[styles.filteringText, { color: colors.primaryForeground }]}
           >
-            Updating results...
+            {debouncedSearchQuery ? "Searching..." : "Updating results..."}
           </Text>
         </View>
       )}
@@ -394,7 +412,7 @@ const SongHistory = () => {
           styles.listContent,
           isFiltering && styles.dimmedContent,
         ]}
-        onEndReached={handleLoadMore}
+        onEndReached={loadMoreSongs}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyState}
@@ -402,7 +420,7 @@ const SongHistory = () => {
           <View
             style={[
               styles.separator,
-              { backgroundColor: `${colors.border}33` }, // 33 adds 20% opacity
+              { backgroundColor: `${colors.border}33` },
             ]}
           />
         )}
@@ -603,7 +621,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     position: "absolute",
-    top: 100,
+    top: 120,
     alignSelf: "center",
     zIndex: 10,
     flexDirection: "row",

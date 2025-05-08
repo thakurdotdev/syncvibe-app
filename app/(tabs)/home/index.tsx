@@ -44,6 +44,7 @@ import Animated, {
   useSharedValue,
   withDelay,
   withTiming,
+  runOnUI,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -78,8 +79,24 @@ const SkeletonLoader = () => {
   const shimmerAnimation = useSharedValue(0);
 
   useEffect(() => {
-    shimmerAnimation.value = 0;
-    shimmerAnimation.value = withTiming(1, { duration: 1500 });
+    // Create a repeating animation using runOnUI to ensure it's a worklet
+    runOnUI(() => {
+      "worklet";
+      const startAnimation = () => {
+        "worklet";
+        shimmerAnimation.value = 0;
+        shimmerAnimation.value = withTiming(1, { duration: 1200 }, () => {
+          startAnimation();
+        });
+      };
+
+      startAnimation();
+    })();
+
+    return () => {
+      // Clean up animation when component unmounts
+      shimmerAnimation.value = 0;
+    };
   }, []);
 
   const shimmerStyle = useAnimatedStyle(() => {
@@ -89,96 +106,133 @@ const SkeletonLoader = () => {
           translateX: interpolate(shimmerAnimation.value, [0, 1], [-300, 300]),
         },
       ],
+      opacity: 0.7,
     };
   });
 
+  // Animated values for staggered entrance
+  const opacityAnim = useSharedValue(0);
+  const scaleAnim = useSharedValue(0.98);
+
+  useEffect(() => {
+    opacityAnim.value = withTiming(1, { duration: 600 });
+    scaleAnim.value = withTiming(1, { duration: 700 });
+  }, []);
+
+  const containerStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacityAnim.value,
+      transform: [{ scale: scaleAnim.value }],
+    };
+  });
+
+  // Generate skeleton card items with varying widths for more natural look
+  interface SkeletonOptions {
+    minWidth?: number;
+    maxWidth?: number;
+    height?: number;
+  }
+
+  const generateSkeletonCards = (
+    count: number,
+    options: SkeletonOptions = {},
+  ) => {
+    const { minWidth = 130, maxWidth = 150, height = 170 } = options;
+    return Array(count)
+      .fill(0)
+      .map((_, i) => {
+        // Random width for more natural appearance
+        const width = minWidth + Math.random() * (maxWidth - minWidth);
+
+        return (
+          <Animated.View
+            key={i}
+            entering={FadeInUp.duration(500).delay(100 + i * 50)}
+            className={`mr-4 ${colors.bg} rounded-xl overflow-hidden`}
+            style={{ width, height }}
+          >
+            <Animated.View
+              className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
+              style={shimmerStyle}
+            />
+          </Animated.View>
+        );
+      });
+  };
+
   return (
-    <View className="px-4">
-      {/* Greeting skeleton */}
+    <Animated.View className="px-4" style={containerStyle}>
+      {/* Greeting skeleton - with more subtle rounded corners */}
       <Animated.View
-        entering={FadeInLeft.duration(600)}
-        className={`w-2/3 h-8 ${colors.headerBg} rounded-lg mb-8 mt-4 overflow-hidden`}
+        entering={FadeInLeft.duration(700)}
+        className={`w-3/5 h-9 ${colors.headerBg} rounded-lg mb-8 mt-4 overflow-hidden`}
       >
         <Animated.View
-          className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+          className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
           style={shimmerStyle}
         />
       </Animated.View>
 
-      {/* Feature cards skeleton */}
+      {/* Feature cards skeleton - improved layout and spacing */}
       <Animated.View
         entering={FadeInUp.duration(600).delay(200)}
-        className="flex-row flex-wrap justify-between mb-8"
+        className="mb-12"
       >
-        {[1, 2, 3, 4].map((i) => (
-          <View
-            key={i}
-            className={`w-[45%] h-[100px] mb-4 ${colors.bg} rounded-2xl overflow-hidden`}
-          >
-            <Animated.View
-              className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
-              style={shimmerStyle}
-            />
-          </View>
-        ))}
-      </Animated.View>
-
-      {/* Recently played section */}
-      <Animated.View
-        entering={FadeInRight.duration(600).delay(300)}
-        className="mb-8"
-      >
-        <View
-          className={`w-1/2 h-6 ${colors.headerBg} rounded-lg mb-4 overflow-hidden`}
+        <Animated.View
+          className={`w-2/5 h-7 ${colors.headerBg} rounded-lg mb-5 overflow-hidden`}
+          entering={FadeInLeft.duration(600).delay(250)}
         >
           <Animated.View
-            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
             style={shimmerStyle}
           />
-        </View>
-        <View className="flex-row">
-          {[1, 2, 3].map((i) => (
-            <View
-              key={i}
-              className={`w-36 h-56 mr-4 ${colors.bg} rounded-2xl overflow-hidden`}
-            >
-              <Animated.View
-                className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
-                style={shimmerStyle}
-              />
-            </View>
-          ))}
+        </Animated.View>
+
+        <View className="flex-row overflow-hidden">
+          {generateSkeletonCards(4)}
         </View>
       </Animated.View>
 
-      {/* Trending section */}
+      {/* Recently played section - improved spacing */}
+      <Animated.View
+        entering={FadeInRight.duration(600).delay(300)}
+        className="mb-12"
+      >
+        <Animated.View
+          className={`w-2/5 h-7 ${colors.headerBg} rounded-lg mb-5 overflow-hidden`}
+          entering={FadeInLeft.duration(600).delay(350)}
+        >
+          <Animated.View
+            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
+            style={shimmerStyle}
+          />
+        </Animated.View>
+
+        <View className="flex-row overflow-hidden">
+          {generateSkeletonCards(3)}
+        </View>
+      </Animated.View>
+
+      {/* Trending section - improved consistency */}
       <Animated.View
         entering={FadeInLeft.duration(600).delay(400)}
         className="mb-8"
       >
-        <View
-          className={`w-2/5 h-6 ${colors.headerBg} rounded-lg mb-4 overflow-hidden`}
+        <Animated.View
+          className={`w-2/5 h-7 ${colors.headerBg} rounded-lg mb-5 overflow-hidden`}
+          entering={FadeInLeft.duration(600).delay(450)}
         >
           <Animated.View
-            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
+            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
             style={shimmerStyle}
           />
-        </View>
-        <View className="flex-row">
-          {[1, 2, 3].map((i) => (
-            <View
-              key={i}
-              className={`w-36 h-56 mr-4 ${colors.bg} rounded-2xl overflow-hidden`}
-            >
-              <Animated.View
-                className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/20"
-                style={shimmerStyle}
-              />
-            </View>
-          ))}
+        </Animated.View>
+
+        <View className="flex-row overflow-hidden">
+          {generateSkeletonCards(3)}
         </View>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 };
 

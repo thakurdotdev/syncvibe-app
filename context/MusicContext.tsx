@@ -6,8 +6,8 @@ import {
   PlaylistState,
 } from "@/types/music";
 import { Song } from "@/types/song";
-import { playbackHistory } from "@/utils/playbackHistory";
 import useApi from "@/utils/hooks/useApi";
+import { playbackHistory } from "@/utils/playbackHistory";
 import { setupPlayer } from "@/utils/playerSetup";
 import {
   createContext,
@@ -28,6 +28,9 @@ import TrackPlayer, {
 } from "react-native-track-player";
 import { getPlaybackState } from "react-native-track-player/lib/src/trackPlayer";
 import { useUser } from "./UserContext";
+
+// Cache for converted tracks to avoid redundant processing
+const trackCache = new Map<string, Track>();
 
 // Context definitions remain unchanged
 const PlayerControlsContext = createContext<PlayerControls | undefined>(
@@ -119,6 +122,11 @@ export const usePlaylist = (): PlaylistContextValue => {
 };
 
 const convertSongToTrack = async (song: Song): Promise<Track> => {
+  // Return cached track if available
+  if (trackCache.has(song.id)) {
+    return trackCache.get(song.id)!;
+  }
+
   const audioUrl =
     song.download_url[3]?.link ||
     song.download_url[2]?.link ||
@@ -137,6 +145,17 @@ const convertSongToTrack = async (song: Song): Promise<Track> => {
     artwork: artwork,
     duration: song.duration || 0,
   };
+
+  // Cache the track for future use
+  trackCache.set(song.id, track);
+
+  // Limit cache size to avoid memory issues (keep last 50 tracks)
+  if (trackCache.size > 50) {
+    const oldestKey = trackCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      trackCache.delete(oldestKey);
+    }
+  }
 
   return track;
 };
@@ -211,7 +230,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     };
   }, []);
 
-  // Handle TrackPlayer events with improved responsiveness
   useTrackPlayerEvents(
     [
       Event.PlaybackState,
@@ -286,12 +304,21 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                   if (
                     currentSong.id !== playbackStateRef.current.currentSong?.id
                   ) {
+                    // Update current song in React state
                     playbackDispatch({
                       type: "SET_CURRENT_SONG",
                       payload: currentSong,
                     });
 
-                    // Use only playbackHistory for tracking instead of direct addToHistory
+                    // Log when track changes
+                    console.log(
+                      `Now playing: ${currentSong.name} by ${
+                        currentSong?.artist_map?.primary_artists?.[0]?.name ||
+                        "Unknown Artist"
+                      }`,
+                    );
+
+                    // Update playback history if user is logged in
                     if (user?.userid && currentSong.id) {
                       const duration = currentSong.duration || 0;
                       playbackHistory
@@ -304,44 +331,8 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                         });
                     }
 
-                    // Log when track changes
-                    console.log(
-                      `Now playing: ${currentSong.name} by ${
-                        currentSong?.artist_map?.primary_artists?.[0]?.name ||
-                        "Unknown Artist"
-                      }`,
-                    );
-
-                    // Remove all songs up to and including the current song from playlist state
-                    const updatedPlaylist = playlistState.playlist.slice(
-                      songIndex + 1,
-                    );
-                    playlistDispatch({
-                      type: "SET_PLAYLIST",
-                      payload: updatedPlaylist,
-                    });
-
-                    // Also remove tracks before the current one from TrackPlayer queue
-                    // We need to do this in a setTimeout to avoid affecting current playback
-                    const currentIndex = event.index;
-                    if (typeof currentIndex === "number" && currentIndex > 0) {
-                      setTimeout(async () => {
-                        try {
-                          // Remove tracks before the current one
-                          for (let i = 0; i < currentIndex; i++) {
-                            await TrackPlayer.remove(0);
-                          }
-                          console.log(
-                            `Removed ${currentIndex} previous tracks from queue`,
-                          );
-                        } catch (error) {
-                          console.error(
-                            "Error removing tracks from queue:",
-                            error,
-                          );
-                        }
-                      }, 500);
-                    }
+                    // *** REMOVED THE CODE THAT REMOVES PREVIOUS TRACK FROM QUEUE ***
+                    // This was causing the track skipping issue when resuming playback
                   }
                 }
               }
@@ -556,25 +547,19 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 return;
               }
 
-              // Check for previous playback position
+              // Use the enhanced smart resume feature
               let initialPosition = 0;
               try {
-                const savedProgress = await playbackHistory.getPlaybackProgress(
+                initialPosition = await playbackHistory.getSmartResumePosition(
                   song.id,
                 );
-                if (savedProgress) {
-                  // Only resume if we're not at the end and have more than 10 seconds left
-                  const timeRemaining =
-                    savedProgress.duration - savedProgress.position;
-                  if (timeRemaining > 10 && savedProgress.position > 5) {
-                    initialPosition = savedProgress.position;
-                    console.log(
-                      `Resuming playback from position ${initialPosition} seconds`,
-                    );
-                  }
+                if (initialPosition > 0) {
+                  console.log(
+                    `Smart resume: starting from ${initialPosition} seconds`,
+                  );
                 }
               } catch (error) {
-                console.error("Error retrieving playback history:", error);
+                console.error("Error retrieving smart resume position:", error);
               }
 
               // Find the selected song's index in the playlist
@@ -621,9 +606,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               // Log removed from here to prevent duplicate with track change event
 
               if (user?.userid && song.id) {
-                // Use playbackHistory instead of addToHistory
+                // Initialize playback history with starting position
                 playbackHistory
-                  .updatePlaybackProgress(song, 0, song.duration || 0)
+                  .updatePlaybackProgress(
+                    song,
+                    initialPosition,
+                    song.duration || 0,
+                  )
                   .catch((err: any) => {
                     console.error("Error updating playback history:", err);
                   });
