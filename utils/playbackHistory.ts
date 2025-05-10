@@ -17,7 +17,7 @@ interface PlaybackProgress {
 
 const PLAYBACK_HISTORY_KEY = "@syncvibe/playback_history";
 const SYNC_BATCH_SIZE = 15; // Increased from 10
-const SYNC_INTERVAL = 60000; // Increased to 60 seconds for battery efficiency
+const SYNC_INTERVAL = 10000; // Increased to 60 seconds for battery efficiency
 const POSITION_DEBOUNCE_INTERVAL = 5000; // Only save a song's position every 5 seconds
 const MIN_PLAY_DURATION = 5; // Minimum seconds to consider a "play"
 
@@ -176,11 +176,7 @@ class PlaybackHistoryManager {
       // Filter out unnecessary song data to reduce payload size
       const compactUpdates = updates.map((update) => ({
         ...update,
-        songData: {
-          id: update.songData.id,
-          name: update.songData.name,
-          duration: update.songData.duration,
-        },
+        songData: update.songData,
       }));
 
       const response = await axios.post(
@@ -326,6 +322,104 @@ class PlaybackHistoryManager {
     } catch (error) {
       console.error("Error in smart resume:", error);
       return 0;
+    }
+  }
+
+  /**
+   * Gets the most recently played song from the history
+   * @returns The most recently played song with its last position, or null if no history exists
+   */
+  public async getLastPlayedSong(): Promise<{
+    song: Song;
+    position: number;
+  } | null> {
+    try {
+      // Check in-memory cache first for faster retrieval
+      if (this.pendingUpdates.size > 0) {
+        // Get all entries from the pending updates map
+        const entries = Array.from(this.pendingUpdates.values());
+
+        // Find the most recent entry
+        let mostRecent = entries[0];
+        for (const entry of entries) {
+          if (entry.timestamp > mostRecent.timestamp) {
+            mostRecent = entry;
+          }
+        }
+
+        if (mostRecent && mostRecent.songData) {
+          return {
+            song: mostRecent.songData,
+            position: mostRecent.position,
+          };
+        }
+      }
+
+      // Fall back to storage if not in memory
+      const history = await this.getLocalHistory();
+
+      if (Object.keys(history).length === 0) {
+        return null;
+      }
+
+      // More efficient implementation: find most recent entry in one pass
+      let mostRecent = null;
+      let maxTimestamp = 0;
+
+      for (const key in history) {
+        const entry = history[key];
+        if (entry.timestamp > maxTimestamp) {
+          maxTimestamp = entry.timestamp;
+          mostRecent = entry;
+        }
+      }
+
+      if (mostRecent && mostRecent.songData) {
+        // Cache the result for faster future access
+        this.pendingUpdates.set(mostRecent.songId, mostRecent);
+
+        return {
+          song: mostRecent.songData,
+          position: mostRecent.position,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error getting last played song:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Preloads essential history data into memory for faster access on subsequent app starts
+   * This improves the loading time of the most recently played song
+   */
+  public async preloadHistoryData(): Promise<void> {
+    try {
+      // Only preload if memory cache is empty to avoid redundant work
+      if (this.pendingUpdates.size === 0) {
+        const history = await this.getLocalHistory();
+
+        if (Object.keys(history).length === 0) {
+          return;
+        }
+
+        // Load the most recent entries (up to 5) into the memory cache
+        const entries = Object.values(history)
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, 5);
+
+        for (const entry of entries) {
+          this.pendingUpdates.set(entry.songId, entry);
+        }
+
+        console.log(
+          `Preloaded ${entries.length} recent song entries into memory cache`,
+        );
+      }
+    } catch (error) {
+      console.error("Error preloading history data:", error);
     }
   }
 

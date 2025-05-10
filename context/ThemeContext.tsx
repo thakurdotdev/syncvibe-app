@@ -1,19 +1,27 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useCallback,
-} from "react";
-import { useColorScheme, Appearance, AppState } from "react-native";
 import {
-  colorPalettes,
-  ThemeColors,
-  ColorTheme,
   ColorPalette,
+  colorPalettes,
+  ColorTheme,
+  ThemeColors,
 } from "@/theme/color";
 import { storageCache } from "@/utils/storageCache";
+import React, {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import {
+  Appearance,
+  AppState,
+  InteractionManager,
+  useColorScheme,
+} from "react-native";
 
 const THEME_PREFERENCE_KEY = "@theme_preference";
 const COLOR_PALETTE_KEY = "@color_palette";
@@ -49,40 +57,97 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     useState<ThemePreference>("system");
   const [colorPalette, setColorPaletteState] = useState<PaletteKey>("default");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Use React 18 transitions for non-blocking UI updates
+  const [isPending, startTransition] = useTransition();
 
-  // Separate fast UI update from slower storage operation using our cache
+  // Use refs to track previous values and avoid redundant updates
+  const prevThemeRef = useRef<ThemePreference>(themePreference);
+  const prevPaletteRef = useRef<PaletteKey>(colorPalette);
+  const pendingThemeUpdate = useRef<NodeJS.Timeout | null>(null);
+  const pendingPaletteUpdate = useRef<NodeJS.Timeout | null>(null);
+
+  // Optimized theme update using React 18 transitions
   const updateTheme = useCallback(
     (newTheme: ThemePreference) => {
-      // Update UI immediately
+      // Skip if the theme is not changing
+      if (newTheme === prevThemeRef.current) {
+        return;
+      }
+
+      // Update our ref to avoid redundant updates
+      prevThemeRef.current = newTheme;
+
+      // Clear any pending update
+      if (pendingThemeUpdate.current) {
+        clearTimeout(pendingThemeUpdate.current);
+      }
+
+      // Update UI states immediately to improve perceived performance
       if (newTheme === "system") {
         setThemeState(deviceColorScheme || "light");
       } else {
         setThemeState(newTheme as ColorTheme);
       }
-      setThemePreference(newTheme);
 
-      // Save preference in the background with caching
-      storageCache.setItem(THEME_PREFERENCE_KEY, newTheme).catch((error) => {
-        console.log("Error saving theme preference:", error);
+      // Use startTransition to mark state updates as non-urgent
+      startTransition(() => {
+        setThemePreference(newTheme);
+
+        // Debounce storage operations to prevent jank during rapid changes
+        pendingThemeUpdate.current = setTimeout(() => {
+          InteractionManager.runAfterInteractions(() => {
+            storageCache
+              .setItem(THEME_PREFERENCE_KEY, newTheme)
+              .catch((error) => {
+                console.log("Error saving theme preference:", error);
+              });
+          });
+        }, 300);
       });
     },
-    [deviceColorScheme],
+    [deviceColorScheme, startTransition],
   );
 
-  const updateColorPalette = useCallback((newPalette: PaletteKey) => {
-    setColorPaletteState(newPalette);
-    storageCache.setItem(COLOR_PALETTE_KEY, newPalette).catch((error) => {
-      console.log("Error saving color palette preference:", error);
-    });
-  }, []);
+  const updateColorPalette = useCallback(
+    (newPalette: PaletteKey) => {
+      // Skip if not changing
+      if (newPalette === prevPaletteRef.current) {
+        return;
+      }
 
-  // Load saved theme and palette preferences using cache
+      // Update ref to avoid redundant updates
+      prevPaletteRef.current = newPalette;
+
+      // Clear any pending update
+      if (pendingPaletteUpdate.current) {
+        clearTimeout(pendingPaletteUpdate.current);
+      }
+
+      // Update UI state immediately
+      setColorPaletteState(newPalette);
+
+      // Use startTransition for non-urgent updates
+      startTransition(() => {
+        // Debounce storage operations
+        pendingPaletteUpdate.current = setTimeout(() => {
+          InteractionManager.runAfterInteractions(() => {
+            storageCache
+              .setItem(COLOR_PALETTE_KEY, newPalette)
+              .catch((error) => {
+                console.log("Error saving color palette preference:", error);
+              });
+          });
+        }, 300);
+      });
+    },
+    [startTransition],
+  );
+
   useEffect(() => {
     let isMounted = true;
 
     const loadPreferences = async () => {
       try {
-        // Load theme preference
         const savedTheme = await storageCache.getItem(THEME_PREFERENCE_KEY);
         const savedPalette = await storageCache.getItem(COLOR_PALETTE_KEY);
 
@@ -155,20 +220,28 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     updateColorPalette(newPalette);
   };
 
-  const themeColors = colorPalettes[colorPalette][theme];
+  // Memoize theme colors to prevent unnecessary re-calculations
+  const themeColors = useMemo(
+    () => colorPalettes[colorPalette][theme],
+    [colorPalette, theme],
+  );
 
-  const contextValue: ThemeContextType = {
-    theme,
-    colors: themeColors,
-    isLoading,
-    toggleTheme,
-    setTheme,
-    setSystemTheme,
-    themePreference,
-    colorPalette,
-    setColorPalette,
-    availablePalettes: colorPalettes,
-  };
+  // Use useMemo to avoid unnecessary re-renders of consuming components
+  const contextValue = useMemo(
+    () => ({
+      theme,
+      colors: themeColors,
+      isLoading,
+      toggleTheme,
+      setTheme,
+      setSystemTheme,
+      themePreference,
+      colorPalette,
+      setColorPalette,
+      availablePalettes: colorPalettes,
+    }),
+    [theme, themeColors, isLoading, toggleTheme, themePreference, colorPalette],
+  );
 
   return (
     <ThemeContext.Provider value={contextValue}>

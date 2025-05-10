@@ -139,11 +139,7 @@ const SongCardQueue = memo(
               overflow: "hidden",
             }}
           >
-            <Animated.View
-              entering={SlideInRight.duration(400)}
-              layout={LinearTransition.springify()}
-              style={{ backgroundColor: colors.card }}
-            >
+            <View style={{ backgroundColor: colors.card }}>
               <Pressable
                 onLongPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -190,7 +186,7 @@ const SongCardQueue = memo(
                   </View>
                 </Card>
               </Pressable>
-            </Animated.View>
+            </View>
           </Swipeable>
         </OpacityDecorator>
       </ScaleDecorator>
@@ -236,22 +232,18 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
         getIndex,
         drag,
         isActive,
-      }: RenderItemParams<Song>) => {
-        const index = getIndex();
-        return (
-          <Animated.View
-            entering={FadeIn.duration(400).delay(index * 100)}
-            layout={LinearTransition.springify()}
-          >
-            <SongCardQueue song={item} drag={drag} isActive={isActive} />
-          </Animated.View>
-        );
-      }}
+      }: RenderItemParams<Song>) => (
+        <SongCardQueue song={item} drag={drag} isActive={isActive} />
+      )}
       keyExtractor={(item) => item.id}
       contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 8 }}
       showsVerticalScrollIndicator={false}
       bounces={true}
       onDragEnd={handleDragEnd}
+      updateCellsBatchingPeriod={50}
+      maxToRenderPerBatch={10}
+      windowSize={10}
+      initialNumToRender={8}
     />
   );
 });
@@ -318,20 +310,17 @@ export const SimilarSongs = memo(
     return (
       <FlatList
         data={recommendations}
-        renderItem={({ item, index }) => (
-          <Animated.View
-            entering={FadeIn.duration(400).delay(index * 100)}
-            layout={LinearTransition.springify()}
-          >
-            <SongCard song={item} />
-          </Animated.View>
-        )}
+        renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 8 }}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View className="h-2" />}
         scrollEnabled={true}
         bounces={true}
+        initialNumToRender={8}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={true}
       />
     );
   },

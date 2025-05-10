@@ -11,9 +11,7 @@ import {
   ensureHttpsForSongUrls,
 } from "@/utils/getHttpsUrls";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { SkipBackIcon, SkipForwardIcon } from "lucide-react-native";
 import {
@@ -41,8 +39,8 @@ import TrackPlayer, {
   usePlaybackState,
   useProgress,
 } from "react-native-track-player";
-import NewPlayerDrawer from "./NewPlayerDrawer";
 import Card from "../ui/card";
+import NewPlayerDrawer from "./NewPlayerDrawer";
 
 interface SongCardProps {
   song: Song;

@@ -22,7 +22,7 @@ import {
   SunIcon,
   UserIcon,
 } from "lucide-react-native";
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -49,36 +49,165 @@ const ThemeToggle = memo(() => {
     setColorPalette,
     availablePalettes,
   } = useTheme();
-  const [animatedBackground] = useState(new Animated.Value(0));
 
+  // Cache the selected theme value
   const selectedTheme = themePreference;
 
+  // Memoize handlers to prevent recreation on each render
   const handleThemeChange = useCallback(
     (newTheme: "light" | "system" | "dark") => {
-      Animated.timing(animatedBackground, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }).start(() => {
-        setTheme(newTheme);
-        animatedBackground.setValue(0);
-      });
+      // Use React.startTransition around the context method that already uses startTransition
+      setTheme(newTheme);
     },
-    [setTheme, animatedBackground],
+    [setTheme],
   );
 
   const handlePaletteChange = useCallback(
     (newPalette: keyof typeof availablePalettes) => {
-      Animated.timing(animatedBackground, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }).start(() => {
-        setColorPalette(newPalette);
-        animatedBackground.setValue(0);
-      });
+      setColorPalette(newPalette);
     },
-    [setColorPalette, animatedBackground],
+    [setColorPalette],
+  );
+
+  // Pre-compute button styles to avoid calculations during render
+  const baseButtonStyle = useMemo(
+    () => ({
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      marginRight: 4,
+    }),
+    [],
+  );
+
+  // Pre-compute icon colors
+  const activeIconColor = colors.primaryForeground;
+  const inactiveIconColor = colors.mutedForeground;
+
+  // Use a memoized view to prevent unnecessary re-renders
+  const themeButtons = useMemo(
+    () => (
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: colors.secondary,
+          borderRadius: 20,
+          padding: 4,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => handleThemeChange("light")}
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 16,
+            backgroundColor:
+              selectedTheme === "light" ? colors.primary : "transparent",
+            marginRight: 4,
+          }}
+          activeOpacity={0.7}
+        >
+          <SunIcon
+            size={20}
+            color={
+              selectedTheme === "light"
+                ? colors.primaryForeground
+                : colors.mutedForeground
+            }
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => handleThemeChange("system")}
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 16,
+            backgroundColor:
+              selectedTheme === "system" ? colors.primary : "transparent",
+            marginRight: 4,
+          }}
+          activeOpacity={0.7}
+        >
+          <LaptopIcon
+            size={20}
+            color={
+              selectedTheme === "system"
+                ? colors.primaryForeground
+                : colors.mutedForeground
+            }
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => handleThemeChange("dark")}
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 16,
+            backgroundColor:
+              selectedTheme === "dark" ? colors.primary : "transparent",
+          }}
+          activeOpacity={0.7}
+        >
+          <MoonIcon
+            size={20}
+            color={
+              selectedTheme === "dark"
+                ? colors.primaryForeground
+                : colors.mutedForeground
+            }
+          />
+        </TouchableOpacity>
+      </View>
+    ),
+    [colors, selectedTheme, handleThemeChange],
+  );
+
+  // Use a memoized view for palette buttons to prevent unnecessary re-renders
+  const paletteButtons = useMemo(
+    () => (
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: colors.secondary,
+          borderRadius: 20,
+          padding: 4,
+        }}
+      >
+        {Object.entries(availablePalettes).map(([key, palette]) => (
+          <TouchableOpacity
+            key={key}
+            onPress={() =>
+              handlePaletteChange(key as keyof typeof availablePalettes)
+            }
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 16,
+              backgroundColor:
+                colorPalette === key ? colors.primary : "transparent",
+              marginRight: key === "default" ? 4 : 0,
+            }}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={{
+                color:
+                  colorPalette === key
+                    ? colors.primaryForeground
+                    : colors.mutedForeground,
+                fontSize: 14,
+                fontWeight: colorPalette === key ? "600" : "400",
+              }}
+            >
+              {palette.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    ),
+    [colors, colorPalette, availablePalettes, handlePaletteChange],
   );
 
   return (
@@ -100,79 +229,7 @@ const ThemeToggle = memo(() => {
         >
           Theme
         </Text>
-        <View
-          style={{
-            flexDirection: "row",
-            backgroundColor: colors.secondary,
-            borderRadius: 20,
-            padding: 4,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => handleThemeChange("light")}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-              backgroundColor:
-                selectedTheme === "light" ? colors.primary : "transparent",
-              marginRight: 4,
-            }}
-            activeOpacity={0.7}
-          >
-            <SunIcon
-              size={20}
-              color={
-                selectedTheme === "light"
-                  ? colors.primaryForeground
-                  : colors.mutedForeground
-              }
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleThemeChange("system")}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-              backgroundColor:
-                selectedTheme === "system" ? colors.primary : "transparent",
-              marginRight: 4,
-            }}
-            activeOpacity={0.7}
-          >
-            <LaptopIcon
-              size={20}
-              color={
-                selectedTheme === "system"
-                  ? colors.primaryForeground
-                  : colors.mutedForeground
-              }
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleThemeChange("dark")}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-              backgroundColor:
-                selectedTheme === "dark" ? colors.primary : "transparent",
-            }}
-            activeOpacity={0.7}
-          >
-            <MoonIcon
-              size={20}
-              color={
-                selectedTheme === "dark"
-                  ? colors.primaryForeground
-                  : colors.mutedForeground
-              }
-            />
-          </TouchableOpacity>
-        </View>
+        {themeButtons}
       </View>
 
       <View
@@ -192,45 +249,7 @@ const ThemeToggle = memo(() => {
         >
           Color Palette
         </Text>
-        <View
-          style={{
-            flexDirection: "row",
-            backgroundColor: colors.secondary,
-            borderRadius: 20,
-            padding: 4,
-          }}
-        >
-          {Object.entries(availablePalettes).map(([key, palette]) => (
-            <TouchableOpacity
-              key={key}
-              onPress={() =>
-                handlePaletteChange(key as keyof typeof availablePalettes)
-              }
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 16,
-                backgroundColor:
-                  colorPalette === key ? colors.primary : "transparent",
-                marginRight: key === "default" ? 4 : 0,
-              }}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={{
-                  color:
-                    colorPalette === key
-                      ? colors.primaryForeground
-                      : colors.mutedForeground,
-                  fontSize: 14,
-                  fontWeight: colorPalette === key ? "600" : "400",
-                }}
-              >
-                {palette.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {paletteButtons}
       </View>
     </View>
   );
