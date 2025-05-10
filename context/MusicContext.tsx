@@ -29,14 +29,9 @@ import TrackPlayer, {
 import { getPlaybackState } from "react-native-track-player/lib/src/trackPlayer";
 import { useUser } from "./UserContext";
 
-// Cache for converted tracks to avoid redundant processing
 const trackCache = new Map<string, Track>();
 
-// Maximum number of tracks to keep in memory cache
 const MAX_TRACK_CACHE_SIZE = 50;
-
-// Import toast context for user feedback
-import { toast } from "./ToastContext";
 
 // LRU cache implementation for track conversion
 const addToTrackCache = (songId: string, track: Track) => {
@@ -148,7 +143,6 @@ export const usePlaylist = (): PlaylistContextValue => {
 };
 
 const convertSongToTrack = async (song: Song): Promise<Track> => {
-  // Return cached track if available
   if (trackCache.has(song.id)) {
     return trackCache.get(song.id)!;
   }
@@ -209,33 +203,26 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     userPlaylist: [] as Song[],
   });
 
-  // Initialize TrackPlayer once with optimized settings
   useEffect(() => {
     if (!playerSetupPromise.current) {
-      // Preload history data early for faster song restoration
       playbackHistory
         .preloadHistoryData()
         .catch((err) => console.error("Error preloading history data:", err));
 
-      // Setup listeners for app state and memory pressure
       AppState.addEventListener("change", (nextAppState) => {
         const previousAppState = appStateRef.current;
         appStateRef.current = nextAppState;
 
-        // If app is backgrounded, consider clearing some caches to free memory
         if (nextAppState === "background") {
-          // Only clear track cache if we have a lot of items
           if (trackCache.size > MAX_TRACK_CACHE_SIZE / 2) {
             clearTrackCache();
           }
         }
 
-        // When app comes to foreground, update playback position in history
         if (
           previousAppState.match(/inactive|background/) &&
           nextAppState === "active"
         ) {
-          // Update current song position in history when returning to app
           const updateCurrentPosition = async () => {
             try {
               if (
@@ -266,21 +253,16 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         }
       });
 
-      // In a real app, you would use a library like react-native-performance
-      // to detect memory warnings and clear caches accordingly
-
       playerSetupPromise.current = setupPlayer()
         .then(async (isSetup) => {
           trackPlayerInitialized.current = isSetup;
           playerSetupComplete.current = isSetup;
 
-          // Execute any pending play action once setup is complete
           if (pendingPlayAction.current) {
             pendingPlayAction.current();
             pendingPlayAction.current = null;
           }
 
-          // Load the last played song from history if player is set up successfully
           if (isSetup && !playbackStateRef.current.currentSong) {
             try {
               // Set loading state to true to show visual feedback to user
@@ -296,37 +278,22 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                   } at position ${position.toFixed(2)}s`,
                 );
 
-                // Optimization: Start track conversion process early for parallel processing
                 const trackPromise = convertSongToTrack(lastPlayedSong);
 
-                // Update React state immediately for faster UI response
                 playbackDispatch({
                   type: "SET_CURRENT_SONG",
                   payload: lastPlayedSong,
                 });
 
-                // Update playlist if empty
-                if (playlistState.playlist.length === 0) {
-                  playlistDispatch({
-                    type: "ADD_TO_PLAYLIST",
-                    payload: lastPlayedSong,
-                  });
-                }
-
-                // Perform player operations in parallel when possible
                 await TrackPlayer.reset();
 
-                // Use the track from earlier promise
                 const track = await trackPromise;
 
                 if (track.url) {
-                  // Add to queue and restore position in a single batch
                   try {
                     await TrackPlayer.add([track]);
 
                     if (position > 0) {
-                      // We already have the position from the getLastPlayedSong,
-                      // which is more efficient than calling getSmartResumePosition separately
                       await TrackPlayer.seekTo(position);
                       console.log(
                         `Restored playback position to ${position.toFixed(
@@ -335,11 +302,9 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                       );
                     }
 
-                    // Update UI to reflect restored state
                     playbackDispatch({ type: "SET_LOADING", payload: false });
                   } catch (queueError) {
                     console.error("Failed to add track to queue:", queueError);
-                    // Attempt recovery by retrying once
                     try {
                       await TrackPlayer.reset();
                       await TrackPlayer.add([track]);
@@ -363,10 +328,8 @@ export function MusicProvider({ children }: PlayerProviderProps) {
               }
             } catch (error) {
               console.error("Error loading last played song:", error);
-              // Ensure loading state is reset in case of error
               playbackDispatch({ type: "SET_LOADING", payload: false });
 
-              // Attempt to recover from errors by clearing state
               try {
                 await TrackPlayer.reset();
               } catch (e) {
@@ -379,7 +342,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         })
         .catch((error) => {
           console.error("Error initializing TrackPlayer:", error);
-          // Reset promise so we can try again
           playerSetupPromise.current = null;
           return false;
         });
@@ -500,9 +462,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                           );
                         });
                     }
-
-                    // *** REMOVED THE CODE THAT REMOVES PREVIOUS TRACK FROM QUEUE ***
-                    // This was causing the track skipping issue when resuming playback
                   }
                 }
               }
@@ -516,24 +475,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           case Event.PlaybackError:
             console.error(`Playback error: ${event.code} - ${event.message}`);
             playbackDispatch({ type: "SET_LOADING", payload: false });
-
-            // Wait a moment before trying to recover
-            setTimeout(async () => {
-              try {
-                // Try to recover by playing next song
-                if (playbackStateRef.current.isPlaying) {
-                  await controls.handleNextSong();
-                }
-              } catch (error) {
-                console.error("Error recovering from playback error:", error);
-              }
-            }, 300);
             break;
 
           case Event.PlaybackQueueEnded:
             // Restart current song if we have one
             if (playbackStateRef.current.currentSong) {
-              controls.playSong(playbackStateRef.current.currentSong);
+              controls.handlePlayPauseSong();
+              playbackDispatch({ type: "SET_LOADING", payload: false });
             }
             break;
 
@@ -691,7 +639,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             try {
               await TrackPlayer.reset();
 
-              // Convert the selected song to a track
               const track = await convertSongToTrack(song);
 
               if (!track.url) {
@@ -699,61 +646,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 playbackDispatch({ type: "SET_LOADING", payload: false });
                 return;
               }
-
-              // Use the enhanced smart resume feature
-              let initialPosition = 0;
-              try {
-                initialPosition = await playbackHistory.getSmartResumePosition(
-                  song.id,
-                );
-                if (initialPosition > 0) {
-                  console.log(
-                    `Smart resume: starting from ${initialPosition} seconds`,
-                  );
-                }
-              } catch (error) {
-                console.error("Error retrieving smart resume position:", error);
-              }
-
-              // Find the selected song's index in the playlist
-              const songIndex = playlistState.playlist.findIndex(
-                (s) => s.id === song.id,
-              );
-
-              // Set repeat mode to off by default
               await TrackPlayer.setRepeatMode(RepeatMode.Off);
-
-              if (songIndex >= 0) {
-                const remainingPlaylist =
-                  playlistState.playlist.slice(songIndex);
-                const allTracks = await Promise.all(
-                  remainingPlaylist.map(convertSongToTrack),
-                );
-                const validTracks = allTracks.filter((track) => track.url);
-
-                if (validTracks.length > 0) {
-                  await TrackPlayer.add(validTracks);
-                  await TrackPlayer.skip(0);
-                }
-              } else {
-                await TrackPlayer.add([track]);
-              }
-
-              // Seek to the saved position if needed
-              if (initialPosition > 0) {
-                await TrackPlayer.seekTo(initialPosition);
-              }
-
-              // Start playback
+              await TrackPlayer.add([track]);
               await TrackPlayer.play();
 
               if (user?.userid && song.id) {
                 playbackHistory
-                  .updatePlaybackProgress(
-                    song,
-                    initialPosition,
-                    song.duration || 0,
-                  )
+                  .updatePlaybackProgress(song, 10, song.duration || 0)
                   .catch((err: any) => {
                     console.error("Error updating playback history:", err);
                   });
