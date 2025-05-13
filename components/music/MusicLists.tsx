@@ -1,5 +1,5 @@
 import Card from "@/components/ui/card";
-import { usePlayer, usePlayerState } from "@/context/MusicContext";
+import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
 import { useTheme } from "@/context/ThemeContext";
 import { Song } from "@/types/song";
 import * as Haptics from "expo-haptics";
@@ -34,11 +34,7 @@ import DraggableFlatList, {
 } from "react-native-draggable-flatlist";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
-import Animated, {
-  FadeIn,
-  LinearTransition,
-  SlideInRight,
-} from "react-native-reanimated";
+import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import {
   AlbumCard,
   ArtistCard,
@@ -46,6 +42,7 @@ import {
   PlaylistCard,
   SongCard,
 } from "./MusicCards";
+import TrackPlayer from "react-native-track-player";
 
 interface AlbumsGridProps {
   albums: any[];
@@ -194,26 +191,28 @@ const SongCardQueue = memo(
   },
 );
 
-export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
+export const MusicQueue = memo(() => {
   const { colors } = useTheme();
   const { reorderPlaylist } = usePlayer();
+  const { playlist, setPlaylist } = usePlaylist();
   const scrollRef = useRef(null);
-  const [localPlaylist, setLocalPlaylist] = useState<Song[]>(playlist);
 
-  useEffect(() => {
-    setLocalPlaylist(playlist);
-  }, [playlist]);
+  const clearPlaylist = useCallback(() => {
+    setPlaylist([]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    TrackPlayer.removeUpcomingTracks();
+  }, [setPlaylist]);
 
   const handleDragEnd = useCallback(
     ({ data }: { data: Song[] }) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setLocalPlaylist(data);
+      setPlaylist(data);
       reorderPlaylist(data);
     },
     [reorderPlaylist],
   );
 
-  if (!localPlaylist.length) {
+  if (!playlist.length) {
     return (
       <View className="items-center justify-center py-10">
         <Text className="text-lg" style={{ color: colors.text }}>
@@ -226,7 +225,7 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
   return (
     <DraggableFlatList
       ref={scrollRef}
-      data={localPlaylist}
+      data={playlist}
       renderItem={({
         item,
         getIndex,
@@ -236,14 +235,10 @@ export const MusicQueue = memo(({ playlist }: { playlist: Song[] }) => {
         <SongCardQueue song={item} drag={drag} isActive={isActive} />
       )}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 8 }}
+      contentContainerStyle={{ paddingBottom: 10, paddingHorizontal: 8 }}
       showsVerticalScrollIndicator={false}
       bounces={true}
       onDragEnd={handleDragEnd}
-      updateCellsBatchingPeriod={50}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      initialNumToRender={8}
     />
   );
 });
@@ -312,15 +307,11 @@ export const SimilarSongs = memo(
         data={recommendations}
         renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 8 }}
+        contentContainerStyle={{ paddingBottom: 10, paddingHorizontal: 8 }}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View className="h-2" />}
         scrollEnabled={true}
         bounces={true}
-        initialNumToRender={8}
-        maxToRenderPerBatch={5}
-        windowSize={5}
-        removeClippedSubviews={true}
       />
     );
   },

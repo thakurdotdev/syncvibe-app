@@ -50,12 +50,6 @@ const SWIPE_THRESHOLD = 150;
 const TABS = ["player", "queue", "recommendations"] as const;
 type TabType = (typeof TABS)[number];
 
-// Use this to calculate tab positions for smooth sliding
-const getTabIndex = (tab: TabType): number => {
-  "worklet";
-  return TABS.indexOf(tab);
-};
-
 const PlayerTab = React.memo(
   ({
     currentSong,
@@ -103,10 +97,9 @@ const PlayerTab = React.memo(
   },
 );
 
-// Optimized tabs without unnecessary animations
-const QueueTab = React.memo(({ playlist }: { playlist: Song[] }) => (
+const QueueTab = React.memo(() => (
   <View style={styles.tabContentContainer}>
-    <MusicQueue playlist={playlist} />
+    <MusicQueue />
   </View>
 ));
 
@@ -144,15 +137,11 @@ export default function Player() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Animation values
   const translateY = useSharedValue(height);
   const gestureTranslateY = useSharedValue(0);
   const miniPlayerOpacity = useSharedValue(1);
   const scale = useSharedValue(1);
   const startY = useSharedValue(0);
-
-  // Prevent multiple tab changes in quick succession
-  const isTabChanging = useRef(false);
 
   const handlePlayPauseSong = async () => {
     if (isPlaying) {
@@ -266,14 +255,8 @@ export default function Player() {
 
   const handleTabPress = useCallback(
     (tab: TabType) => {
-      if (tab !== activeTab && !isTabChanging.current) {
-        isTabChanging.current = true;
+      if (tab !== activeTab) {
         setActiveTab(tab);
-
-        // Reset after animation
-        setTimeout(() => {
-          isTabChanging.current = false;
-        }, TAB_ANIMATION_DURATION + 50);
       }
     },
     [activeTab],
@@ -288,7 +271,6 @@ export default function Player() {
     [currentSong],
   );
 
-  // Vertical gesture for expanding/collapsing player
   const verticalGesture = Gesture.Pan()
     .onStart(() => {
       "worklet";
@@ -314,32 +296,6 @@ export default function Player() {
       }
     });
 
-  // Tab indicator animation
-  const tabIndicatorPosition = useSharedValue(0);
-
-  // Update tab indicator position whenever the active tab changes
-  useEffect(() => {
-    const index = getTabIndex(activeTab);
-    tabIndicatorPosition.value = withTiming(index, {
-      duration: 250,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-    });
-  }, [activeTab]);
-
-  // Animated styles for the tab indicator
-  const tabIndicatorStyle = useAnimatedStyle(() => {
-    const width = 100 / TABS.length;
-    return {
-      position: "absolute",
-      bottom: -1,
-      height: 3,
-      width: `${width}%`,
-      borderRadius: 3,
-      backgroundColor: colors.primary,
-      left: `${tabIndicatorPosition.value * (100 / TABS.length)}%`,
-    };
-  });
-
   const expandedPlayerStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -353,9 +309,6 @@ export default function Player() {
     };
   });
 
-  // Improved tab content rendering with better animation performance
-  // We render all tabs at once but position them side by side
-  // This enables smooth sliding transitions without re-rendering content
   const miniPlayerStyle = useAnimatedStyle(() => {
     const calculatedOpacity = interpolate(
       translateY.value,
@@ -378,27 +331,6 @@ export default function Player() {
       ],
     };
   });
-
-  // Render only the active tab content without expensive animations
-  const renderTabContent = () => {
-    // Use conditional rendering instead of animated transitions
-    // This significantly reduces the animation overhead during tab switching
-    if (activeTab === "player") {
-      return <PlayerTab currentSong={currentSong} artistName={artistName} />;
-    } else if (activeTab === "queue") {
-      return <QueueTab playlist={playlist} />;
-    } else if (activeTab === "recommendations") {
-      return (
-        <RecommendationsTab
-          recommendations={recommendations}
-          loading={loading}
-          fetchRecommendations={getRecommendations}
-        />
-      );
-    }
-    // Default fallback
-    return <PlayerTab currentSong={currentSong} artistName={artistName} />;
-  };
 
   const renderExpandedPlayer = () => (
     <Animated.View
@@ -468,18 +400,48 @@ export default function Player() {
                 ]}
               >
                 {tab === "player"
-                  ? "Now Playing"
+                  ? "Playing"
                   : tab === "queue"
                   ? "Queue"
                   : "For You"}
               </Text>
             </Button>
           ))}
-          <Animated.View style={tabIndicatorStyle} />
         </View>
 
         <Animated.View style={styles.contentContainer}>
-          {renderTabContent()}
+          <View style={{ flex: 1 }}>
+            <View
+              style={{
+                display: activeTab === "player" ? "flex" : "none",
+                flex: 1,
+              }}
+            >
+              <PlayerTab currentSong={currentSong!} artistName={artistName} />
+            </View>
+
+            <View
+              style={{
+                display: activeTab === "queue" ? "flex" : "none",
+                flex: 1,
+              }}
+            >
+              <QueueTab />
+            </View>
+
+            <View
+              style={{
+                display: activeTab === "recommendations" ? "flex" : "none",
+                flex: 1,
+              }}
+            >
+              <RecommendationsTab
+                recommendations={recommendations}
+                loading={loading}
+                fetchRecommendations={getRecommendations}
+              />
+            </View>
+          </View>
         </Animated.View>
       </View>
     </Animated.View>
@@ -654,6 +616,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 16,
     borderBottomWidth: 1,
+    position: "relative",
   },
   tab: {
     flex: 1,
@@ -671,13 +634,7 @@ const styles = StyleSheet.create({
   activeTabText: {
     fontWeight: "600",
   },
-  activeTabIndicator: {
-    position: "absolute",
-    bottom: -1,
-    height: 3,
-    width: "50%",
-    borderRadius: 3,
-  },
+
   contentContainer: {
     flex: 1,
     paddingHorizontal: 10,

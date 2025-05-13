@@ -80,18 +80,10 @@ export async function PlaybackService() {
   // Improved previous track handler with better position check
   TrackPlayer.addEventListener(Event.RemotePrevious, async () => {
     try {
-      const currentPosition = await TrackPlayer.getProgress().then(
-        (progress) => progress.position,
-      );
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
       const queue = await TrackPlayer.getQueue();
 
-      if (currentPosition > 3) {
-        // If more than 3 seconds in, just restart current track
-        console.log("Service: Restarting current track (position > 3s)");
-        await TrackPlayer.seekTo(0);
-        await TrackPlayer.play();
-      } else if (currentIndex !== undefined && currentIndex > 0) {
+      if (currentIndex !== undefined && currentIndex > 0) {
         // Skip to previous track
         const prevIndex = currentIndex - 1;
         console.log(
@@ -101,7 +93,6 @@ export async function PlaybackService() {
         await TrackPlayer.skip(prevIndex);
         await TrackPlayer.play();
       } else if (queue.length > 0) {
-        // If we're on the first track, just restart it
         console.log("Service: At first track, restarting");
         await TrackPlayer.seekTo(0);
         await TrackPlayer.play();

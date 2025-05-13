@@ -555,15 +555,12 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.PlaybackProgressUpdated:
-            // Save playback progress every ~10 seconds
             if (
               event.position &&
               event.position > 0 &&
               playbackStateRef.current.currentSong
             ) {
-              // Save progress only if we're at least 5 seconds into the song and have at least 5 seconds remaining
               if (event.position > 5 && event.duration - event.position > 5) {
-                // Only save every ~10 seconds to avoid excessive updates
                 if (Math.floor(event.position) % 10 === 0) {
                   playbackHistory.updatePlaybackProgress(
                     playbackStateRef.current.currentSong,
@@ -577,7 +574,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         }
       } catch (error) {
         console.error("Error handling TrackPlayer event:", error);
-        // Reset flag to ensure UI can recover from errors
         isSwitchingTracks.current = false;
         playbackDispatch({ type: "SET_LOADING", payload: false });
       }
@@ -726,15 +722,10 @@ export function MusicProvider({ children }: PlayerProviderProps) {
 
       addToPlaylist: async (songs: Song | Song[]) => {
         const newSongs = Array.isArray(songs) ? songs : [songs];
-        console.log(`Adding ${newSongs.length} songs to playlist state`);
-
-        // Combine the existing playlist with the new songs
-        const updatedPlaylist = [...playlistState.playlist, ...newSongs];
-
         // Update playlist state
         playlistDispatch({
           type: "SET_PLAYLIST",
-          payload: updatedPlaylist,
+          payload: newSongs,
         });
 
         // Add to TrackPlayer queue if initialized
@@ -777,7 +768,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           const newSongs = Array.isArray(songs) ? songs : [songs];
           console.log(`Adding ${newSongs.length} songs to queue`);
 
-          // Filter out songs that are already in the playlist
           const currentSongId = playbackStateRef.current.currentSong?.id;
           const uniqueNewSongs = newSongs.filter(
             (song) =>
@@ -786,25 +776,17 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           );
 
           if (uniqueNewSongs.length > 0) {
-            // Update React state immediately for UI responsiveness
             playlistDispatch({
               type: "ADD_TO_PLAYLIST",
               payload: uniqueNewSongs,
             });
-
-            // Add to player queue if ready
             if (trackPlayerInitialized.current) {
-              // Convert all tracks at once for better reliability
               const tracksToAdd = await Promise.all(
                 uniqueNewSongs.map(convertSongToTrack),
               );
               const validTracks = tracksToAdd.filter((track) => track.url);
 
               if (validTracks.length > 0) {
-                // Get current queue state to ensure we're adding to the right position
-                const currentQueue = await TrackPlayer.getQueue();
-
-                // Add all tracks to the player queue
                 await TrackPlayer.add(validTracks);
 
                 console.log(
@@ -886,13 +868,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             );
 
             if (newCurrentIndex >= 0) {
-              // Keep playing current track while updating queue
-              const currentPosition = await TrackPlayer.getProgress().then(
-                (progress) => progress.position,
-              );
-              const isPlaying = await TrackPlayer.getState().then(
-                (state) => state === State.Playing,
-              );
+              const isPlaying = (await getPlaybackState()).state;
 
               // Remove upcoming tracks and add new ones
               await TrackPlayer.removeUpcomingTracks();
@@ -918,11 +894,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             } else {
               // Current track not in new order, handle gracefully
               if (currentTrack) {
-                // Keep current track playing
-                const isPlaying = await TrackPlayer.getState().then(
-                  (state) => state === State.Playing,
-                );
-
                 // Add new tracks in background
                 setTimeout(async () => {
                   const tracksToAdd = await Promise.all(
