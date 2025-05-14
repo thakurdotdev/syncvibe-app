@@ -191,6 +191,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
   const pendingPlayAction = useRef<(() => Promise<void>) | null>(null);
   const isSwitchingTracks = useRef(false);
   const appStateRef = useRef(AppState.currentState);
+  const appStartTime = useRef(Date.now());
 
   const [playbackState, playbackDispatch] = useReducer(playbackReducer, {
     currentSong: null,
@@ -217,12 +218,27 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           if (trackCache.size > MAX_TRACK_CACHE_SIZE / 2) {
             clearTrackCache();
           }
+
+          // If app goes to background, let playbackHistory know
+          if (playbackStateRef.current.isPlaying) {
+            // We're still playing, but app is in background
+            playbackHistory.pausePlayback().catch((err) => {
+              console.error("Error pausing playback history:", err);
+            });
+          }
         }
 
         if (
           previousAppState.match(/inactive|background/) &&
           nextAppState === "active"
         ) {
+          // App came to foreground
+          if (playbackStateRef.current.isPlaying) {
+            // If still playing, resume playback tracking
+            playbackHistory.resumePlayback().catch((err) => {
+              console.error("Error resuming playback history:", err);
+            });
+          }
           const updateCurrentPosition = async () => {
             try {
               if (
@@ -237,10 +253,12 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 );
 
                 if (position > 0 && playbackStateRef.current.currentSong) {
+                  // Always update current position when app comes to foreground
                   playbackHistory.updatePlaybackProgress(
                     playbackStateRef.current.currentSong,
                     position,
                     duration,
+                    playbackStateRef.current.isPlaying,
                   );
                 }
               }
@@ -292,6 +310,12 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                 if (track.url) {
                   try {
                     await TrackPlayer.add([track]);
+
+                    // Set repeat mode to Off to prevent auto-advancing to next track
+                    await TrackPlayer.setRepeatMode(RepeatMode.Off);
+
+                    // Don't auto-play the restored track which can cause unwanted track changes
+                    await TrackPlayer.pause();
 
                     if (position > 0) {
                       await TrackPlayer.seekTo(position);
@@ -362,6 +386,61 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     };
   }, []);
 
+  // Clean up resources when component unmounts
+  useEffect(() => {
+    return () => {
+      // Ensure we cleanup the playbackHistory manager
+      playbackHistory.destroy();
+
+      // Clean up track player if initialized
+      if (trackPlayerInitialized.current) {
+        // Use the correct TrackPlayer teardown method
+        TrackPlayer.reset().catch((err: Error) => {
+          console.error("Error resetting TrackPlayer:", err);
+        });
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        if (nextAppState.match(/inactive|background/)) {
+          try {
+            if (
+              playbackStateRef.current.currentSong?.id &&
+              trackPlayerInitialized.current
+            ) {
+              const { position, duration } = await TrackPlayer.getProgress();
+              if (position > 0 && duration > 0) {
+                // Always update when app goes to background
+                await playbackHistory.updatePlaybackProgress(
+                  playbackStateRef.current.currentSong,
+                  position,
+                  duration,
+                  playbackStateRef.current.isPlaying,
+                );
+                console.log(
+                  `Saved position ${position}s before app went to background`,
+                );
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Error saving playback position on app state change:",
+              error,
+            );
+          }
+        }
+      },
+    );
+
+    return () => {
+      appStateSubscription.remove();
+    };
+  }, []);
+
   useTrackPlayerEvents(
     [
       Event.PlaybackState,
@@ -387,35 +466,24 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         switch (event.type) {
           case Event.PlaybackState:
             const playerState = (await getPlaybackState()).state;
+            const isNowPlaying = playerState === State.Playing;
+
             // Only update UI if state actually changed
-            if (
-              (playerState === State.Playing) !==
-              playbackStateRef.current.isPlaying
-            ) {
+            if (isNowPlaying !== playbackStateRef.current.isPlaying) {
               playbackDispatch({
                 type: "SET_PLAYING",
-                payload: playerState === State.Playing,
+                payload: isNowPlaying,
               });
-            }
 
-            // If we're playing and just became active, make sure current song is in sync
-            if (
-              playerState === State.Playing &&
-              !playbackStateRef.current.isLoading &&
-              !playbackStateRef.current.currentSong
-            ) {
-              const currentTrack = await TrackPlayer.getActiveTrack();
-              if (currentTrack) {
-                const songIndex = playlistState.playlist.findIndex(
-                  (song) => song.id === currentTrack.id,
+              // Update the playback history with the new playing state
+              if (playbackStateRef.current.currentSong) {
+                const { position, duration } = await TrackPlayer.getProgress();
+                playbackHistory.updatePlaybackProgress(
+                  playbackStateRef.current.currentSong,
+                  position,
+                  duration,
+                  isNowPlaying,
                 );
-
-                if (songIndex >= 0) {
-                  playbackDispatch({
-                    type: "SET_CURRENT_SONG",
-                    payload: playlistState.playlist[songIndex],
-                  });
-                }
               }
             }
             break;
@@ -453,14 +521,26 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                     // Update playback history if user is logged in
                     if (user?.userid && currentSong.id) {
                       const duration = currentSong.duration || 0;
-                      playbackHistory
-                        .updatePlaybackProgress(currentSong, 0, duration)
-                        .catch((err) => {
-                          console.error(
-                            "Error updating playback history:",
-                            err,
-                          );
-                        });
+
+                      // Only update history if the track change wasn't triggered during app startup
+                      if (
+                        playerSetupComplete.current &&
+                        Date.now() - appStartTime.current > 3000
+                      ) {
+                        playbackHistory
+                          .updatePlaybackProgress(
+                            currentSong,
+                            0,
+                            duration,
+                            true,
+                          )
+                          .catch((err) => {
+                            console.error(
+                              "Error updating playback history:",
+                              err,
+                            );
+                          });
+                      }
                     }
                   }
                 }
@@ -478,8 +558,17 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.PlaybackQueueEnded:
-            // Restart current song if we have one
-            if (playbackStateRef.current.currentSong) {
+            // Handle queue end by playing the next song from playlist state
+            if (
+              playbackStateRef.current.currentSong &&
+              playlistState.playlist.length > 0
+            ) {
+              console.log(
+                "TrackPlayer queue ended, playing next song from playlist state",
+              );
+              controls.handleNextSong();
+            } else if (playbackStateRef.current.currentSong) {
+              // Just restart current song if it's the only one
               controls.handlePlayPauseSong();
               playbackDispatch({ type: "SET_LOADING", payload: false });
             }
@@ -511,21 +600,19 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             break;
 
           case Event.RemoteNext:
-            // Note: Primary handling is in service.ts
-            // This is just for additional UI feedback
-            if (!isSwitchingTracks.current) {
-              isSwitchingTracks.current = true;
-              playbackDispatch({ type: "SET_LOADING", payload: true });
-            }
+            // Handle remote next using our local playlist state
+            console.log("Remote next button pressed, using local playlist");
+            isSwitchingTracks.current = true;
+            playbackDispatch({ type: "SET_LOADING", payload: true });
+            controls.handleNextSong();
             break;
 
           case Event.RemotePrevious:
-            // Note: Primary handling is in service.ts
-            // This is just for additional UI feedback
-            if (!isSwitchingTracks.current) {
-              isSwitchingTracks.current = true;
-              playbackDispatch({ type: "SET_LOADING", payload: true });
-            }
+            // Handle remote previous using our local playlist state
+            console.log("Remote previous button pressed, using local playlist");
+            isSwitchingTracks.current = true;
+            playbackDispatch({ type: "SET_LOADING", payload: true });
+            controls.handlePrevSong();
             break;
 
           case Event.RemoteSeek:
@@ -558,7 +645,8 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             if (
               event.position &&
               event.position > 0 &&
-              playbackStateRef.current.currentSong
+              playbackStateRef.current.currentSong &&
+              playbackStateRef.current.isPlaying // Only update when actually playing
             ) {
               if (event.position > 5 && event.duration - event.position > 5) {
                 if (Math.floor(event.position) % 10 === 0) {
@@ -566,6 +654,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                     playbackStateRef.current.currentSong,
                     event.position,
                     event.duration,
+                    playbackStateRef.current.isPlaying,
                   );
                 }
               }
@@ -584,43 +673,6 @@ export function MusicProvider({ children }: PlayerProviderProps) {
     playbackStateRef.current = playbackState;
   }, [playbackState]);
 
-  useEffect(() => {
-    const appStateSubscription = AppState.addEventListener(
-      "change",
-      async (nextAppState) => {
-        if (nextAppState.match(/inactive|background/)) {
-          try {
-            if (
-              playbackStateRef.current.currentSong?.id &&
-              trackPlayerInitialized.current
-            ) {
-              const { position, duration } = await TrackPlayer.getProgress();
-              if (position > 0 && duration > 0) {
-                await playbackHistory.updatePlaybackProgress(
-                  playbackStateRef.current.currentSong,
-                  position,
-                  duration,
-                );
-                console.log(
-                  `Saved position ${position}s before app went to background`,
-                );
-              }
-            }
-          } catch (error) {
-            console.error(
-              "Error saving playback position on app state change:",
-              error,
-            );
-          }
-        }
-      },
-    );
-
-    return () => {
-      appStateSubscription.remove();
-    };
-  }, []);
-
   const controls: PlayerControls = useMemo(
     () => ({
       playSong: async (song: Song) => {
@@ -630,6 +682,17 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           playbackDispatch({ type: "SET_CURRENT_SONG", payload: song });
           playbackDispatch({ type: "SET_LOADING", payload: true });
           playbackDispatch({ type: "SET_PLAYING", payload: true });
+
+          // Check if the song exists in the playlist
+          const songExistsInPlaylist = playlistState.playlist.some(
+            (s) => s.id === song.id,
+          );
+
+          // If not in playlist, clear the queue and add just this song
+          if (!songExistsInPlaylist) {
+            console.log("Song not in playlist, adding to queue:", song.name);
+            playlistDispatch({ type: "SET_PLAYLIST", payload: [song] });
+          }
 
           const playOperation = async () => {
             try {
@@ -648,7 +711,7 @@ export function MusicProvider({ children }: PlayerProviderProps) {
 
               if (user?.userid && song.id) {
                 playbackHistory
-                  .updatePlaybackProgress(song, 10, song.duration || 0)
+                  .updatePlaybackProgress(song, 0, song.duration || 0, true) // Starting playback so isPlaying is true
                   .catch((err: any) => {
                     console.error("Error updating playback history:", err);
                   });
@@ -673,6 +736,11 @@ export function MusicProvider({ children }: PlayerProviderProps) {
         try {
           playbackDispatch({ type: "STOP_SONG" });
 
+          // Stop playback history tracking
+          await playbackHistory.stopPlayback().catch((err) => {
+            console.error("Error stopping playback history:", err);
+          });
+
           if (trackPlayerInitialized.current) {
             await TrackPlayer.stop();
             await TrackPlayer.reset();
@@ -694,6 +762,17 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             } else {
               return;
             }
+          }
+
+          // Update playback history with new playing state
+          if (playbackStateRef.current.currentSong) {
+            const { position, duration } = await TrackPlayer.getProgress();
+            playbackHistory.updatePlaybackProgress(
+              playbackStateRef.current.currentSong,
+              position,
+              duration,
+              newPlayingState,
+            );
           }
 
           const playerState = await TrackPlayer.getState();
@@ -778,22 +857,11 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           if (uniqueNewSongs.length > 0) {
             playlistDispatch({
               type: "ADD_TO_PLAYLIST",
-              payload: uniqueNewSongs,
+              payload: [
+                playbackStateRef.current.currentSong,
+                ...uniqueNewSongs,
+              ],
             });
-            if (trackPlayerInitialized.current) {
-              const tracksToAdd = await Promise.all(
-                uniqueNewSongs.map(convertSongToTrack),
-              );
-              const validTracks = tracksToAdd.filter((track) => track.url);
-
-              if (validTracks.length > 0) {
-                await TrackPlayer.add(validTracks);
-
-                console.log(
-                  `Added ${validTracks.length} tracks to player queue`,
-                );
-              }
-            }
           }
         } catch (error) {
           console.error("Queue addition error:", error);
@@ -946,48 +1014,51 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           playbackDispatch({ type: "SET_LOADING", payload: true });
           isSwitchingTracks.current = true;
 
-          // Get the current queue from TrackPlayer
-          const queue = await TrackPlayer.getQueue();
-          const currentIndex = await TrackPlayer.getActiveTrackIndex();
+          // Use local playlist state instead of TrackPlayer queue
+          const playlist = playlistState.playlist;
+          const currentSongId = playbackStateRef.current.currentSong?.id;
 
-          // Make sure we have a valid index
-          if (currentIndex === undefined) {
+          if (!currentSongId || playlist.length === 0) {
+            console.log("No song is currently playing or playlist is empty");
             isSwitchingTracks.current = false;
             playbackDispatch({ type: "SET_LOADING", payload: false });
             return;
           }
 
-          // If we have a valid index and it's not the last track
-          if (currentIndex < queue.length - 1) {
+          // Find the current song index in our local playlist state
+          const currentIndex = playlist.findIndex(
+            (song) => song.id === currentSongId,
+          );
+
+          if (currentIndex === -1) {
+            console.log("Current song not found in playlist");
+            isSwitchingTracks.current = false;
+            playbackDispatch({ type: "SET_LOADING", payload: false });
+            return;
+          }
+
+          // If we have a next song in the playlist
+          if (currentIndex < playlist.length - 1) {
             console.log(
-              `Skipping from track ${currentIndex} to ${currentIndex + 1}`,
+              `Playing next song from playlist: ${currentIndex} to ${
+                currentIndex + 1
+              }`,
             );
 
-            // For more reliability, use explicit skip rather than skipToNext
-            await TrackPlayer.skip(currentIndex + 1);
-            await TrackPlayer.play();
-
-            // Update UI state
-            playbackDispatch({ type: "SET_PLAYING", payload: true });
-
-            // Track change logging will be handled by PlaybackActiveTrackChanged event
-          } else if (queue.length > 0) {
-            // We're at the end - restart from beginning
-            console.log("Reached end of queue, restarting from beginning");
-            await TrackPlayer.skip(0);
-            await TrackPlayer.play();
-
-            // Track change logging will be handled by PlaybackActiveTrackChanged event
-          } else if (playlistState.playlist.length > 0) {
-            // If queue is empty but we have songs in React state
-            console.log(
-              "Queue empty but playlist has songs, playing first song",
-            );
-            const nextSong = playlistState.playlist[0];
+            const nextSong = playlist[currentIndex + 1];
             await controls.playSong(nextSong);
+
+            // Track change logging will be handled by PlaybackActiveTrackChanged event
+          } else if (playlist.length > 0) {
+            // We're at the end - decide whether to loop or stop
+            console.log("Reached end of playlist, playing first song");
+            const firstSong = playlist[0];
+            await controls.playSong(firstSong);
+
+            // Track change logging will be handled by PlaybackActiveTrackChanged event
           } else {
             // No more songs
-            console.log("No more songs in queue or playlist");
+            console.log("No more songs in playlist");
             playbackDispatch({ type: "STOP_SONG" });
             await TrackPlayer.stop();
             isSwitchingTracks.current = false;
@@ -1015,14 +1086,29 @@ export function MusicProvider({ children }: PlayerProviderProps) {
           playbackDispatch({ type: "SET_LOADING", payload: true });
           isSwitchingTracks.current = true;
 
-          // Get current playback position and queue information
+          // Get current playback position
           const position = await TrackPlayer.getProgress().then(
             (progress) => progress.position,
           );
-          const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
-          // Make sure we have a valid index
-          if (currentIndex === undefined) {
+          // Use local playlist state instead of TrackPlayer queue
+          const playlist = playlistState.playlist;
+          const currentSongId = playbackStateRef.current.currentSong?.id;
+
+          if (!currentSongId || playlist.length === 0) {
+            console.log("No song is currently playing or playlist is empty");
+            isSwitchingTracks.current = false;
+            playbackDispatch({ type: "SET_LOADING", payload: false });
+            return;
+          }
+
+          // Find the current song index in our local playlist state
+          const currentIndex = playlist.findIndex(
+            (song) => song.id === currentSongId,
+          );
+
+          if (currentIndex === -1) {
+            console.log("Current song not found in playlist");
             isSwitchingTracks.current = false;
             playbackDispatch({ type: "SET_LOADING", payload: false });
             return;
@@ -1035,32 +1121,27 @@ export function MusicProvider({ children }: PlayerProviderProps) {
             isSwitchingTracks.current = false;
             playbackDispatch({ type: "SET_LOADING", payload: false });
           }
-          // If we have a valid index and it's not the first track
+          // If we're not at the first track, go to previous
           else if (currentIndex > 0) {
             console.log(
-              `Skipping from track ${currentIndex} to ${currentIndex - 1}`,
+              `Playing previous song from playlist: ${currentIndex} to ${
+                currentIndex - 1
+              }`,
             );
 
-            // For more reliability, use explicit skip rather than skipToPrevious
-            await TrackPlayer.skip(currentIndex - 1);
-            await TrackPlayer.play();
-
-            // Update UI state will be handled by track change event
-            playbackDispatch({ type: "SET_PLAYING", payload: true });
+            const prevSong = playlist[currentIndex - 1];
+            await controls.playSong(prevSong);
 
             // Track change logging will be handled by PlaybackActiveTrackChanged event
           }
-          // If we're at the first track and repeating is desired
+          // If we're at the first track
           else if (currentIndex === 0) {
             console.log("At first track, restarting");
-            const queue = await TrackPlayer.getQueue();
-            if (queue.length > 0) {
-              // Restart current song
-              await TrackPlayer.seekTo(0);
-              await TrackPlayer.play();
-              isSwitchingTracks.current = false;
-              playbackDispatch({ type: "SET_LOADING", payload: false });
-            }
+            // Restart current song
+            await TrackPlayer.seekTo(0);
+            await TrackPlayer.play();
+            isSwitchingTracks.current = false;
+            playbackDispatch({ type: "SET_LOADING", payload: false });
           } else {
             console.log("No previous track available");
             isSwitchingTracks.current = false;

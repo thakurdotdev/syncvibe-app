@@ -41,9 +41,8 @@ import { ProgressBar, SongControls } from "./MusicCards";
 import { MusicQueue, SimilarSongs } from "./MusicLists";
 import NewPlayerDrawer from "./NewPlayerDrawer";
 
-const { height, width } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 const ANIMATION_DURATION = 300;
-const TAB_ANIMATION_DURATION = 200;
 const SWIPE_THRESHOLD = 150;
 
 // Tab constants for easier reference
@@ -124,7 +123,7 @@ const RecommendationsTab = React.memo(
 );
 
 export default function Player() {
-  const { theme, colors } = useTheme();
+  const { colors } = useTheme();
   const { addToQueue, handleNextSong } = usePlayer();
   const { currentSong, isPlaying, isLoading } = usePlayerState();
   const { playlist } = usePlaylist();
@@ -132,8 +131,6 @@ export default function Player() {
   const [activeTab, setActiveTab] = useState<TabType>("player");
   const insets = useSafeAreaInsets();
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
-  const [isPlayerVisible, setIsPlayerVisible] = useState(true);
-  const lastPathRef = useRef("");
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -153,32 +150,6 @@ export default function Player() {
 
   const pathname = usePathname();
   const isHomeActive = pathname.includes("/home");
-
-  useFocusEffect(
-    useCallback(() => {
-      if (pathname.includes("/home") && currentSong) {
-        setIsPlayerVisible(true);
-      }
-
-      if (lastPathRef.current !== pathname) {
-        lastPathRef.current = pathname;
-
-        const timer = setTimeout(() => {
-          if (currentSong && pathname.includes("/home")) {
-            setIsPlayerVisible(true);
-          }
-        }, 100);
-
-        return () => clearTimeout(timer);
-      }
-    }, [pathname, currentSong]),
-  );
-
-  useEffect(() => {
-    if (currentSong && isHomeActive) {
-      setIsPlayerVisible(true);
-    }
-  }, [currentSong, isHomeActive]);
 
   const getRecommendations = useCallback(async () => {
     if (!currentSong?.id || playlist.length > 2) return;
@@ -544,7 +515,7 @@ export default function Player() {
     return () => backHandler.remove();
   }, [isExpanded, closePlayer]);
 
-  if (!currentSong || !isHomeActive || !isPlayerVisible) return null;
+  if (!currentSong || !isHomeActive) return null;
 
   return (
     <>

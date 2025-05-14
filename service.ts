@@ -30,99 +30,28 @@ export async function PlaybackService() {
 
   TrackPlayer.addEventListener(Event.RemoteNext, async () => {
     try {
-      const queue = await TrackPlayer.getQueue();
-      const currentIndex = await TrackPlayer.getActiveTrackIndex();
+      // We don't handle the actual next song logic here anymore
+      // Instead, we'll emit an event that the MusicContext will listen for
+      // and handle using its local playlist state
+      console.log("Service: Remote next - signaling to use local playlist");
 
-      if (currentIndex !== undefined && currentIndex < queue.length - 1) {
-        const nextIndex = currentIndex + 1;
-        console.log(
-          `Service: Skipping from track ${currentIndex} to ${nextIndex}`,
-        );
-
-        // Skip directly to the next track
-        await TrackPlayer.skip(nextIndex);
-        await TrackPlayer.play();
-      } else if (queue.length > 0) {
-        // Loop back to beginning with smooth transition
-        console.log("Service: Reached end of queue, looping to beginning");
-        await TrackPlayer.skip(0);
-        await TrackPlayer.play();
-      }
+      // Simplified approach - no direct queue manipulation
+      // The RemoteNext event is already handled in MusicContext.tsx
+      // through the Event.RemoteNext listener
     } catch (error) {
-      console.error("Error handling next track:", error);
-
-      // More reliable recovery approach
-      try {
-        const queue = await TrackPlayer.getQueue();
-        const currentIndex = await TrackPlayer.getActiveTrackIndex();
-
-        if (currentIndex === undefined) {
-          // If no active track, play the first track
-          if (queue.length > 0) {
-            await TrackPlayer.skip(0);
-            await TrackPlayer.play();
-          }
-        } else if (currentIndex + 1 < queue.length) {
-          // Simple skip to next track
-          await TrackPlayer.skip(currentIndex + 1);
-          await TrackPlayer.play();
-        } else if (queue.length > 0) {
-          // Loop back to first track
-          await TrackPlayer.skip(0);
-          await TrackPlayer.play();
-        }
-      } catch (recoveryError) {
-        console.error("Recovery attempt failed:", recoveryError);
-      }
+      console.error("Error handling remote next track:", error);
     }
   });
 
-  // Improved previous track handler with better position check
+  // Simplified previous track handler that defers to MusicContext
   TrackPlayer.addEventListener(Event.RemotePrevious, async () => {
     try {
-      const currentIndex = await TrackPlayer.getActiveTrackIndex();
-      const queue = await TrackPlayer.getQueue();
-
-      if (currentIndex !== undefined && currentIndex > 0) {
-        // Skip to previous track
-        const prevIndex = currentIndex - 1;
-        console.log(
-          `Service: Skipping from track ${currentIndex} to ${prevIndex}`,
-        );
-
-        await TrackPlayer.skip(prevIndex);
-        await TrackPlayer.play();
-      } else if (queue.length > 0) {
-        console.log("Service: At first track, restarting");
-        await TrackPlayer.seekTo(0);
-        await TrackPlayer.play();
-      }
+      // We don't handle the actual previous song logic here anymore
+      // Instead, we'll rely on the MusicContext to handle this
+      // through its Event.RemotePrevious listener
+      console.log("Service: Remote previous - signaling to use local playlist");
     } catch (error) {
-      console.error("Error handling previous track:", error);
-
-      // More reliable recovery approach
-      try {
-        const currentIndex = await TrackPlayer.getActiveTrackIndex();
-        const queue = await TrackPlayer.getQueue();
-
-        if (currentIndex === undefined) {
-          // If no active track, play the first track
-          if (queue.length > 0) {
-            await TrackPlayer.skip(0);
-            await TrackPlayer.play();
-          }
-        } else if (currentIndex > 0) {
-          // Simple skip to previous track
-          await TrackPlayer.skip(currentIndex - 1);
-          await TrackPlayer.play();
-        } else if (queue.length > 0) {
-          // Restart first track
-          await TrackPlayer.seekTo(0);
-          await TrackPlayer.play();
-        }
-      } catch (recoveryError) {
-        console.error("Recovery attempt failed:", recoveryError);
-      }
+      console.error("Error handling remote previous track:", error);
     }
   });
 
