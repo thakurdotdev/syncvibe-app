@@ -161,43 +161,19 @@ const PlaylistScreen = () => {
     setTimeout(() => setShowDeleteModal(true), 300);
   };
 
-  const playlistPairs = [];
-  for (let i = 0; i < userPlaylist.length; i += 2) {
-    playlistPairs.push([userPlaylist[i], userPlaylist[i + 1] || null]);
-  }
-
   if (loading && !selectedPlaylist) return <LoadingState />;
 
   if (!user) {
     return <LoginScreen />;
   }
 
-  const renderRow = ({ item }: { item: any[] }) => (
-    <View
-      style={{
-        flexDirection: "row",
-        paddingHorizontal: 12,
-        marginBottom: 16,
-        width: "100%",
-        gap: 20,
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <PlaylistCard
-          playlist={item[0]}
-          isUser={true}
-          onLongPress={() => handleLongPress(item[0])}
-        />
-      </View>
-      {item[1] && (
-        <View style={{ flex: 1 }}>
-          <PlaylistCard
-            playlist={item[1]}
-            isUser={true}
-            onLongPress={() => handleLongPress(item[1])}
-          />
-        </View>
-      )}
+  const renderPlaylistItem = ({ item }: { item: any }) => (
+    <View style={{ flex: 1, paddingHorizontal: 6 }}>
+      <PlaylistCard
+        playlist={item}
+        isUser={true}
+        onLongPress={() => handleLongPress(item)}
+      />
     </View>
   );
 
@@ -207,16 +183,26 @@ const PlaylistScreen = () => {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        padding: 24,
+        paddingHorizontal: 32,
+        paddingVertical: 48,
       }}
     >
-      <Music4 size={60} color={colors.mutedForeground} />
+      <View
+        style={{
+          backgroundColor: colors.muted,
+          borderRadius: 32,
+          padding: 24,
+          marginBottom: 24,
+        }}
+      >
+        <Music4 size={48} color={colors.mutedForeground} />
+      </View>
       <Text
         style={{
           color: colors.text,
           fontSize: 20,
-          fontWeight: "bold",
-          marginTop: 16,
+          marginBottom: 8,
+          textAlign: "center",
         }}
       >
         No playlists yet
@@ -224,11 +210,13 @@ const PlaylistScreen = () => {
       <Text
         style={{
           color: colors.mutedForeground,
+          fontSize: 16,
           textAlign: "center",
-          marginTop: 8,
+          lineHeight: 22,
+          marginBottom: 32,
         }}
       >
-        Create your first playlist to start organizing your music
+        Create your first playlist to start organizing your favorite music
       </Text>
       <Button
         variant="default"
@@ -236,7 +224,6 @@ const PlaylistScreen = () => {
         icon={<Plus size={20} color={colors.primaryForeground} />}
         iconPosition="left"
         title="Create Playlist"
-        style={{ marginTop: 24 }}
         onPress={() => {
           setSelectedPlaylist(null);
           setFormData({ name: "", description: "" });
@@ -251,23 +238,23 @@ const PlaylistScreen = () => {
       style={{
         flex: 1,
         backgroundColor: colors.background,
-        position: "relative",
-        padding: 20,
       }}
     >
-      <Animated.View
+      {/* Header */}
+      <View
         style={{
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
-          backgroundColor: colors.background,
+          paddingHorizontal: 20,
+          paddingTop: 8,
+          paddingBottom: 16,
         }}
       >
         <Text
           style={{
             color: colors.text,
             fontSize: 20,
-            fontWeight: "bold",
           }}
         >
           My Playlists
@@ -284,17 +271,22 @@ const PlaylistScreen = () => {
             setShowUpdateModal(true);
           }}
         />
-      </Animated.View>
+      </View>
+
+      {/* Playlist Grid */}
       <Animated.FlatList
-        data={playlistPairs}
-        renderItem={renderRow}
-        keyExtractor={(item, index) => `row-${index}`}
+        data={userPlaylist}
+        renderItem={renderPlaylistItem}
+        keyExtractor={(item) => `playlist-${item.id}`}
+        numColumns={2}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingTop: 20,
-          paddingBottom: 20,
+          paddingBottom: 24,
           flexGrow: userPlaylist.length === 0 ? 1 : undefined,
         }}
+        columnWrapperStyle={
+          userPlaylist.length > 0 ? { marginBottom: 12 } : undefined
+        }
         ListEmptyComponent={EmptyState}
       />
 
@@ -303,9 +295,15 @@ const PlaylistScreen = () => {
         isVisible={showActionsModal}
         onClose={() => setShowActionsModal(false)}
         maxHeight="30%"
-        backgroundColor={colors.card}
       >
-        <View style={{ padding: 24 }}>
+        <View
+          style={{
+            padding: 24,
+            backgroundColor: colors.card,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          }}
+        >
           <View
             style={{
               flexDirection: "row",
@@ -318,38 +316,40 @@ const PlaylistScreen = () => {
               style={{
                 color: colors.text,
                 fontSize: 20,
-                fontWeight: "bold",
+                fontWeight: "700",
               }}
             >
               Playlist Options
             </Text>
             <TouchableOpacity
               style={{
-                borderRadius: 999,
-                padding: 4,
+                borderRadius: 8,
+                padding: 8,
+                backgroundColor: colors.muted,
               }}
               onPress={() => setShowActionsModal(false)}
             >
-              <X size={22} color={colors.mutedForeground} />
+              <X size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
-          <Button
-            variant="secondary"
-            title="Edit Playlist"
-            icon={<Edit3 size={20} color={colors.primary} />}
-            iconPosition="left"
-            style={{ marginBottom: 16 }}
-            onPress={handleUpdateAction}
-          />
+          <View style={{ gap: 12 }}>
+            <Button
+              variant="secondary"
+              title="Edit Playlist"
+              icon={<Edit3 size={20} color={colors.primary} />}
+              iconPosition="left"
+              onPress={handleUpdateAction}
+            />
 
-          <Button
-            variant="destructive"
-            title="Delete Playlist"
-            icon={<Trash2 size={20} color={colors.destructiveForeground} />}
-            iconPosition="left"
-            onPress={handleDeleteAction}
-          />
+            <Button
+              variant="destructive"
+              title="Delete Playlist"
+              icon={<Trash2 size={20} color={colors.destructiveForeground} />}
+              iconPosition="left"
+              onPress={handleDeleteAction}
+            />
+          </View>
         </View>
       </SwipeableModal>
 
@@ -359,9 +359,15 @@ const PlaylistScreen = () => {
         onClose={() => setShowUpdateModal(false)}
         scrollable={true}
         useScrollView={true}
-        backgroundColor={colors.card}
       >
-        <View style={{ padding: 24 }}>
+        <View
+          style={{
+            padding: 24,
+            backgroundColor: colors.card,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          }}
+        >
           <View
             style={{
               flexDirection: "row",
@@ -370,97 +376,103 @@ const PlaylistScreen = () => {
               marginBottom: 24,
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: 20,
-                  fontWeight: "bold",
-                  marginLeft: 8,
-                }}
-              >
-                {selectedPlaylist ? "Edit Playlist" : "Create Playlist"}
-              </Text>
-            </View>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 22,
+                fontWeight: "700",
+              }}
+            >
+              {selectedPlaylist ? "Edit Playlist" : "Create Playlist"}
+            </Text>
             <TouchableOpacity
               style={{
-                borderRadius: 999,
-                padding: 4,
+                borderRadius: 8,
+                padding: 8,
+                backgroundColor: colors.muted,
               }}
               onPress={() => setShowUpdateModal(false)}
             >
-              <X size={22} color={colors.mutedForeground} />
+              <X size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
-          <View style={{ marginBottom: 16 }}>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 16,
-                marginBottom: 8,
-                fontWeight: "500",
-              }}
-            >
-              Name
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: colors.muted,
-                color: colors.text,
-                padding: 16,
-                borderRadius: 12,
-              }}
-              value={formData.name}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, name: text }))
-              }
-              placeholder="Enter playlist name"
-              placeholderTextColor={colors.mutedForeground}
-              selectionColor={colors.primary}
+          <View style={{ gap: 20 }}>
+            <View>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 16,
+                  marginBottom: 8,
+                  fontWeight: "600",
+                }}
+              >
+                Name
+              </Text>
+              <TextInput
+                style={{
+                  backgroundColor: colors.muted,
+                  color: colors.text,
+                  padding: 16,
+                  borderRadius: 12,
+                  fontSize: 16,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+                value={formData.name}
+                onChangeText={(text) =>
+                  setFormData((prev) => ({ ...prev, name: text }))
+                }
+                placeholder="Enter playlist name"
+                placeholderTextColor={colors.mutedForeground}
+                selectionColor={colors.primary}
+              />
+            </View>
+
+            <View>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 16,
+                  marginBottom: 8,
+                  fontWeight: "600",
+                }}
+              >
+                Description
+              </Text>
+              <TextInput
+                style={{
+                  backgroundColor: colors.muted,
+                  color: colors.text,
+                  padding: 16,
+                  borderRadius: 12,
+                  height: 100,
+                  textAlignVertical: "top",
+                  fontSize: 16,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+                value={formData.description}
+                onChangeText={(text) =>
+                  setFormData((prev) => ({ ...prev, description: text }))
+                }
+                placeholder="Enter description"
+                placeholderTextColor={colors.mutedForeground}
+                multiline={true}
+                numberOfLines={3}
+                selectionColor={colors.primary}
+              />
+            </View>
+
+            <Button
+              variant="default"
+              size="lg"
+              title={selectedPlaylist ? "Save Changes" : "Create Playlist"}
+              disabled={loading}
+              isLoading={loading}
+              onPress={handleSavePlaylist}
             />
           </View>
-
-          <View style={{ marginBottom: 32 }}>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 16,
-                marginBottom: 8,
-                fontWeight: "500",
-              }}
-            >
-              Description
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: colors.muted,
-                color: colors.text,
-                padding: 16,
-                borderRadius: 12,
-                height: 100,
-                textAlignVertical: "top",
-              }}
-              value={formData.description}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, description: text }))
-              }
-              placeholder="Enter description"
-              placeholderTextColor={colors.mutedForeground}
-              multiline={true}
-              numberOfLines={3}
-              selectionColor={colors.primary}
-            />
-          </View>
-
-          <Button
-            variant="default"
-            size="lg"
-            title={selectedPlaylist ? "Save Changes" : "Create Playlist"}
-            disabled={loading}
-            isLoading={loading}
-            onPress={handleSavePlaylist}
-          />
         </View>
       </SwipeableModal>
 
@@ -469,43 +481,53 @@ const PlaylistScreen = () => {
         isVisible={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         maxHeight="35%"
-        backgroundColor={colors.card}
       >
-        <View style={{ padding: 24 }}>
-          <View style={{ alignItems: "center", marginBottom: 16 }}>
+        <View
+          style={{
+            padding: 24,
+            backgroundColor: colors.card,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          }}
+        >
+          <View style={{ alignItems: "center", marginBottom: 20 }}>
             <View
               style={{
                 backgroundColor:
                   theme === "dark"
                     ? "rgba(127, 29, 29, 0.3)"
                     : "rgba(254, 202, 202, 0.3)",
-                padding: 12,
-                borderRadius: 999,
-                marginBottom: 12,
+                padding: 16,
+                borderRadius: 20,
+                marginBottom: 16,
               }}
             >
-              <AlertCircle size={28} color={colors.destructive} />
+              <AlertCircle size={32} color={colors.destructive} />
             </View>
             <Text
-              style={{ color: colors.text, fontSize: 20, fontWeight: "bold" }}
+              style={{
+                color: colors.text,
+                fontSize: 22,
+                fontWeight: "700",
+                marginBottom: 8,
+              }}
             >
               Delete Playlist
             </Text>
+            <Text
+              style={{
+                color: colors.mutedForeground,
+                fontSize: 16,
+                textAlign: "center",
+                lineHeight: 22,
+              }}
+            >
+              Are you sure you want to delete "{selectedPlaylist?.name}"? This
+              action cannot be undone.
+            </Text>
           </View>
 
-          <Text
-            style={{
-              color: colors.mutedForeground,
-              fontSize: 16,
-              marginBottom: 32,
-              textAlign: "center",
-            }}
-          >
-            Are you sure you want to delete "{selectedPlaylist?.name}"? This
-            action cannot be undone.
-          </Text>
-
-          <View style={{ flexDirection: "row", gap: 16 }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
             <Button
               variant="secondary"
               title="Cancel"
@@ -563,15 +585,16 @@ export const PlaylistCard = memo(({ playlist, isUser, onLongPress }: any) => {
       key={securedPlaylist.id}
       width={"100%"}
     >
-      <View style={{ padding: 12, gap: 10 }} className="relative">
+      <View style={{ padding: 12, gap: 8 }}>
         <CardImage uri={imageUrl} alt={`Playlist: ${securedPlaylist.name}`} />
 
-        <View style={{ gap: 4, paddingHorizontal: 4 }}>
+        <View style={{ gap: 2, paddingHorizontal: 2 }}>
           <Text
             style={{
               color: colors.text,
               fontWeight: "600",
-              fontSize: 14,
+              fontSize: 15,
+              lineHeight: 20,
             }}
             numberOfLines={1}
             ellipsizeMode="tail"
@@ -581,7 +604,8 @@ export const PlaylistCard = memo(({ playlist, isUser, onLongPress }: any) => {
           <Text
             style={{
               color: colors.mutedForeground,
-              fontSize: 12,
+              fontSize: 13,
+              lineHeight: 18,
             }}
             numberOfLines={1}
             ellipsizeMode="tail"

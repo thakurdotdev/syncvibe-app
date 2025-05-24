@@ -82,10 +82,11 @@ export const CardContainer = ({
   width = 160,
   onLongPress,
 }: CardContainerProps) => {
-  const { colors } = useTheme();
-
   return (
-    <Card variant="default" style={{ marginRight: 8, marginBottom: 8 }}>
+    <Card
+      variant="ghost"
+      className="rounded-none border-none bg-none bg-transparent mb-2"
+    >
       <Pressable
         style={{
           width: width,
@@ -93,9 +94,6 @@ export const CardContainer = ({
         }}
         onPress={onPress}
         onLongPress={onLongPress}
-        android_ripple={{
-          color: "rgba(255, 255, 255, 0.1)",
-        }}
       >
         {children}
       </Pressable>
@@ -138,7 +136,7 @@ export const SongCard = memo(
     }, []);
 
     return (
-      <Card variant="default" className="h-[60px] p-0 rounded-none">
+      <Card variant="ghost" className="h-[60px] p-0 rounded-none">
         <Card.Content className="p-0 rounded-none">
           <Pressable
             onPress={handlePress}
@@ -152,6 +150,7 @@ export const SongCard = memo(
                 alt="Song cover"
                 fadeDuration={0}
                 resizeMode="cover"
+                className="rounded-md"
               />
             </View>
 
@@ -209,7 +208,7 @@ export const SongCard = memo(
 
 export const CardImage = ({ uri, alt }: { uri: string; alt: string }) => (
   <View
-    style={{ width: "100%", height: 140, borderRadius: 6, overflow: "hidden" }}
+    style={{ width: "100%", height: 140, borderRadius: 5, overflow: "hidden" }}
   >
     <Image
       source={{ uri: uri || "https://via.placeholder.com/140" }}
@@ -368,7 +367,6 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.2)",
               borderRadius: 6,
               alignItems: "center",
               justifyContent: "center",

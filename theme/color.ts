@@ -1,4 +1,3 @@
-// Define the base color palette interface
 export interface ColorPalette {
   light: ThemeColors;
   dark: ThemeColors;
@@ -6,7 +5,6 @@ export interface ColorPalette {
   description: string;
 }
 
-// Define the theme colors interface
 export interface ThemeColors {
   // Main palette
   background: string;
@@ -54,113 +52,8 @@ export interface ThemeColors {
   };
 }
 
-// Default palette
 const defaultPalette: ColorPalette = {
   name: "Default",
-  description: "The default color scheme with neutral tones",
-  light: {
-    // Main palette (following shadcn/ui's color scheme)
-    background: "#FFFFFF",
-    foreground: "#09090B", // Neutral-950
-    card: "#FFFFFF",
-    cardForeground: "#09090B",
-    popover: "#FFFFFF",
-    popoverForeground: "#09090B",
-    primary: "#18181B", // Zinc-900 - shadcn default
-    primaryForeground: "#FFFFFF",
-    secondary: "#F4F4F5", // Zinc-100
-    secondaryForeground: "#18181B",
-    muted: "#F4F4F5", // Zinc-100
-    mutedForeground: "#71717A", // Zinc-500
-    accent: "#F4F4F5", // Zinc-100
-    accentForeground: "#18181B",
-    destructive: "#EF4444", // Red-500
-    destructiveForeground: "#FFFFFF",
-    border: "#E4E4E7", // Zinc-200
-    input: "#E4E4E7", // Zinc-200
-    ring: "#18181B", // Zinc-900
-    text: "#18181B", // Zinc-900
-
-    // Button state variants
-    primaryHover: "#27272A", // Zinc-800
-    primaryActive: "#3F3F46", // Zinc-700
-    primaryDisabled: "#A1A1AA", // Zinc-400
-
-    secondaryHover: "#E4E4E7", // Zinc-200
-    secondaryActive: "#D4D4D8", // Zinc-300
-    secondaryDisabled: "#F4F4F5", // Zinc-100 with opacity
-
-    accentHover: "#E4E4E7", // Zinc-200
-    accentActive: "#D4D4D8", // Zinc-300
-    accentDisabled: "#F4F4F5", // Zinc-100 with opacity
-
-    destructiveHover: "#DC2626", // Red-600
-    destructiveActive: "#B91C1C", // Red-700
-    destructiveDisabled: "#FCA5A5", // Red-300
-
-    // Gradient colors
-    gradients: {
-      primary: ["#60a5fa", "#3b82f6", "#2563eb"], // Blue gradient
-      background: ["#f8fafc", "#f1f5f9"], // Subtle light gradient
-      card: ["#ffffff", "#f8fafc"], // Card gradient
-      accent: ["#e0f2fe", "#bae6fd"], // Light blue accent
-      destructive: ["#fecaca", "#ef4444"], // Red gradient
-    },
-  },
-  dark: {
-    // Main palette (following shadcn/ui's dark theme)
-    background: "#09090B", // Neutral-950
-    foreground: "#FAFAFA", // Neutral-50
-    card: "#09090B", // Neutral-950
-    cardForeground: "#FAFAFA",
-    popover: "#09090B",
-    popoverForeground: "#FAFAFA",
-    primary: "#FAFAFA", // Neutral-50
-    primaryForeground: "#09090B",
-    secondary: "#27272A", // Zinc-800
-    secondaryForeground: "#FAFAFA",
-    muted: "#27272A", // Zinc-800
-    mutedForeground: "#A1A1AA", // Zinc-400
-    accent: "#27272A", // Zinc-800
-    accentForeground: "#FAFAFA",
-    destructive: "#7F1D1D", // Red-900
-    destructiveForeground: "#FAFAFA",
-    border: "#27272A", // Zinc-800
-    input: "#27272A", // Zinc-800
-    ring: "#FAFAFA", // Neutral-50
-    text: "#FAFAFA", // Neutral-50
-
-    // Button state variants
-    primaryHover: "#E4E4E7", // Zinc-200
-    primaryActive: "#D4D4D8", // Zinc-300
-    primaryDisabled: "#71717A", // Zinc-500
-
-    secondaryHover: "#3F3F46", // Zinc-700
-    secondaryActive: "#52525B", // Zinc-600
-    secondaryDisabled: "#27272A", // Zinc-800 with opacity
-
-    accentHover: "#3F3F46", // Zinc-700
-    accentActive: "#52525B", // Zinc-600
-    accentDisabled: "#27272A", // Zinc-800 with opacity
-
-    destructiveHover: "#991B1B", // Red-800
-    destructiveActive: "#B91C1C", // Red-700
-    destructiveDisabled: "#7F1D1D", // Red-900 with opacity
-
-    // Gradient colors
-    gradients: {
-      primary: ["#1e40af", "#2563eb", "#3b82f6"], // Deeper blue gradient
-      background: ["#09090B", "#18181b"], // Dark background gradient
-      card: ["#18181b", "#27272a"], // Card gradient
-      accent: ["#0c4a6e", "#0369a1"], // Dark blue accent
-      destructive: ["#7f1d1d", "#b91c1c"], // Dark red gradient
-    },
-  },
-};
-
-// Alternative palette
-const alternativePalette: ColorPalette = {
-  name: "Alternative",
   description: "A more vibrant color scheme with enhanced contrast",
   light: {
     // Main palette (following shadcn/ui's color scheme)
@@ -262,11 +155,8 @@ const alternativePalette: ColorPalette = {
   },
 };
 
-// Export all available palettes
 export const colorPalettes: Record<string, ColorPalette> = {
   default: defaultPalette,
-  alternative: alternativePalette,
 };
 
-// Export types
 export type ColorTheme = "light" | "dark";

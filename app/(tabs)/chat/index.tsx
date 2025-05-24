@@ -178,10 +178,7 @@ const SearchUser: React.FC = () => {
           activeOpacity={0.7}
           style={{ marginVertical: 4 }}
         >
-          <Card
-            variant={isOnline ? "secondary" : "default"}
-            className="flex-row items-center p-3"
-          >
+          <Card variant="ghost" className="flex-row items-center p-3">
             <View style={styles.avatarContainer}>
               <Image
                 source={{ uri: getProfileCloudinaryUrl(user?.profilepic) }}
@@ -302,6 +299,7 @@ const SearchUser: React.FC = () => {
         >
           <View
             style={[styles.searchContainer, { backgroundColor: colors.muted }]}
+            className="rounded-full"
           >
             <Ionicons
               name="search"
@@ -392,8 +390,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    // backgroundColor value is applied dynamically through style prop
-    borderRadius: 12,
     paddingHorizontal: 12,
     height: 42,
   },
@@ -418,7 +414,7 @@ const styles = StyleSheet.create({
     marginBottom: 45,
   },
   listContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingBottom: 20,
   },
   listHeaderContainer: {

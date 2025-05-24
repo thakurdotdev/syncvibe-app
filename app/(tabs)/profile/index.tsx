@@ -3,9 +3,10 @@ import DeveloperProfileModal from "@/components/DeveloperProfileModal";
 import Card from "@/components/ui/card";
 import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
-import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
+import { getOptimizedImageUrl } from "@/utils/Cloudinary";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
   BellIcon,
@@ -34,57 +35,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-
-// Theme Toggle Component
 const ThemeToggle = memo(() => {
-  const {
-    theme,
-    colors,
-    setTheme,
-    themePreference,
-    colorPalette,
-    setColorPalette,
-    availablePalettes,
-  } = useTheme();
+  const { colors, setTheme, themePreference } = useTheme();
 
-  // Cache the selected theme value
   const selectedTheme = themePreference;
 
-  // Memoize handlers to prevent recreation on each render
   const handleThemeChange = useCallback(
     (newTheme: "light" | "system" | "dark") => {
-      // Use React.startTransition around the context method that already uses startTransition
       setTheme(newTheme);
     },
     [setTheme],
   );
 
-  const handlePaletteChange = useCallback(
-    (newPalette: keyof typeof availablePalettes) => {
-      setColorPalette(newPalette);
-    },
-    [setColorPalette],
-  );
-
-  // Pre-compute button styles to avoid calculations during render
-  const baseButtonStyle = useMemo(
-    () => ({
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      marginRight: 4,
-    }),
-    [],
-  );
-
-  // Pre-compute icon colors
-  const activeIconColor = colors.primaryForeground;
-  const inactiveIconColor = colors.mutedForeground;
-
-  // Use a memoized view to prevent unnecessary re-renders
   const themeButtons = useMemo(
     () => (
       <View
@@ -164,52 +128,6 @@ const ThemeToggle = memo(() => {
     [colors, selectedTheme, handleThemeChange],
   );
 
-  // Use a memoized view for palette buttons to prevent unnecessary re-renders
-  const paletteButtons = useMemo(
-    () => (
-      <View
-        style={{
-          flexDirection: "row",
-          backgroundColor: colors.secondary,
-          borderRadius: 20,
-          padding: 4,
-        }}
-      >
-        {Object.entries(availablePalettes).map(([key, palette]) => (
-          <TouchableOpacity
-            key={key}
-            onPress={() =>
-              handlePaletteChange(key as keyof typeof availablePalettes)
-            }
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-              backgroundColor:
-                colorPalette === key ? colors.primary : "transparent",
-              marginRight: key === "default" ? 4 : 0,
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={{
-                color:
-                  colorPalette === key
-                    ? colors.primaryForeground
-                    : colors.mutedForeground,
-                fontSize: 14,
-                fontWeight: colorPalette === key ? "600" : "400",
-              }}
-            >
-              {palette.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    ),
-    [colors, colorPalette, availablePalettes, handlePaletteChange],
-  );
-
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
       <View
@@ -231,31 +149,10 @@ const ThemeToggle = memo(() => {
         </Text>
         {themeButtons}
       </View>
-
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: 16,
-        }}
-      >
-        <Text
-          style={{
-            color: colors.foreground,
-            fontSize: 16,
-            fontWeight: "600",
-          }}
-        >
-          Color Palette
-        </Text>
-        {paletteButtons}
-      </View>
     </View>
   );
 });
 
-// Setting Item Component
 const SettingItem = ({
   icon,
   title,
@@ -349,124 +246,12 @@ const SettingItem = ({
   );
 };
 
-// Stats Card Component
-const StatsCard = ({
-  count,
-  label,
-  onPress,
-  colors,
-  icon,
-}: {
-  count: number;
-  label: string;
-  onPress: () => void;
-  colors: any;
-  icon: React.ReactNode;
-}) => {
-  const [scale] = useState(new Animated.Value(1));
-
-  const handlePressIn = () => {
-    Animated.spring(scale, {
-      toValue: 0.97,
-      friction: 8,
-      tension: 100,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      friction: 5,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={{ flex: 1 }}
-    >
-      <Animated.View style={{ transform: [{ scale }], flex: 1 }}>
-        <Card variant="secondary" className="flex-1">
-          <Card.Content className="flex-1 p-4">
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  backgroundColor: colors.primary + "20", // semi-transparent version of primary color
-                  borderRadius: 12,
-                  padding: 10,
-                  marginRight: 12,
-                }}
-              >
-                {icon}
-              </View>
-              <View>
-                <Text
-                  style={{
-                    fontSize: 28,
-                    fontWeight: "bold",
-                    color: colors.foreground,
-                  }}
-                >
-                  {count}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: colors.mutedForeground,
-                  }}
-                >
-                  {label}
-                </Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-      </Animated.View>
-    </Pressable>
-  );
-};
-
 export default function ProfileScreen() {
-  const { user, logout, getProfile, loading, followers, following } = useUser();
-  const insets = useSafeAreaInsets();
+  const { user, logout, getProfile, loading } = useUser();
   const { colors, theme } = useTheme();
   const [avatarScale] = useState(new Animated.Value(1));
   const [open, setOpen] = useState(false);
   const [showDeveloperModal, setShowDeveloperModal] = useState(false);
-  const scrollY = new Animated.Value(0);
-
-  const headerHeight = insets.top + 60;
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, headerHeight],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
-
-  const headerTranslateY = scrollY.interpolate({
-    inputRange: [0, headerHeight],
-    outputRange: [-headerHeight, 0],
-    extrapolate: "clamp",
-  });
-
-  const pulseAvatar = () => {
-    Animated.sequence([
-      Animated.timing(avatarScale, {
-        toValue: 1.05,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(avatarScale, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
 
   useEffect(() => {
     const getUser = async () => {
@@ -518,227 +303,147 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Fixed Header */}
-      <View
-        style={{
-          height: headerHeight,
-          backgroundColor: colors.background,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-          flexDirection: "row",
-          alignItems: "center",
-          paddingHorizontal: 16,
-          paddingTop: insets.top,
-        }}
-      >
-        <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              overflow: "hidden",
-              marginRight: 12,
-            }}
-          >
-            <Image
-              source={{
-                uri: "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_200,w_200/r_max/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp",
-              }}
-              style={{ width: "100%", height: "100%" }}
-              resizeMode="cover"
-            />
-          </View>
-        </View>
-        <TouchableOpacity
-          onPress={() => setShowDeveloperModal(true)}
-          style={{
-            padding: 8,
-            borderRadius: 20,
-            backgroundColor: colors.secondary,
-          }}
-        >
-          <Code2Icon size={20} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Animated.ScrollView
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true },
-        )}
-        scrollEventThrottle={16}
-        contentContainerStyle={{
-          paddingTop: 20,
-          paddingBottom: Math.max(insets.bottom, 30),
-        }}
         showsVerticalScrollIndicator={false}
+        className="mb-20"
       >
         {/* Profile Header */}
-        <View
-          style={{
-            paddingHorizontal: 20,
-            paddingBottom: 20,
-          }}
-        >
-          <View style={{ alignItems: "center" }}>
-            <Pressable
-              onPress={() => {
-                pulseAvatar();
-                router.push("/update-profile-picture");
+        <View style={{ marginBottom: 24 }}>
+          <LinearGradient
+            colors={[colors.primary, `${colors.primary}95`, colors.background]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{
+              height: 280,
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 0,
+            }}
+          />
+
+          {/* Profile Info */}
+          <View style={{ paddingTop: 32, paddingHorizontal: 24 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                gap: 20,
               }}
-              style={{ marginBottom: 20 }}
             >
-              <Animated.View
+              {/* Avatar */}
+              <Pressable
+                onPress={() => router.push("/update-profile-picture")}
                 style={{
-                  transform: [{ scale: avatarScale }],
-                  position: "relative",
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 12,
+                  elevation: 10,
                 }}
               >
+                <Animated.View
+                  style={{
+                    transform: [{ scale: avatarScale }],
+                  }}
+                >
+                  <Image
+                    source={{ uri: getOptimizedImageUrl(user?.profilepic) }}
+                    style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 10,
+                      borderWidth: 3,
+                      borderColor: colors.background,
+                    }}
+                    resizeMode="cover"
+                  />
+                  <Pressable
+                    style={{
+                      position: "absolute",
+                      bottom: -6,
+                      right: -6,
+                      backgroundColor: colors.primary,
+                      borderRadius: 12,
+                      width: 32,
+                      height: 32,
+                      justifyContent: "center",
+                      alignItems: "center",
+                      borderWidth: 2,
+                      borderColor: colors.background,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 4,
+                    }}
+                    onPress={() => setOpen(true)}
+                  >
+                    <Feather
+                      name="camera"
+                      size={14}
+                      color={colors.background}
+                    />
+                  </Pressable>
+                </Animated.View>
+              </Pressable>
+
+              {/* Name and Username */}
+              <View style={{ flex: 1, paddingTop: 6 }}>
                 <View
                   style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: 60,
-                    borderWidth: 3,
-                    borderColor: colors.primary,
-                    padding: 2,
-                    justifyContent: "center",
+                    flexDirection: "row",
                     alignItems: "center",
-                    shadowColor: colors.primary,
-                    shadowOffset: {
-                      width: 0,
-                      height: 4,
-                    },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 8,
-                    elevation: 5,
-                    backgroundColor: colors.background,
+                    flexWrap: "wrap",
+                    gap: 6,
                   }}
                 >
-                  <View
+                  <Text
                     style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: 55,
-                      overflow: "hidden",
+                      fontSize: 24,
+                      fontWeight: "700",
+                      color: colors.background,
+                      letterSpacing: -0.5,
                     }}
                   >
-                    <Image
-                      source={{
-                        uri: getProfileCloudinaryUrl(user?.profilepic),
-                      }}
-                      style={{ width: "100%", height: "100%" }}
-                      resizeMode="cover"
+                    {user?.name}
+                  </Text>
+                  {user?.verified && (
+                    <MaterialCommunityIcons
+                      name="check-decagram"
+                      size={22}
+                      color={colors.background}
+                      style={{ opacity: 0.9 }}
                     />
-                  </View>
+                  )}
                 </View>
-
-                <Pressable
-                  style={{
-                    position: "absolute",
-                    bottom: 0,
-                    right: 0,
-                    backgroundColor: colors.primary,
-                    borderRadius: 20,
-                    padding: 8,
-                    borderWidth: 2,
-                    borderColor: colors.background,
-                  }}
-                  onPress={() => setOpen(true)}
-                >
-                  <Feather
-                    name="camera"
-                    size={16}
-                    color={colors.primaryForeground}
-                  />
-                </Pressable>
-              </Animated.View>
-            </Pressable>
-
-            <View style={{ alignItems: "center", marginBottom: 16 }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginBottom: 4,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 24,
-                    fontWeight: "bold",
-                    color: colors.foreground,
-                  }}
-                >
-                  {user?.name}
-                </Text>
-                {user?.verified && (
-                  <MaterialCommunityIcons
-                    name="check-decagram"
-                    size={20}
-                    color={colors.primary}
-                    style={{ marginLeft: 6 }}
-                  />
+                {user?.username && (
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      color: `${colors.background}CC`,
+                      marginTop: 2,
+                    }}
+                  >
+                    @{user?.username}
+                  </Text>
+                )}
+                {user?.email && (
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      color: `${colors.background}CC`,
+                      marginTop: 2,
+                    }}
+                  >
+                    {user?.email}
+                  </Text>
                 )}
               </View>
-
-              {user?.username && (
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: colors.mutedForeground,
-                    marginBottom: 8,
-                  }}
-                >
-                  @{user?.username}
-                </Text>
-              )}
-
-              {user?.bio && (
-                <Text
-                  style={{
-                    textAlign: "center",
-                    color: colors.foreground,
-                    lineHeight: 20,
-                    maxWidth: width - 80,
-                    marginBottom: 16,
-                  }}
-                >
-                  {user.bio}
-                </Text>
-              )}
             </View>
           </View>
         </View>
-
-        {/* Stats Section */}
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 16,
-            paddingHorizontal: 20,
-            marginBottom: 20,
-          }}
-        >
-          <StatsCard
-            count={following.length}
-            label="Following"
-            onPress={() => router.push("/followings")}
-            colors={colors}
-            icon={<UserIcon size={22} color={colors.primary} />}
-          />
-          <StatsCard
-            count={followers.length}
-            label="Followers"
-            onPress={() => router.push("/followers")}
-            colors={colors}
-            icon={<HeartIcon size={22} color={colors.primary} />}
-          />
-        </View>
-
-        {/* Settings Sections */}
         <View style={{ padding: 20, gap: 16 }}>
           {/* Appearance Section */}
           <Card variant="default">
@@ -866,19 +571,46 @@ export default function ProfileScreen() {
               />
             </Card.Content>
           </Card>
-        </View>
 
-        {/* App Version */}
-        <View
-          style={{
-            alignItems: "center",
-            paddingVertical: 20,
-            paddingBottom: Math.max(insets.bottom, 20),
-          }}
-        >
-          <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-            SyncVibe v1.0.0
-          </Text>
+          {/* About Section */}
+          <Card variant="default">
+            <Card.Header>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    backgroundColor: colors.secondary,
+                    borderRadius: 12,
+                    padding: 10,
+                    marginRight: 12,
+                  }}
+                >
+                  <Feather name="info" size={22} color={colors.primary} />
+                </View>
+                <Card.Title>About</Card.Title>
+              </View>
+            </Card.Header>
+            <Card.Content>
+              <SettingItem
+                icon={<Code2Icon size={20} color={colors.mutedForeground} />}
+                title="Developer Info"
+                subtitle="Meet the developer behind SyncVibe"
+                onPress={() => setShowDeveloperModal(true)}
+                colors={colors}
+              />
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 12,
+                }}
+              >
+                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
+                  SyncVibe v1.0.0
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
         </View>
       </Animated.ScrollView>
 
@@ -887,6 +619,6 @@ export default function ProfileScreen() {
         isVisible={showDeveloperModal}
         onClose={() => setShowDeveloperModal(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 }

@@ -467,14 +467,12 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
-        {/* Content that appears on top of the gradient */}
         <View className="z-10 pb-3">
-          {/* Search Bar */}
           <Animated.View className="px-4 pt-2" style={searchBarStyle}>
             <TouchableOpacity
               className={`flex-row items-center ${
                 theme === "light" ? "bg-white/90" : "bg-white/10"
-              } rounded-2xl px-4 h-11`}
+              } rounded-full px-4 h-11`}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push("/search");
@@ -533,7 +531,7 @@ export default function HomeScreen() {
             }
           >
             <Animated.View
-              className="px-4 pb-10"
+              className="px-2 pb-10"
               entering={FadeIn.duration(500).delay(200)}
               layout={LinearTransition.springify()}
               style={{ opacity: contentOpacity }}

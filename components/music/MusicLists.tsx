@@ -10,14 +10,7 @@ import {
   RefreshCcwIcon,
   Trash2Icon,
 } from "lucide-react-native";
-import React, {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { memo, useCallback, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -42,7 +35,6 @@ import {
   PlaylistCard,
   SongCard,
 } from "./MusicCards";
-import TrackPlayer from "react-native-track-player";
 
 interface AlbumsGridProps {
   albums: any[];
@@ -131,59 +123,57 @@ const SongCardQueue = memo(
             rightThreshold={40}
             overshootRight={false}
             containerStyle={{
-              marginHorizontal: 8,
               marginVertical: 4,
               overflow: "hidden",
             }}
           >
-            <View style={{ backgroundColor: colors.card }}>
-              <Pressable
-                onLongPress={() => {
+            <Pressable
+              onLongPress={() => {
+                if (!isCurrentSong) {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   drag();
-                }}
-                onPress={handlePress}
-                disabled={isActive}
-                delayLongPress={150}
+                }
+              }}
+              onPress={handlePress}
+              disabled={isActive}
+              delayLongPress={150}
+            >
+              <Card
+                variant={isCurrentSong ? "secondary" : "ghost"}
+                className="w-full flex-row rounded-none h-[60px]"
               >
-                <Card
-                  variant={isCurrentSong ? "secondary" : "default"}
-                  className="w-full flex-row rounded-none h-[60px]"
-                >
-                  <View className="relative">
-                    <Image
-                      source={{ uri: songImage }}
-                      style={{ width: 56, height: 60 }}
-                    />
-                  </View>
+                <View className="relative">
+                  <Image
+                    source={{ uri: songImage }}
+                    style={{ width: 56, height: 60 }}
+                    className="rounded-md"
+                    fadeDuration={0}
+                    resizeMode="cover"
+                  />
+                </View>
 
-                  <View className="flex-1 p-3 px-4 justify-center">
-                    <Text
-                      style={{ color: colors.cardForeground }}
-                      className="font-semibold text-base"
-                      numberOfLines={1}
-                    >
-                      {songName}
-                    </Text>
-                    <Text
-                      style={{ color: colors.mutedForeground }}
-                      className="text-sm"
-                      numberOfLines={1}
-                    >
-                      {songArtist}
-                    </Text>
-                  </View>
+                <View className="flex-1 p-3 px-4 justify-center">
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontWeight: "600",
+                      fontSize: 16,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {songName}
+                  </Text>
+                  <Text
+                    style={{ color: colors.mutedForeground, fontSize: 14 }}
+                    numberOfLines={1}
+                  >
+                    {songArtist}
+                  </Text>
+                </View>
 
-                  {/* Drag Handle Area */}
-                  <View className="justify-center pl-2">
-                    <GripVerticalIcon
-                      size={24}
-                      color={isActive ? colors.primary : colors.mutedForeground}
-                    />
-                  </View>
-                </Card>
-              </Pressable>
-            </View>
+                {/* Drag Handle Area */}
+              </Card>
+            </Pressable>
           </Swipeable>
         </OpacityDecorator>
       </ScaleDecorator>
@@ -196,12 +186,6 @@ export const MusicQueue = memo(() => {
   const { reorderPlaylist } = usePlayer();
   const { playlist, setPlaylist } = usePlaylist();
   const scrollRef = useRef(null);
-
-  const clearPlaylist = useCallback(() => {
-    setPlaylist([]);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    TrackPlayer.removeUpcomingTracks();
-  }, [setPlaylist]);
 
   const handleDragEnd = useCallback(
     ({ data }: { data: Song[] }) => {
@@ -324,7 +308,10 @@ export const AlbumsGrid = ({ albums, title }: AlbumsGridProps) => {
   return (
     <View className="mb-6">
       {title && (
-        <Text className="text-xl font-bold mb-4" style={{ color: colors.text }}>
+        <Text
+          className="text-xl font-bold mb-4 ml-3"
+          style={{ color: colors.text }}
+        >
           {title}
         </Text>
       )}
@@ -341,8 +328,6 @@ export const AlbumsGrid = ({ albums, title }: AlbumsGridProps) => {
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingRight: 16 }}
-        ItemSeparatorComponent={() => <View className="w-4" />}
       />
     </View>
   );
@@ -355,7 +340,10 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
   return (
     <View className="mb-6">
       {title && (
-        <Text className="text-xl font-bold mb-4" style={{ color: colors.text }}>
+        <Text
+          className="text-xl font-bold mb-4 ml-3"
+          style={{ color: colors.text }}
+        >
           {title}
         </Text>
       )}
@@ -372,8 +360,6 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingRight: 16 }}
-        ItemSeparatorComponent={() => <View className="w-4" />}
       />
     </View>
   );
@@ -389,7 +375,7 @@ export const RecommendationGrid = ({
 
   return (
     <View className="mb-6">
-      <View className="flex-row justify-between items-center mb-4">
+      <View className="flex-row justify-between items-center mb-4 ml-3">
         {title && (
           <Text
             className="text-xl font-bold"
@@ -421,8 +407,6 @@ export const RecommendationGrid = ({
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingRight: 16, paddingLeft: 2 }}
-        ItemSeparatorComponent={() => <View className="w-4" />}
         className="pb-2"
       />
     </View>
@@ -438,7 +422,7 @@ export const TrendingSongs = memo(
       <View className="mb-6">
         {title && (
           <Text
-            className="text-xl font-bold mb-4"
+            className="text-xl font-bold mb-4 ml-3"
             style={{ color: colors.text }}
           >
             {title}
@@ -457,8 +441,6 @@ export const TrendingSongs = memo(
           )}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingRight: 16 }}
-          ItemSeparatorComponent={() => <View className="w-4" />}
         />
       </View>
     );
@@ -472,7 +454,10 @@ export const ArtistGrid = memo(({ artists, title }: ArtistGridProps) => {
   return (
     <View className="mb-6">
       {title && (
-        <Text className="text-xl font-bold mb-4" style={{ color: colors.text }}>
+        <Text
+          className="text-xl font-bold mb-4 ml-3"
+          style={{ color: colors.text }}
+        >
           {title}
         </Text>
       )}
@@ -489,8 +474,6 @@ export const ArtistGrid = memo(({ artists, title }: ArtistGridProps) => {
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingRight: 16 }}
-        ItemSeparatorComponent={() => <View className="w-4" />}
       />
     </View>
   );
