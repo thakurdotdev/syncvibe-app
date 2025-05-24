@@ -434,7 +434,6 @@ export default function HomeScreen() {
       />
 
       <SafeAreaView className="flex-1">
-        {/* Animated gradient header */}
         <Animated.View
           style={[
             {
@@ -582,7 +581,7 @@ export default function HomeScreen() {
                 <Animated.View entering={FadeInRight.duration(600).delay(400)}>
                   <RecommendationGrid
                     recommendations={recommendations.songs}
-                    title="Mostly you listen to"
+                    title="Your Favorite"
                     showMore={true}
                   />
                 </Animated.View>

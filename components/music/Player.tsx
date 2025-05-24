@@ -464,7 +464,7 @@ export default function Player() {
             e.stopPropagation();
             handlePlayPauseSong();
           }}
-          variant="secondary"
+          variant="ghost"
           size="icon"
         >
           {isLoading ? (
@@ -483,7 +483,7 @@ export default function Player() {
           )}
         </Button>
         <Button
-          variant="secondary"
+          variant="ghost"
           size="icon"
           onPress={(e) => {
             e.stopPropagation();
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   miniPlayerImage: {
     width: 48,
     height: 48,
-    // borderRadius: 12,
+    borderRadius: 8,
   },
   miniPlayerTextContainer: {
     flex: 1,

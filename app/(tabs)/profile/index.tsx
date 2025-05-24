@@ -28,7 +28,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Image,
   Pressable,
   Text,
@@ -304,10 +303,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <Animated.ScrollView
-        showsVerticalScrollIndicator={false}
-        className="mb-20"
-      >
+      <Animated.ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={{ marginBottom: 24 }}>
           <LinearGradient

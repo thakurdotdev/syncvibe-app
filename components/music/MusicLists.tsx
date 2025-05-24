@@ -6,7 +6,6 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import {
   ChevronRightIcon,
-  GripVerticalIcon,
   RefreshCcwIcon,
   Trash2Icon,
 } from "lucide-react-native";
@@ -309,7 +308,7 @@ export const AlbumsGrid = ({ albums, title }: AlbumsGridProps) => {
     <View className="mb-6">
       {title && (
         <Text
-          className="text-xl font-bold mb-4 ml-3"
+          className="text-xl font-bold mb-2 ml-3"
           style={{ color: colors.text }}
         >
           {title}
@@ -341,7 +340,7 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
     <View className="mb-6">
       {title && (
         <Text
-          className="text-xl font-bold mb-4 ml-3"
+          className="text-xl font-bold mb-2 ml-3"
           style={{ color: colors.text }}
         >
           {title}
@@ -375,7 +374,7 @@ export const RecommendationGrid = ({
 
   return (
     <View className="mb-6">
-      <View className="flex-row justify-between items-center mb-4 ml-3">
+      <View className="flex-row justify-between items-center mb-2 ml-3">
         {title && (
           <Text
             className="text-xl font-bold"
@@ -422,7 +421,7 @@ export const TrendingSongs = memo(
       <View className="mb-6">
         {title && (
           <Text
-            className="text-xl font-bold mb-4 ml-3"
+            className="text-xl font-bold mb-2 ml-3"
             style={{ color: colors.text }}
           >
             {title}
@@ -455,7 +454,7 @@ export const ArtistGrid = memo(({ artists, title }: ArtistGridProps) => {
     <View className="mb-6">
       {title && (
         <Text
-          className="text-xl font-bold mb-4 ml-3"
+          className="text-xl font-bold mb-2 ml-3"
           style={{ color: colors.text }}
         >
           {title}
