@@ -109,7 +109,7 @@ export const SongCard = memo(
     const { playSong } = usePlayer();
     const { currentSong, isPlaying, isLoading } = usePlayerState();
     const { user } = useUser();
-    const { colors, theme } = useTheme();
+    const { colors } = useTheme();
 
     const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
     const isCurrentSong = currentSong?.id === securedSong.id;
@@ -136,7 +136,10 @@ export const SongCard = memo(
     }, []);
 
     return (
-      <Card variant="ghost" className="h-[60px] p-0 rounded-none">
+      <Card
+        variant={isCurrentSong ? "secondary" : "ghost"}
+        className="h-[60px] p-0 rounded-none"
+      >
         <Card.Content className="p-0 rounded-none">
           <Pressable
             onPress={handlePress}
@@ -171,7 +174,7 @@ export const SongCard = memo(
             </View>
 
             {isCurrentSong ? (
-              <View className="flex-row items-end h-10 space-x-0.5 pr-2">
+              <View className="flex-row items-center justify-center pr-2">
                 {isLoading ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
@@ -548,7 +551,7 @@ export const SongControls = memo(() => {
           <Ionicons
             name={isPlaying ? "pause" : "play"}
             size={28}
-            color={colors.background}
+            color={colors.text}
           />
         </TouchableOpacity>
 
