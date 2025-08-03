@@ -45,16 +45,16 @@ export const setupPlayer = async (): Promise<boolean> => {
         console.log("Initializing TrackPlayer...");
       }
 
-      // Setup with optimized configuration
+      // Setup with optimized configuration for high-quality streaming
       await TrackPlayer.setupPlayer({
-        // Increase cache for better offline experience
-        maxCacheSize: 1024 * 1024 * 750, // 750MB cache
+        // Increase cache for better offline experience and high-quality streaming
+        maxCacheSize: 1024 * 1024 * 1000, // 1GB cache for high-quality tracks
 
-        // Improved buffering for better playback experience
-        minBuffer: 1000, // 1 second minimum buffer
-        maxBuffer: 600000, // 10 minutes maximum buffer
-        playBuffer: 200, // Start playback after 200ms of buffering
-        backBuffer: 3000, // Keep 3 seconds of audio before current position
+        // Optimized buffering for high-quality streaming
+        minBuffer: 2000, // 2 seconds minimum buffer for smooth playback
+        maxBuffer: 900000, // 15 minutes maximum buffer for better quality retention
+        playBuffer: 500, // Start playback after 500ms of buffering for better quality
+        backBuffer: 5000, // Keep 5 seconds of audio before current position
 
         // Ensure metadata updates automatically
         autoUpdateMetadata: true,

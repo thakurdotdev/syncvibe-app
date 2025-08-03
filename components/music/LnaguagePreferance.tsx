@@ -62,26 +62,6 @@ const LanguagePreference = () => {
           </Text>
         </View>
 
-        {/* Selected Languages Display */}
-        <View className="flex-row flex-wrap justify-center mb-6">
-          {Array.from(selectedLangs).map((lang) => (
-            <View
-              key={lang}
-              className="bg-gray-200 rounded-full px-3 py-1 m-1 flex-row items-center"
-            >
-              <Text className="text-sm capitalize">{lang}</Text>
-              {selectedLangs.size > 1 && (
-                <TouchableOpacity
-                  onPress={() => handleLanguageToggle(lang)}
-                  className="ml-2"
-                >
-                  <X size={16} color="#000" />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-        </View>
-
         {/* Language Selection Area */}
         <View className="bg-white rounded-lg p-4 shadow-sm mb-6">
           <View className="flex-row items-center mb-4">

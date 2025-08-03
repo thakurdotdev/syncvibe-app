@@ -16,6 +16,7 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { LoaderIcon } from "lucide-react-native";
 import React, {
   useCallback,
   useEffect,
@@ -32,19 +33,11 @@ import {
 } from "react-native";
 import Animated, {
   Extrapolation,
-  FadeIn,
-  FadeInLeft,
-  FadeInRight,
-  FadeInUp,
-  FadeOut,
   interpolate,
-  LinearTransition,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withTiming,
-  runOnUI,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -60,181 +53,6 @@ interface Recommendations {
   songs: Song[];
   recentlyPlayed: Song[];
 }
-
-const SkeletonLoader = () => {
-  const { theme } = useTheme();
-  const colors =
-    theme === "light"
-      ? {
-          bg: "bg-gray-100/80",
-          headerBg: "bg-gray-200/80",
-          shimmer: "bg-gray-200/50",
-        }
-      : {
-          bg: "bg-gray-800/70",
-          headerBg: "bg-gray-800",
-          shimmer: "bg-gray-700/50",
-        };
-
-  const shimmerAnimation = useSharedValue(0);
-
-  useEffect(() => {
-    // Create a repeating animation using runOnUI to ensure it's a worklet
-    runOnUI(() => {
-      "worklet";
-      const startAnimation = () => {
-        "worklet";
-        shimmerAnimation.value = 0;
-        shimmerAnimation.value = withTiming(1, { duration: 1200 }, () => {
-          startAnimation();
-        });
-      };
-
-      startAnimation();
-    })();
-
-    return () => {
-      // Clean up animation when component unmounts
-      shimmerAnimation.value = 0;
-    };
-  }, []);
-
-  const shimmerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateX: interpolate(shimmerAnimation.value, [0, 1], [-300, 300]),
-        },
-      ],
-      opacity: 0.7,
-    };
-  });
-
-  // Animated values for staggered entrance
-  const opacityAnim = useSharedValue(0);
-  const scaleAnim = useSharedValue(0.98);
-
-  useEffect(() => {
-    opacityAnim.value = withTiming(1, { duration: 600 });
-    scaleAnim.value = withTiming(1, { duration: 700 });
-  }, []);
-
-  const containerStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacityAnim.value,
-      transform: [{ scale: scaleAnim.value }],
-    };
-  });
-
-  // Generate skeleton card items with varying widths for more natural look
-  interface SkeletonOptions {
-    minWidth?: number;
-    maxWidth?: number;
-    height?: number;
-  }
-
-  const generateSkeletonCards = (
-    count: number,
-    options: SkeletonOptions = {},
-  ) => {
-    const { minWidth = 130, maxWidth = 150, height = 170 } = options;
-    return Array(count)
-      .fill(0)
-      .map((_, i) => {
-        // Random width for more natural appearance
-        const width = minWidth + Math.random() * (maxWidth - minWidth);
-
-        return (
-          <Animated.View
-            key={i}
-            entering={FadeInUp.duration(500).delay(100 + i * 50)}
-            className={`mr-4 ${colors.bg} rounded-xl overflow-hidden`}
-            style={{ width, height }}
-          >
-            <Animated.View
-              className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
-              style={shimmerStyle}
-            />
-          </Animated.View>
-        );
-      });
-  };
-
-  return (
-    <Animated.View className="px-4" style={containerStyle}>
-      {/* Greeting skeleton - with more subtle rounded corners */}
-      <Animated.View
-        entering={FadeInLeft.duration(700)}
-        className={`w-3/5 h-9 ${colors.headerBg} rounded-lg mb-8 mt-4 overflow-hidden`}
-      >
-        <Animated.View
-          className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
-          style={shimmerStyle}
-        />
-      </Animated.View>
-
-      {/* Feature cards skeleton - improved layout and spacing */}
-      <Animated.View
-        entering={FadeInUp.duration(600).delay(200)}
-        className="mb-12"
-      >
-        <Animated.View
-          className={`w-2/5 h-7 ${colors.headerBg} rounded-lg mb-5 overflow-hidden`}
-          entering={FadeInLeft.duration(600).delay(250)}
-        >
-          <Animated.View
-            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
-            style={shimmerStyle}
-          />
-        </Animated.View>
-
-        <View className="flex-row overflow-hidden">
-          {generateSkeletonCards(4)}
-        </View>
-      </Animated.View>
-
-      {/* Recently played section - improved spacing */}
-      <Animated.View
-        entering={FadeInRight.duration(600).delay(300)}
-        className="mb-12"
-      >
-        <Animated.View
-          className={`w-2/5 h-7 ${colors.headerBg} rounded-lg mb-5 overflow-hidden`}
-          entering={FadeInLeft.duration(600).delay(350)}
-        >
-          <Animated.View
-            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
-            style={shimmerStyle}
-          />
-        </Animated.View>
-
-        <View className="flex-row overflow-hidden">
-          {generateSkeletonCards(3)}
-        </View>
-      </Animated.View>
-
-      {/* Trending section - improved consistency */}
-      <Animated.View
-        entering={FadeInLeft.duration(600).delay(400)}
-        className="mb-8"
-      >
-        <Animated.View
-          className={`w-2/5 h-7 ${colors.headerBg} rounded-lg mb-5 overflow-hidden`}
-          entering={FadeInLeft.duration(600).delay(450)}
-        >
-          <Animated.View
-            className="absolute top-0 left-0 right-0 bottom-0 w-full bg-white/10"
-            style={shimmerStyle}
-          />
-        </Animated.View>
-
-        <View className="flex-row overflow-hidden">
-          {generateSkeletonCards(3)}
-        </View>
-      </Animated.View>
-    </Animated.View>
-  );
-};
 
 export default function HomeScreen() {
   const api = useApi();
@@ -498,13 +316,9 @@ export default function HomeScreen() {
         </View>
 
         {loading ? (
-          <Animated.View
-            className="flex-1"
-            entering={FadeIn.duration(500)}
-            exiting={FadeOut.duration(300)}
-          >
-            <SkeletonLoader />
-          </Animated.View>
+          <View className="flex-1 items-center justify-center">
+            <LoaderIcon className="animate-spin" />
+          </View>
         ) : (
           <Animated.ScrollView
             ref={scrollViewRef}
@@ -514,27 +328,10 @@ export default function HomeScreen() {
             scrollEventThrottle={16}
             contentContainerStyle={{ paddingBottom: 20, paddingTop: 20 }}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={theme === "light" ? "#555555" : "#ffffff"}
-                progressBackgroundColor={
-                  theme === "light" ? "#f5f5f5" : "#1e1e1e"
-                }
-                colors={
-                  theme === "light"
-                    ? ["#6366F1", "#8B5CF6"]
-                    : ["#ffffff", "#9333ea"]
-                }
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            <Animated.View
-              className="px-2 pb-10"
-              entering={FadeIn.duration(500).delay(200)}
-              layout={LinearTransition.springify()}
-              style={{ opacity: contentOpacity }}
-            >
+            <View className="px-2 pb-10">
               {error ? (
                 <View
                   className={`py-4 my-2 rounded-2xl ${
@@ -568,64 +365,64 @@ export default function HomeScreen() {
               ) : null}
 
               {recommendations.recentlyPlayed.length > 0 && (
-                <Animated.View entering={FadeInLeft.duration(600).delay(300)}>
+                <View>
                   <RecommendationGrid
                     recommendations={recommendations.recentlyPlayed}
                     title="Recently Played"
                     showMore={true}
                   />
-                </Animated.View>
+                </View>
               )}
 
               {recommendations.songs.length > 0 && (
-                <Animated.View entering={FadeInRight.duration(600).delay(400)}>
+                <View>
                   <RecommendationGrid
                     recommendations={recommendations.songs}
                     title="Your Favorite"
                     showMore={true}
                   />
-                </Animated.View>
+                </View>
               )}
 
               {trendingSongs.length > 0 && (
-                <Animated.View entering={FadeInLeft.duration(600).delay(500)}>
+                <View>
                   <TrendingSongs songs={trendingSongs} title="Trending Now" />
-                </Animated.View>
+                </View>
               )}
 
               {homePageData?.playlists && homePageData.playlists.length > 0 && (
-                <Animated.View entering={FadeInRight.duration(600).delay(600)}>
+                <View>
                   <PlaylistsGrid
                     playlists={homePageData.playlists}
                     title="Popular Playlists"
                   />
-                </Animated.View>
+                </View>
               )}
 
               {homePageData?.charts && homePageData.charts.length > 0 && (
-                <Animated.View entering={FadeInLeft.duration(600).delay(700)}>
+                <View>
                   <PlaylistsGrid
                     playlists={homePageData.charts}
                     title="Top Charts"
                   />
-                </Animated.View>
+                </View>
               )}
 
               {homePageData?.albums && homePageData.albums.length > 0 && (
-                <Animated.View entering={FadeInRight.duration(600).delay(800)}>
+                <View>
                   <AlbumsGrid albums={homePageData.albums} title="New Albums" />
-                </Animated.View>
+                </View>
               )}
 
               {homePageData?.artists && homePageData.artists.length > 0 && (
-                <Animated.View entering={FadeInLeft.duration(600).delay(900)}>
+                <View>
                   <ArtistGrid
                     artists={homePageData.artists}
                     title="Artists You'll Love"
                   />
-                </Animated.View>
+                </View>
               )}
-            </Animated.View>
+            </View>
           </Animated.ScrollView>
         )}
       </SafeAreaView>

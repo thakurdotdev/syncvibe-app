@@ -44,6 +44,7 @@ import NewPlayerDrawer from "./NewPlayerDrawer";
 
 interface SongCardProps {
   song: Song;
+  onPress?: () => void | Promise<void>; // Optional callback for when song is clicked
 }
 
 interface AlbumCardProps {
@@ -105,6 +106,7 @@ export const SongCard = memo(
   ({
     song,
     disableOnLongPress = false,
+    onPress: onPressCallback,
   }: SongCardProps & { disableOnLongPress?: boolean }) => {
     const { playSong } = usePlayer();
     const { currentSong, isPlaying, isLoading } = usePlayerState();
@@ -116,6 +118,11 @@ export const SongCard = memo(
     const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
 
     const handlePress = useCallback(async () => {
+      // Call the optional callback first
+      if (onPressCallback) {
+        await onPressCallback();
+      }
+
       if (isCurrentSong) {
         if (isPlaying) {
           await TrackPlayer.pause();
@@ -128,7 +135,7 @@ export const SongCard = memo(
           addToHistory(securedSong, 10);
         }
       }
-    }, [isCurrentSong, isPlaying, securedSong, playSong]);
+    }, [isCurrentSong, isPlaying, securedSong, playSong, onPressCallback]);
 
     const handleLongPress = useCallback(() => {
       setPlayerDrawerOpen(true);
@@ -138,7 +145,7 @@ export const SongCard = memo(
     return (
       <Card
         variant={isCurrentSong ? "secondary" : "ghost"}
-        className="h-[60px] p-0 rounded-none"
+        className="h-[60px] p-0 rounded-lg bg-transparent border-none mb-2"
       >
         <Card.Content className="p-0 rounded-none">
           <Pressable
@@ -153,7 +160,7 @@ export const SongCard = memo(
                 alt="Song cover"
                 fadeDuration={0}
                 resizeMode="cover"
-                className="rounded-md"
+                className="rounded-l-md"
               />
             </View>
 

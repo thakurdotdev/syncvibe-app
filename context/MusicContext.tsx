@@ -9,6 +9,7 @@ import { Song } from "@/types/song";
 import useApi from "@/utils/hooks/useApi";
 import { playbackHistory } from "@/utils/playbackHistory";
 import { setupPlayer } from "@/utils/playerSetup";
+import streamingManager from "@/utils/streamingManager";
 import {
   createContext,
   ReactNode,
@@ -143,33 +144,47 @@ export const usePlaylist = (): PlaylistContextValue => {
 };
 
 const convertSongToTrack = async (song: Song): Promise<Track> => {
+  // Check if we have this track cached already
   if (trackCache.has(song.id)) {
     return trackCache.get(song.id)!;
   }
 
-  const audioUrl =
-    song.download_url[3]?.link ||
-    song.download_url[2]?.link ||
-    song.download_url[1]?.link ||
-    song.download_url[0]?.link;
+  try {
+    // Use streaming manager for high-quality streaming with caching
+    const track = await streamingManager.convertSongToStreamingTrack(song);
 
-  const artwork =
-    song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
+    // Use the optimized caching function
+    addToTrackCache(song.id, track);
 
-  const track = {
-    id: song.id,
-    url: audioUrl,
-    title: song.name || "Unknown Title",
-    artist: song?.artist_map?.primary_artists?.[0]?.name || "Unknown Artist",
-    album: song.album || "Unknown Album",
-    artwork: artwork,
-    duration: song.duration || 0,
-  };
+    return track;
+  } catch (error) {
+    console.error(`Failed to get streaming track for ${song.name}:`, error);
 
-  // Use the optimized caching function
-  addToTrackCache(song.id, track);
+    // Fallback to original logic if streaming manager fails
+    const audioUrl =
+      song.download_url[3]?.link ||
+      song.download_url[2]?.link ||
+      song.download_url[1]?.link ||
+      song.download_url[0]?.link;
 
-  return track;
+    const artwork =
+      song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
+
+    const track = {
+      id: song.id,
+      url: audioUrl,
+      title: song.name || "Unknown Title",
+      artist: song?.artist_map?.primary_artists?.[0]?.name || "Unknown Artist",
+      album: song.album || "Unknown Album",
+      artwork: artwork,
+      duration: song.duration || 0,
+    };
+
+    // Use the optimized caching function
+    addToTrackCache(song.id, track);
+
+    return track;
+  }
 };
 
 interface PlayerProviderProps {
@@ -518,6 +533,13 @@ export function MusicProvider({ children }: PlayerProviderProps) {
                       }`,
                     );
 
+                    // Preload next tracks for seamless playback
+                    streamingManager
+                      .preloadNextTracks(playlistState.playlist, songIndex)
+                      .catch((err) => {
+                        console.error("Error preloading next tracks:", err);
+                      });
+
                     // Update playback history if user is logged in
                     if (user?.userid && currentSong.id) {
                       const duration = currentSong.duration || 0;
@@ -554,6 +576,30 @@ export function MusicProvider({ children }: PlayerProviderProps) {
 
           case Event.PlaybackError:
             console.error(`Playback error: ${event.code} - ${event.message}`);
+
+            // Handle streaming errors with fallback logic
+            if (playbackStateRef.current.currentSong) {
+              const currentSong = playbackStateRef.current.currentSong;
+              console.log(
+                `Attempting to recover from playback error for: ${currentSong.name}`,
+              );
+
+              // Try to get a fallback URL from streaming manager
+              try {
+                const fallbackTrack = await convertSongToTrack(currentSong);
+                if (fallbackTrack.url) {
+                  console.log(`Found fallback URL, retrying playback`);
+                  await TrackPlayer.reset();
+                  await TrackPlayer.add([fallbackTrack]);
+                  await TrackPlayer.play();
+                  playbackDispatch({ type: "SET_LOADING", payload: false });
+                  return;
+                }
+              } catch (fallbackError) {
+                console.error("Fallback URL also failed:", fallbackError);
+              }
+            }
+
             playbackDispatch({ type: "SET_LOADING", payload: false });
             break;
 
