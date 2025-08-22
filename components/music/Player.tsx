@@ -32,7 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrackPlayer from "react-native-track-player";
 import Button from "../ui/button";
 import { ProgressBar, SongControls } from "./MusicCards";
-import { MusicQueue, SimilarSongs } from "./MusicLists";
+import { MusicQueue } from "./MusicLists";
 import NewPlayerDrawer from "./NewPlayerDrawer";
 
 const { height } = Dimensions.get("window");
@@ -40,7 +40,7 @@ const ANIMATION_DURATION = 300;
 const SWIPE_THRESHOLD = 150;
 
 // Tab constants for easier reference
-const TABS = ["player", "queue", "recommendations"] as const;
+const TABS = ["player", "queue"] as const;
 type TabType = (typeof TABS)[number];
 
 const PlayerTab = React.memo(
@@ -61,7 +61,7 @@ const PlayerTab = React.memo(
             styles.albumArt,
             {
               shadowColor: colors.primary,
-              shadowOffset: { width: 0, height: 8 },
+              shadowOffset: { width: 0, height: 10 },
               shadowOpacity: 0.2,
               shadowRadius: 12,
             },
@@ -95,26 +95,6 @@ const QueueTab = React.memo(() => (
     <MusicQueue />
   </View>
 ));
-
-const RecommendationsTab = React.memo(
-  ({
-    recommendations,
-    loading,
-    fetchRecommendations,
-  }: {
-    recommendations: Song[];
-    loading: boolean;
-    fetchRecommendations: () => void;
-  }) => (
-    <View style={styles.tabContentContainer}>
-      <SimilarSongs
-        recommendations={recommendations}
-        loading={loading}
-        fetchRecommendations={fetchRecommendations}
-      />
-    </View>
-  ),
-);
 
 export default function Player() {
   const { colors } = useTheme();
@@ -364,11 +344,7 @@ export default function Player() {
                   activeTab === tab ? styles.activeTabText : undefined,
                 ]}
               >
-                {tab === "player"
-                  ? "Playing"
-                  : tab === "queue"
-                  ? "Queue"
-                  : "For You"}
+                {tab === "player" ? "Playing" : "Queue"}
               </Text>
             </Button>
           ))}
@@ -392,19 +368,6 @@ export default function Player() {
               }}
             >
               <QueueTab />
-            </View>
-
-            <View
-              style={{
-                display: activeTab === "recommendations" ? "flex" : "none",
-                flex: 1,
-              }}
-            >
-              <RecommendationsTab
-                recommendations={recommendations}
-                loading={loading}
-                fetchRecommendations={getRecommendations}
-              />
             </View>
           </View>
         </Animated.View>
@@ -614,9 +577,9 @@ const styles = StyleSheet.create({
   albumArt: {
     width: "90%",
     aspectRatio: 1,
-    borderRadius: 20,
+    borderRadius: 10,
     alignSelf: "center",
-    maxHeight: height * 0.45,
+    maxHeight: height * 0.5,
     marginTop: 10,
   },
   songInfoContainer: {

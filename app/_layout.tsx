@@ -1,5 +1,5 @@
-import React from "react";
 import { Stack } from "expo-router";
+import React from "react";
 import { StatusBar } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -9,16 +9,20 @@ import CallScreen from "@/components/video/CallScreen";
 import IncomingCallModal from "@/components/video/IncomingCall";
 import { GroupMusicProvider } from "@/context/GroupMusicContext";
 import { MusicProvider } from "@/context/MusicContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import { ChatProvider } from "@/context/SocketContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { UserProvider } from "@/context/UserContext";
 import { useVideoCall, VideoCallProvider } from "@/context/VideoCallContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import * as Notifications from "expo-notifications";
 import TrackPlayer from "react-native-track-player";
 import "../global.css";
 import { PlaybackService } from "../service";
-import * as Notifications from "expo-notifications";
-import { NotificationProvider } from "@/context/NotificationContext";
-import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -30,25 +34,46 @@ Notifications.setNotificationHandler({
 
 TrackPlayer.registerPlaybackService(() => PlaybackService);
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1,
+      gcTime: Infinity,
+      staleTime: Infinity,
+    },
+  },
+});
+
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+});
+
 function RootLayout() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
           <UserProvider>
-            <ChatProvider>
-              <VideoCallProvider>
-                <NotificationProvider>
-                  <MusicProvider>
-                    <GroupMusicProvider>
-                      <GestureHandlerRootView style={{ flex: 1 }}>
-                        <RootLayoutNav />
-                      </GestureHandlerRootView>
-                    </GroupMusicProvider>
-                  </MusicProvider>
-                </NotificationProvider>
-              </VideoCallProvider>
-            </ChatProvider>
+            <PersistQueryClientProvider
+              client={queryClient}
+              persistOptions={{ persister: asyncStoragePersister }}
+            >
+              <ChatProvider>
+                <VideoCallProvider>
+                  <NotificationProvider>
+                    <MusicProvider>
+                      <GroupMusicProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                          <RootLayoutNav />
+                        </GestureHandlerRootView>
+                      </GroupMusicProvider>
+                    </MusicProvider>
+                  </NotificationProvider>
+                </VideoCallProvider>
+              </ChatProvider>
+            </PersistQueryClientProvider>
           </UserProvider>
         </ToastProvider>
       </ThemeProvider>

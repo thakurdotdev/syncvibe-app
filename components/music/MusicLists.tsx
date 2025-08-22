@@ -4,14 +4,16 @@ import { useTheme } from "@/context/ThemeContext";
 import { Song } from "@/types/song";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import { ChevronRightIcon, Trash2Icon } from "lucide-react-native";
+import React, {
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from "react";
 import {
-  ChevronRightIcon,
-  RefreshCcwIcon,
-  Trash2Icon,
-} from "lucide-react-native";
-import React, { memo, useCallback, useMemo, useRef } from "react";
-import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -27,13 +29,7 @@ import DraggableFlatList, {
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
-import {
-  AlbumCard,
-  ArtistCard,
-  NewSongCard,
-  PlaylistCard,
-  SongCard,
-} from "./MusicCards";
+import { AlbumCard, ArtistCard, NewSongCard, PlaylistCard } from "./MusicCards";
 
 interface AlbumsGridProps {
   albums: any[];
@@ -71,6 +67,15 @@ const SongCardQueue = memo(
     const { currentSong } = usePlayerState();
     const isCurrentSong = currentSong?.id === song.id;
     const swipeableRef = useRef<Swipeable>(null);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useLayoutEffect(() => {
+      // Small delay to prevent flash of right actions on mount
+      const timer = setTimeout(() => {
+        setIsMounted(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    }, []);
 
     const handlePress = useCallback(() => {
       playSong(song);
@@ -91,6 +96,8 @@ const SongCardQueue = memo(
 
     const renderRightActions = useCallback(
       (progress: any, dragX: any) => {
+        if (!isMounted) return null;
+
         return (
           <RectButton
             onPress={handleDelete}
@@ -109,7 +116,7 @@ const SongCardQueue = memo(
           </RectButton>
         );
       },
-      [handleDelete],
+      [handleDelete, isMounted],
     );
 
     return (
@@ -121,6 +128,7 @@ const SongCardQueue = memo(
             friction={2}
             rightThreshold={40}
             overshootRight={false}
+            enableTrackpadTwoFingerGesture={false}
             containerStyle={{
               marginVertical: 4,
               overflow: "hidden",
@@ -225,80 +233,6 @@ export const MusicQueue = memo(() => {
     />
   );
 });
-
-export const SimilarSongs = memo(
-  ({
-    recommendations,
-    loading,
-    fetchRecommendations,
-  }: {
-    recommendations: Song[];
-    loading: boolean;
-    fetchRecommendations: () => void;
-  }) => {
-    const { colors } = useTheme();
-    if (loading) {
-      return (
-        <View className="items-center justify-center py-12">
-          <ActivityIndicator size="large" color="white" />
-          <Text
-            className="text-lg font-medium mt-4"
-            style={{ color: colors.text }}
-          >
-            Finding similar vibes...
-          </Text>
-        </View>
-      );
-    }
-
-    if (recommendations.length === 0) {
-      return (
-        <View className="items-center justify-center py-12 px-4">
-          <Text
-            className="text-lg font-medium mb-3"
-            style={{ color: colors.text }}
-          >
-            No similar songs found
-          </Text>
-          <Text
-            className="text-sm mb-4 text-center"
-            style={{ color: colors.mutedForeground }}
-          >
-            We couldn't find any similar songs at the moment. Try again later.
-          </Text>
-          <TouchableOpacity
-            onPress={fetchRecommendations}
-            style={{ backgroundColor: colors.primary }}
-            className="px-6 py-3 rounded-full flex-row items-center"
-          >
-            <View className="flex-row items-center justify-center gap-2">
-              <RefreshCcwIcon size={16} color={colors.primaryForeground} />
-              <Text
-                className="font-medium"
-                style={{ color: colors.primaryForeground }}
-              >
-                Try Again
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <FlatList
-        data={recommendations}
-        renderItem={({ item }) => <SongCard song={item} />}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 10, paddingHorizontal: 8 }}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View className="h-2" />}
-        scrollEnabled={true}
-        bounces={true}
-      />
-    );
-  },
-);
 
 export const AlbumsGrid = ({ albums, title }: AlbumsGridProps) => {
   const { colors } = useTheme();

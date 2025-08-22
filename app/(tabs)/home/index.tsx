@@ -8,6 +8,7 @@ import {
 import { SONG_URL } from "@/constants";
 import { useTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
+import { useHomePageMusic, useRecentMusic } from "@/queries/useMusic";
 import { Song } from "@/types/song";
 import useApi from "@/utils/hooks/useApi";
 import { Ionicons } from "@expo/vector-icons";
@@ -55,17 +56,9 @@ interface Recommendations {
 }
 
 export default function HomeScreen() {
-  const api = useApi();
   const { selectedLanguages, user } = useUser();
   const { colors, theme } = useTheme();
-  const [homePageData, setHomePageData] = useState<HomePageData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [recommendations, setRecommendations] = useState<Recommendations>({
-    songs: [],
-    recentlyPlayed: [],
-  });
   const scrollViewRef = useRef(null);
 
   // Animation values
@@ -74,6 +67,9 @@ export default function HomeScreen() {
   const searchBarTranslateY = useSharedValue(0);
   const contentOpacity = useSharedValue(1);
   const headerScale = useSharedValue(1);
+
+  const { data: homePageData, isLoading: loading, error } = useHomePageMusic();
+  const { data: recommendations, refetch } = useRecentMusic();
 
   // Setup initial animations
   useEffect(() => {
@@ -149,79 +145,20 @@ export default function HomeScreen() {
     };
   });
 
-  const fetchData = useCallback(async () => {
-    try {
-      setError("");
-      const response = await axios.get(
-        `${SONG_URL}/modules?lang=${selectedLanguages}`,
-        {
-          headers: {
-            "Cache-Control": "no-cache",
-          },
-        },
-      );
-
-      if (response.status === 200) {
-        const topAllData = response.data?.data;
-        setHomePageData({
-          trending: topAllData.trending?.data || [],
-          playlists: topAllData.playlists?.data || [],
-          albums: topAllData?.albums.data || [],
-          charts: topAllData?.charts.data || [],
-          artists: topAllData?.artist_recos?.data || [],
-        });
-      }
-    } catch (error) {
-      setError("Failed to load content. Please try again later.");
-      console.error("Error fetching homepage data:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [selectedLanguages]);
-
-  const getRecommendations = async () => {
-    try {
-      if (!user?.userid) return;
-
-      const response = await api.get("/api/music/recommendations");
-
-      if (response.status === 200) {
-        const { songs, recentlyPlayed } = response.data.data;
-
-        setRecommendations({
-          songs: songs || [],
-          recentlyPlayed: recentlyPlayed || [],
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching recommendations:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (!user?.userid) return;
-    getRecommendations();
-  }, [user?.userid]);
-
   const onRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
-    fetchData();
     if (user?.userid) {
-      getRecommendations();
+      refetch();
     }
-  }, [fetchData, user?.userid]);
+  }, [user?.userid]);
 
   const trendingSongs = useMemo(() => {
     return (
-      homePageData?.trending?.filter((item) => item?.type === "song") || []
+      homePageData?.trending?.data?.filter((item) => item?.type === "song") ||
+      []
     );
   }, [homePageData?.trending]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   // Define header gradient colors based on theme
   const headerGradientColors = useMemo(() => {
@@ -332,7 +269,7 @@ export default function HomeScreen() {
             }
           >
             <View className="px-2 pb-10">
-              {error ? (
+              {typeof error === "string" ? (
                 <View
                   className={`py-4 my-2 rounded-2xl ${
                     theme === "light" ? "bg-gray-100/80" : "bg-gray-900/80"
@@ -364,20 +301,20 @@ export default function HomeScreen() {
                 </View>
               ) : null}
 
-              {recommendations.recentlyPlayed.length > 0 && (
+              {(recommendations?.recentlyPlayed ?? []).length > 0 && (
                 <View>
                   <RecommendationGrid
-                    recommendations={recommendations.recentlyPlayed}
+                    recommendations={recommendations?.recentlyPlayed ?? []}
                     title="Recently Played"
                     showMore={true}
                   />
                 </View>
               )}
 
-              {recommendations.songs.length > 0 && (
+              {(recommendations?.songs || []).length > 0 && (
                 <View>
                   <RecommendationGrid
-                    recommendations={recommendations.songs}
+                    recommendations={recommendations?.songs ?? []}
                     title="Your Favorite"
                     showMore={true}
                   />
@@ -390,38 +327,43 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              {homePageData?.playlists && homePageData.playlists.length > 0 && (
-                <View>
-                  <PlaylistsGrid
-                    playlists={homePageData.playlists}
-                    title="Popular Playlists"
-                  />
-                </View>
-              )}
+              {homePageData?.playlists &&
+                homePageData.playlists.data.length > 0 && (
+                  <View>
+                    <PlaylistsGrid
+                      playlists={homePageData.playlists.data}
+                      title="Popular Playlists"
+                    />
+                  </View>
+                )}
 
-              {homePageData?.charts && homePageData.charts.length > 0 && (
+              {homePageData?.charts && homePageData.charts.data.length > 0 && (
                 <View>
                   <PlaylistsGrid
-                    playlists={homePageData.charts}
+                    playlists={homePageData.charts.data}
                     title="Top Charts"
                   />
                 </View>
               )}
 
-              {homePageData?.albums && homePageData.albums.length > 0 && (
+              {homePageData?.albums && homePageData.albums.data.length > 0 && (
                 <View>
-                  <AlbumsGrid albums={homePageData.albums} title="New Albums" />
-                </View>
-              )}
-
-              {homePageData?.artists && homePageData.artists.length > 0 && (
-                <View>
-                  <ArtistGrid
-                    artists={homePageData.artists}
-                    title="Artists You'll Love"
+                  <AlbumsGrid
+                    albums={homePageData.albums.data}
+                    title="New Albums"
                   />
                 </View>
               )}
+
+              {homePageData?.artist_recos &&
+                homePageData.artist_recos.data.length > 0 && (
+                  <View>
+                    <ArtistGrid
+                      artists={homePageData.artist_recos.data}
+                      title="Artists You'll Love"
+                    />
+                  </View>
+                )}
             </View>
           </Animated.ScrollView>
         )}
