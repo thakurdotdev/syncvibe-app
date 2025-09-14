@@ -1,8 +1,8 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { Feather } from "@expo/vector-icons"; // Using Expo Vector Icons
-import { useTheme } from "@/context/ThemeContext"; // Assuming you have a ThemeContext
-import Button from "../components/ui/button";
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Feather } from '@expo/vector-icons'; // Using Expo Vector Icons
+import { useTheme } from '@/context/ThemeContext'; // Assuming you have a ThemeContext
+import Button from '../components/ui/button';
 
 const ButtonsDemo: React.FC = () => {
   const { colors, theme, toggleTheme } = useTheme();
@@ -13,128 +13,94 @@ const ButtonsDemo: React.FC = () => {
       contentContainerStyle={styles.contentContainer}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          Button Examples
-        </Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Button Examples</Text>
         <Button
-          variant="outline"
-          size="sm"
-          title={theme === "dark" ? "Light Mode" : "Dark Mode"}
+          variant='outline'
+          size='sm'
+          title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           icon={
-            <Feather
-              name={theme === "dark" ? "sun" : "moon"}
-              size={14}
-              color={colors.primary}
-            />
+            <Feather name={theme === 'dark' ? 'sun' : 'moon'} size={14} color={colors.primary} />
           }
-          iconPosition="left"
+          iconPosition='left'
           onPress={toggleTheme}
         />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Variants
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Variants</Text>
 
       <View style={styles.section}>
-        <Button title="Default" />
-        <Button variant="secondary" title="Secondary" />
-        <Button variant="destructive" title="Destructive" />
-        <Button variant="outline" title="Outline" />
-        <Button variant="ghost" title="Ghost" />
-        <Button variant="link" title="Link" />
+        <Button title='Default' />
+        <Button variant='secondary' title='Secondary' />
+        <Button variant='destructive' title='Destructive' />
+        <Button variant='outline' title='Outline' />
+        <Button variant='ghost' title='Ghost' />
+        <Button variant='link' title='Link' />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Sizes
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Sizes</Text>
 
       <View style={styles.section}>
-        <Button size="sm" title="Small" />
-        <Button size="default" title="Default" />
-        <Button size="lg" title="Large" />
+        <Button size='sm' title='Small' />
+        <Button size='default' title='Default' />
+        <Button size='lg' title='Large' />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        With Icons
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>With Icons</Text>
 
       <View style={styles.section}>
         <Button
-          icon={<Feather name="download" size={14} color="white" />}
-          iconPosition="left"
-          title="Download"
+          icon={<Feather name='download' size={14} color='white' />}
+          iconPosition='left'
+          title='Download'
         />
 
         <Button
-          variant="secondary"
-          icon={
-            <Feather
-              name="arrow-right"
-              size={14}
-              color={colors.secondaryForeground}
-            />
-          }
-          iconPosition="right"
-          title="Next"
+          variant='secondary'
+          icon={<Feather name='arrow-right' size={14} color={colors.secondaryForeground} />}
+          iconPosition='right'
+          title='Next'
         />
 
         <Button
-          variant="outline"
-          icon={<Feather name="settings" size={14} color={colors.primary} />}
-          iconPosition="left"
-          title="Settings"
+          variant='outline'
+          icon={<Feather name='settings' size={14} color={colors.primary} />}
+          iconPosition='left'
+          title='Settings'
         />
 
         <View style={styles.iconRow}>
           <Button
-            variant="outline"
-            size="icon"
-            icon={<Feather name="plus" size={16} color={colors.primary} />}
+            variant='outline'
+            size='icon'
+            icon={<Feather name='plus' size={16} color={colors.primary} />}
           />
 
           <Button
-            size="icon"
-            icon={
-              <Feather
-                name="check"
-                size={16}
-                color={colors.primaryForeground}
-              />
-            }
+            size='icon'
+            icon={<Feather name='check' size={16} color={colors.primaryForeground} />}
           />
 
           <Button
-            variant="destructive"
-            size="icon"
-            icon={
-              <Feather
-                name="trash-2"
-                size={16}
-                color={colors.destructiveForeground}
-              />
-            }
+            variant='destructive'
+            size='icon'
+            icon={<Feather name='trash-2' size={16} color={colors.destructiveForeground} />}
           />
         </View>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        States
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>States</Text>
 
       <View style={styles.section}>
-        <Button isLoading title="Loading" />
+        <Button isLoading title='Loading' />
 
-        <Button disabled title="Disabled" />
+        <Button disabled title='Disabled' />
 
-        <Button variant="outline" disabled title="Disabled Outline" />
+        <Button variant='outline' disabled title='Disabled Outline' />
 
-        <Button variant="secondary" disabled title="Disabled Secondary" />
+        <Button variant='secondary' disabled title='Disabled Secondary' />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Examples
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Examples</Text>
 
       <View
         style={[
@@ -145,17 +111,13 @@ const ButtonsDemo: React.FC = () => {
           },
         ]}
       >
-        <Text style={[styles.cardTitle, { color: colors.foreground }]}>
-          Create a new project
-        </Text>
-        <Text
-          style={[styles.cardDescription, { color: colors.mutedForeground }]}
-        >
+        <Text style={[styles.cardTitle, { color: colors.foreground }]}>Create a new project</Text>
+        <Text style={[styles.cardDescription, { color: colors.mutedForeground }]}>
           Deploy your new project in one-click.
         </Text>
         <View style={styles.cardActions}>
-          <Button variant="outline" title="Cancel" style={{ flex: 1 }} />
-          <Button title="Deploy" style={{ flex: 1 }} />
+          <Button variant='outline' title='Cancel' style={{ flex: 1 }} />
+          <Button title='Deploy' style={{ flex: 1 }} />
         </View>
       </View>
     </ScrollView>
@@ -171,18 +133,18 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 24,
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     marginTop: 24,
     marginBottom: 12,
   },
@@ -190,7 +152,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
   card: {
@@ -201,7 +163,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 8,
   },
   cardDescription: {
@@ -209,7 +171,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardActions: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
 });

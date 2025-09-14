@@ -1,7 +1,7 @@
-import { SONG_URL } from "@/constants";
-import { Song } from "@/types/song";
-import axios from "axios";
-import { ensureHttpsForSongUrls } from "../getHttpsUrls";
+import { SONG_URL } from '@/constants';
+import { Song } from '@/types/song';
+import axios from 'axios';
+import { ensureHttpsForSongUrls } from '../getHttpsUrls';
 
 /**
  * Searches for songs based on a query string

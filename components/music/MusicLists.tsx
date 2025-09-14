@@ -1,35 +1,21 @@
-import Card from "@/components/ui/card";
-import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
-import { useTheme } from "@/context/ThemeContext";
-import { Song } from "@/types/song";
-import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import { ChevronRightIcon, Trash2Icon } from "lucide-react-native";
-import React, {
-  memo,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  useLayoutEffect,
-} from "react";
-import {
-  FlatList,
-  Image,
-  Pressable,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import Card from '@/components/ui/card';
+import { usePlayer, usePlayerState, usePlaylist } from '@/context/MusicContext';
+import { useTheme } from '@/context/ThemeContext';
+import { Song } from '@/types/song';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { ChevronRightIcon, Trash2Icon } from 'lucide-react-native';
+import React, { memo, useCallback, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { FlatList, Image, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import DraggableFlatList, {
   OpacityDecorator,
   RenderItemParams,
   ScaleDecorator,
-} from "react-native-draggable-flatlist";
-import { RectButton } from "react-native-gesture-handler";
-import Swipeable from "react-native-gesture-handler/Swipeable";
-import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
-import { AlbumCard, ArtistCard, NewSongCard, PlaylistCard } from "./MusicCards";
+} from 'react-native-draggable-flatlist';
+import { RectButton } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
+import { AlbumCard, ArtistCard, NewSongCard, PlaylistCard } from './MusicCards';
 
 interface AlbumsGridProps {
   albums: any[];
@@ -53,15 +39,7 @@ interface ArtistGridProps {
 }
 
 const SongCardQueue = memo(
-  ({
-    song,
-    drag,
-    isActive,
-  }: {
-    song: Song;
-    drag: () => void;
-    isActive: boolean;
-  }) => {
+  ({ song, drag, isActive }: { song: Song; drag: () => void; isActive: boolean }) => {
     const { colors } = useTheme();
     const { playSong, removeFromQueue } = usePlayer();
     const { currentSong } = usePlayerState();
@@ -91,7 +69,7 @@ const SongCardQueue = memo(
     const songName = useMemo(() => song.name, [song.name]);
     const songArtist = useMemo(
       () => song.subtitle || song.artist_map?.artists?.[0]?.name,
-      [song.subtitle, song.artist_map],
+      [song.subtitle, song.artist_map]
     );
 
     const renderRightActions = useCallback(
@@ -102,21 +80,21 @@ const SongCardQueue = memo(
           <RectButton
             onPress={handleDelete}
             style={{
-              backgroundColor: "#dc2626",
-              justifyContent: "center",
-              alignItems: "center",
+              backgroundColor: '#dc2626',
+              justifyContent: 'center',
+              alignItems: 'center',
               width: 60,
-              height: "100%",
+              height: '100%',
             }}
           >
-            <View style={{ alignItems: "center", justifyContent: "center" }}>
-              <Trash2Icon size={24} color="white" />
-              <Text className="text-white text-xs mt-1">Remove</Text>
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              <Trash2Icon size={24} color='white' />
+              <Text className='text-white text-xs mt-1'>Remove</Text>
             </View>
           </RectButton>
         );
       },
-      [handleDelete, isMounted],
+      [handleDelete, isMounted]
     );
 
     return (
@@ -131,7 +109,7 @@ const SongCardQueue = memo(
             enableTrackpadTwoFingerGesture={false}
             containerStyle={{
               marginVertical: 4,
-              overflow: "hidden",
+              overflow: 'hidden',
             }}
           >
             <Pressable
@@ -146,34 +124,31 @@ const SongCardQueue = memo(
               delayLongPress={150}
             >
               <Card
-                variant={isCurrentSong ? "secondary" : "ghost"}
-                className="w-full flex-row rounded-none h-[60px]"
+                variant={isCurrentSong ? 'secondary' : 'ghost'}
+                className='w-full flex-row rounded-none h-[60px]'
               >
-                <View className="relative">
+                <View className='relative'>
                   <Image
                     source={{ uri: songImage }}
                     style={{ width: 56, height: 60 }}
-                    className="rounded-md"
+                    className='rounded-md'
                     fadeDuration={0}
-                    resizeMode="cover"
+                    resizeMode='cover'
                   />
                 </View>
 
-                <View className="flex-1 p-3 px-4 justify-center">
+                <View className='flex-1 p-3 px-4 justify-center'>
                   <Text
                     style={{
                       color: colors.text,
-                      fontWeight: "600",
+                      fontWeight: '600',
                       fontSize: 16,
                     }}
                     numberOfLines={1}
                   >
                     {songName}
                   </Text>
-                  <Text
-                    style={{ color: colors.mutedForeground, fontSize: 14 }}
-                    numberOfLines={1}
-                  >
+                  <Text style={{ color: colors.mutedForeground, fontSize: 14 }} numberOfLines={1}>
                     {songArtist}
                   </Text>
                 </View>
@@ -185,7 +160,7 @@ const SongCardQueue = memo(
         </OpacityDecorator>
       </ScaleDecorator>
     );
-  },
+  }
 );
 
 export const MusicQueue = memo(() => {
@@ -200,13 +175,13 @@ export const MusicQueue = memo(() => {
       setPlaylist(data);
       reorderPlaylist(data);
     },
-    [reorderPlaylist],
+    [reorderPlaylist]
   );
 
   if (!playlist.length) {
     return (
-      <View className="items-center justify-center py-10">
-        <Text className="text-lg" style={{ color: colors.text }}>
+      <View className='items-center justify-center py-10'>
+        <Text className='text-lg' style={{ color: colors.text }}>
           No songs in queue
         </Text>
       </View>
@@ -217,12 +192,7 @@ export const MusicQueue = memo(() => {
     <DraggableFlatList
       ref={scrollRef}
       data={playlist}
-      renderItem={({
-        item,
-        getIndex,
-        drag,
-        isActive,
-      }: RenderItemParams<Song>) => (
+      renderItem={({ item, getIndex, drag, isActive }: RenderItemParams<Song>) => (
         <SongCardQueue song={item} drag={drag} isActive={isActive} />
       )}
       keyExtractor={(item) => item.id}
@@ -239,12 +209,9 @@ export const AlbumsGrid = ({ albums, title }: AlbumsGridProps) => {
   if (!albums?.length) return null;
 
   return (
-    <View className="mb-6">
+    <View className='mb-6'>
       {title && (
-        <Text
-          className="text-xl font-bold mb-2 ml-3"
-          style={{ color: colors.text }}
-        >
+        <Text className='text-xl font-bold mb-2 ml-3' style={{ color: colors.text }}>
           {title}
         </Text>
       )}
@@ -271,12 +238,9 @@ export const PlaylistsGrid = ({ playlists, title }: PlaylistsGridProps) => {
   if (!playlists?.length) return null;
 
   return (
-    <View className="mb-6">
+    <View className='mb-6'>
       {title && (
-        <Text
-          className="text-xl font-bold mb-2 ml-3"
-          style={{ color: colors.text }}
-        >
+        <Text className='text-xl font-bold mb-2 ml-3' style={{ color: colors.text }}>
           {title}
         </Text>
       )}
@@ -307,21 +271,15 @@ export const RecommendationGrid = ({
   if (!recommendations?.length) return null;
 
   return (
-    <View className="mb-6">
-      <View className="flex-row justify-between items-center mb-2 ml-3">
+    <View className='mb-6'>
+      <View className='flex-row justify-between items-center mb-2 ml-3'>
         {title && (
-          <Text
-            className="text-xl font-bold"
-            style={{ fontFamily: "System", color: colors.text }}
-          >
+          <Text className='text-xl font-bold' style={{ fontFamily: 'System', color: colors.text }}>
             {title}
           </Text>
         )}
         {showMore && (
-          <TouchableOpacity
-            className="px-3 py-1"
-            onPress={() => router.push("/song-history")}
-          >
+          <TouchableOpacity className='px-3 py-1' onPress={() => router.push('/song-history')}>
             <ChevronRightIcon size={20} color={colors.text} />
           </TouchableOpacity>
         )}
@@ -340,57 +298,49 @@ export const RecommendationGrid = ({
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
-        className="pb-2"
+        className='pb-2'
       />
     </View>
   );
 };
 
-export const TrendingSongs = memo(
-  ({ songs, title }: { songs: Song[]; title: string }) => {
-    const { colors } = useTheme();
-    if (!songs?.length) return null;
+export const TrendingSongs = memo(({ songs, title }: { songs: Song[]; title: string }) => {
+  const { colors } = useTheme();
+  if (!songs?.length) return null;
 
-    return (
-      <View className="mb-6">
-        {title && (
-          <Text
-            className="text-xl font-bold mb-2 ml-3"
-            style={{ color: colors.text }}
+  return (
+    <View className='mb-6'>
+      {title && (
+        <Text className='text-xl font-bold mb-2 ml-3' style={{ color: colors.text }}>
+          {title}
+        </Text>
+      )}
+      <FlatList
+        data={songs}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item, index }) => (
+          <Animated.View
+            entering={FadeIn.duration(400).delay(index * 100)}
+            layout={LinearTransition.springify()}
           >
-            {title}
-          </Text>
+            <NewSongCard song={item} />
+          </Animated.View>
         )}
-        <FlatList
-          data={songs}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => (
-            <Animated.View
-              entering={FadeIn.duration(400).delay(index * 100)}
-              layout={LinearTransition.springify()}
-            >
-              <NewSongCard song={item} />
-            </Animated.View>
-          )}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-        />
-      </View>
-    );
-  },
-);
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      />
+    </View>
+  );
+});
 
 export const ArtistGrid = memo(({ artists, title }: ArtistGridProps) => {
   const { colors } = useTheme();
   if (!artists?.length) return null;
 
   return (
-    <View className="mb-6">
+    <View className='mb-6'>
       {title && (
-        <Text
-          className="text-xl font-bold mb-2 ml-3"
-          style={{ color: colors.text }}
-        >
+        <Text className='text-xl font-bold mb-2 ml-3' style={{ color: colors.text }}>
           {title}
         </Text>
       )}

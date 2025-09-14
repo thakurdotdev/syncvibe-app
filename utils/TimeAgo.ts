@@ -10,7 +10,7 @@ export const TimeAgo = (postedTime: string | number | Date): string => {
 
   // Less than 1 minute ago
   if (elapsed < 60000) {
-    return "Just now";
+    return 'Just now';
   }
 
   // Less than 24 hours ago
@@ -22,14 +22,14 @@ export const TimeAgo = (postedTime: string | number | Date): string => {
   }
 
   // More than 24 hours ago: Format as `DD Mon YYYY, HH:MM AM/PM`
-  const day: string = String(postedDate.getDate()).padStart(2, "0");
-  const month: string = postedDate.toLocaleString("en-US", { month: "short" }); // e.g., "Dec"
+  const day: string = String(postedDate.getDate()).padStart(2, '0');
+  const month: string = postedDate.toLocaleString('en-US', { month: 'short' }); // e.g., "Dec"
   const year: number = postedDate.getFullYear();
 
   const formattedDate: string = `${day} ${month} ${year}`;
   const formattedTime: string = postedDate.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: true,
   });
 

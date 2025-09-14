@@ -1,42 +1,33 @@
-import { useTheme } from "@/context/ThemeContext";
-import { useUser } from "@/context/UserContext";
-import { router } from "expo-router";
-import { UserIcon, AtSignIcon, FileTextIcon } from "lucide-react-native";
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useTheme } from '@/context/ThemeContext';
+import { useUser } from '@/context/UserContext';
+import { router } from 'expo-router';
+import { UserIcon, AtSignIcon, FileTextIcon } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export default function EditProfileScreen() {
   const { user } = useUser();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const [name, setName] = useState(user?.name || "");
-  const [username, setUsername] = useState(user?.username || "");
-  const [bio, setBio] = useState(user?.bio || "");
+  const [name, setName] = useState(user?.name || '');
+  const [username, setUsername] = useState(user?.username || '');
+  const [bio, setBio] = useState(user?.bio || '');
 
   const handleSave = async () => {
     try {
       // TODO: Save profile changes to backend
       router.back();
     } catch (error) {
-      console.error("Error updating profile:", error);
+      console.error('Error updating profile:', error);
     }
   };
 
   const SectionHeader = ({ title }: { title: string }) => (
-    <Text style={[styles.sectionHeader, { color: colors.mutedForeground }]}>
-      {title}
-    </Text>
+    <Text style={[styles.sectionHeader, { color: colors.mutedForeground }]}>{title}</Text>
   );
 
   const FormField = ({
@@ -56,24 +47,17 @@ export default function EditProfileScreen() {
   }) => (
     <View style={[styles.fieldContainer, { backgroundColor: colors.card }]}>
       <View style={styles.fieldHeader}>
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: colors.primary + "20" },
-          ]}
-        >
+        <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
           <Icon size={18} color={colors.primary} />
         </View>
-        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
-          {label}
-        </Text>
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{label}</Text>
       </View>
       <View style={styles.inputWrapper}>
         <Input
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          variant="filled"
+          variant='filled'
           multiline={multiline}
           inputStyle={[
             styles.input,
@@ -90,7 +74,7 @@ export default function EditProfileScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView
@@ -103,20 +87,20 @@ export default function EditProfileScreen() {
       >
         {/* Personal Information Section */}
         <View style={styles.section}>
-          <SectionHeader title="PERSONAL INFORMATION" />
+          <SectionHeader title='PERSONAL INFORMATION' />
           <View style={styles.fieldsContainer}>
             <FormField
-              label="Full Name"
+              label='Full Name'
               value={name}
               onChangeText={setName}
-              placeholder="Enter your full name"
+              placeholder='Enter your full name'
               icon={UserIcon}
             />
             <FormField
-              label="Username"
+              label='Username'
               value={username}
               onChangeText={setUsername}
-              placeholder="Choose a unique username"
+              placeholder='Choose a unique username'
               icon={AtSignIcon}
             />
           </View>
@@ -124,13 +108,13 @@ export default function EditProfileScreen() {
 
         {/* About Section */}
         <View style={styles.section}>
-          <SectionHeader title="ABOUT" />
+          <SectionHeader title='ABOUT' />
           <View style={styles.fieldsContainer}>
             <FormField
-              label="Bio"
+              label='Bio'
               value={bio}
               onChangeText={setBio}
-              placeholder="Tell others about yourself, your interests, and what you love about music..."
+              placeholder='Tell others about yourself, your interests, and what you love about music...'
               icon={FileTextIcon}
               multiline
             />
@@ -141,8 +125,8 @@ export default function EditProfileScreen() {
         <View style={styles.buttonContainer}>
           <Button
             onPress={handleSave}
-            variant="default"
-            size="lg"
+            variant='default'
+            size='lg'
             style={[styles.saveButton, { backgroundColor: colors.primary }]}
           >
             Save Changes
@@ -169,10 +153,10 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     letterSpacing: 1,
     marginBottom: 16,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   fieldsContainer: {
     gap: 16,
@@ -181,14 +165,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
   fieldHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     marginBottom: 16,
   },
@@ -196,12 +180,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fieldLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   inputWrapper: {
     flex: 1,
@@ -216,7 +200,7 @@ const styles = StyleSheet.create({
   },
   multilineInput: {
     minHeight: 200,
-    textAlignVertical: "top",
+    textAlignVertical: 'top',
     paddingTop: 10,
   },
   buttonContainer: {
@@ -226,7 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     elevation: 3,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,

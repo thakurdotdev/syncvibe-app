@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform } from 'react-native';
 import TrackPlayer, {
   AndroidAudioContentType,
   AppKilledPlaybackBehavior,
@@ -7,7 +7,7 @@ import TrackPlayer, {
   IOSCategoryMode,
   IOSCategoryOptions,
   RepeatMode,
-} from "react-native-track-player";
+} from 'react-native-track-player';
 
 // Function to register service only once
 let isServiceRegistered = false;
@@ -19,7 +19,7 @@ export function registerPlaybackService() {
 
   isServiceRegistered = true;
 
-  TrackPlayer.registerPlaybackService(() => require("../service").default);
+  TrackPlayer.registerPlaybackService(() => require('../service').default);
 }
 
 let setupPromise: Promise<boolean> | null = null;
@@ -38,11 +38,11 @@ export const setupPlayer = async (): Promise<boolean> => {
       // Check if the player is already initialized by attempting an operation
       try {
         await TrackPlayer.getVolume();
-        console.log("TrackPlayer is already initialized");
+        console.log('TrackPlayer is already initialized');
         return true;
       } catch (error) {
         // Player is not initialized, continue with setup
-        console.log("Initializing TrackPlayer...");
+        console.log('Initializing TrackPlayer...');
       }
 
       // Setup with optimized configuration for high-quality streaming
@@ -60,11 +60,11 @@ export const setupPlayer = async (): Promise<boolean> => {
         autoUpdateMetadata: true,
 
         // Platform-specific audio settings
-        ...(Platform.OS === "android" && {
+        ...(Platform.OS === 'android' && {
           androidAudioContentType: AndroidAudioContentType.Music,
         }),
 
-        ...(Platform.OS === "ios" && {
+        ...(Platform.OS === 'ios' && {
           // iOS audio session category
           iosCategory: IOSCategory.Playback,
 
@@ -100,11 +100,7 @@ export const setupPlayer = async (): Promise<boolean> => {
         ],
 
         // Capabilities for compact view
-        compactCapabilities: [
-          Capability.Play,
-          Capability.Pause,
-          Capability.SkipToNext,
-        ],
+        compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext],
 
         // Notification/Control Center capabilities
         notificationCapabilities: [
@@ -131,10 +127,10 @@ export const setupPlayer = async (): Promise<boolean> => {
       // Reset retry count on successful setup
       setupRetryCount = 0;
 
-      console.log("TrackPlayer setup complete");
+      console.log('TrackPlayer setup complete');
       return true;
     } catch (error) {
-      console.error("Error setting up TrackPlayer:", error);
+      console.error('Error setting up TrackPlayer:', error);
 
       // Implement retry logic
       setupRetryCount++;
@@ -178,7 +174,7 @@ export const resetPlayer = async (): Promise<boolean> => {
     // Setup again
     return setupPlayer();
   } catch (error) {
-    console.error("Error resetting player:", error);
+    console.error('Error resetting player:', error);
     return false;
   }
 };

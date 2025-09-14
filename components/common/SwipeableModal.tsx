@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Animated,
   Dimensions,
@@ -11,16 +11,16 @@ import {
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
-} from "react-native";
-import { useTheme } from "@/context/ThemeContext";
+} from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 
-const { height, width } = Dimensions.get("window");
+const { height, width } = Dimensions.get('window');
 
 interface SwipeableModalProps {
   isVisible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  maxHeight?: number | "auto" | `${number}%`;
+  maxHeight?: number | 'auto' | `${number}%`;
   hideHandle?: boolean;
   backdropOpacity?: number;
   style?: ViewStyle;
@@ -94,7 +94,7 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
       setIsAtScrollTop(offsetY <= 0);
       onScroll?.(event);
     },
-    [onScroll],
+    [onScroll]
   );
 
   // Optimized pan responder
@@ -102,8 +102,7 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isVerticalSwipe =
-          Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        const isVerticalSwipe = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
 
         // Refined swipe conditions
         if (scrollable) {
@@ -135,7 +134,7 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
           }).start();
         }
       },
-    }),
+    })
   ).current;
 
   // Memoized content wrapper
@@ -156,25 +155,16 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
         </ScrollView>
       );
     },
-    [scrollable, useScrollView, handleScroll],
+    [scrollable, useScrollView, handleScroll]
   );
 
   // Bail out early if not visible
   if (!modalVisible) return null;
 
   return (
-    <Modal
-      visible={true}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={closeModal}
-    >
+    <Modal visible={true} transparent={true} animationType='fade' onRequestClose={closeModal}>
       <Animated.View style={[styles.modalContainer]}>
-        <TouchableOpacity
-          style={styles.backdropTouchable}
-          activeOpacity={1}
-          onPress={closeModal}
-        />
+        <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={closeModal} />
         <Animated.View
           style={[
             styles.drawerContainer,
@@ -189,12 +179,7 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
         >
           {!hideHandle && (
             <View style={styles.handleContainer} {...panResponder.panHandlers}>
-              <View
-                style={[
-                  styles.handle,
-                  { backgroundColor: colors.mutedForeground },
-                ]}
-              />
+              <View style={[styles.handle, { backgroundColor: colors.mutedForeground }]} />
             </View>
           )}
           {ContentWrapper(children)}
@@ -207,15 +192,15 @@ const SwipeableModal: React.FC<SwipeableModalProps> = ({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    justifyContent: "flex-end",
-    position: "absolute",
+    justifyContent: 'flex-end',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   backdropTouchable: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
@@ -225,12 +210,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 30,
-    width: "100%",
-    position: "absolute",
+    width: '100%',
+    position: 'absolute',
     bottom: 0,
   },
   handleContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingTop: 12,
     paddingBottom: 8,
     zIndex: 10,

@@ -1,18 +1,18 @@
-import { Song } from "./song";
+import { Song } from './song';
 
 export type Type =
-  | "artist"
-  | "album"
-  | "playlist"
-  | "radio"
-  | "radio_station"
-  | "song"
-  | "channel"
-  | "mix"
-  | "show"
-  | "episode"
-  | "season"
-  | "label";
+  | 'artist'
+  | 'album'
+  | 'playlist'
+  | 'radio'
+  | 'radio_station'
+  | 'song'
+  | 'channel'
+  | 'mix'
+  | 'show'
+  | 'episode'
+  | 'season'
+  | 'label';
 
 export interface Album {
   album_id?: string;
@@ -165,7 +165,7 @@ export interface MusicHistoryParams {
   limit: number;
   searchQuery?: string;
   sortBy?: string;
-  sortOrder?: "ASC" | "DESC";
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 export interface MusicHistoryResponse {

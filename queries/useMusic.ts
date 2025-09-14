@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   addToHistory,
@@ -10,16 +10,16 @@ import {
   getRecentMusic,
   getRelatedSongs,
   searchMusic,
-} from "@/api/music";
-import { useUser } from "@/context/UserContext";
-import { MusicHistoryParams } from "@/types/music";
-import { Song } from "@/types/song";
-import useApi from "@/utils/hooks/useApi";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+} from '@/api/music';
+import { useUser } from '@/context/UserContext';
+import { MusicHistoryParams } from '@/types/music';
+import { Song } from '@/types/song';
+import useApi from '@/utils/hooks/useApi';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const useHomePageMusic = () => {
   return useQuery({
-    queryKey: ["homePageMusic"],
+    queryKey: ['homePageMusic'],
     queryFn: () => getHomePageMusic(),
   });
 };
@@ -29,16 +29,16 @@ export const useRecentMusic = () => {
   const { user } = useUser();
 
   return useQuery({
-    queryKey: ["recentMusic"],
+    queryKey: ['recentMusic'],
     queryFn: () => getRecentMusic(api),
     enabled: !!user?.userid, // Only fetch if user is logged in
-    refetchOnMount: "always", // Always refetch when the component mounts
+    refetchOnMount: 'always', // Always refetch when the component mounts
   });
 };
 
 export const useMusicHistory = (params: MusicHistoryParams) => {
   return useQuery({
-    queryKey: ["musicHistory", params],
+    queryKey: ['musicHistory', params],
     queryFn: () => getMusicHistory(params),
   });
 };
@@ -46,22 +46,17 @@ export const useMusicHistory = (params: MusicHistoryParams) => {
 export const useAddToHistory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      songData,
-      playedTime,
-    }: {
-      songData: Song;
-      playedTime?: number;
-    }) => addToHistory(songData, playedTime),
+    mutationFn: ({ songData, playedTime }: { songData: Song; playedTime?: number }) =>
+      addToHistory(songData, playedTime),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recentMusic"] });
+      queryClient.invalidateQueries({ queryKey: ['recentMusic'] });
     },
   });
 };
 
 export const useRelatedSongs = (songId: string | undefined) => {
   return useQuery({
-    queryKey: ["relatedSongs", songId],
+    queryKey: ['relatedSongs', songId],
     queryFn: () => getRelatedSongs(songId!),
     enabled: !!songId, // Only fetch if songId is provided
   });
@@ -69,7 +64,7 @@ export const useRelatedSongs = (songId: string | undefined) => {
 
 export const usePlaylistDetails = (playlistId: string | undefined) => {
   return useQuery({
-    queryKey: ["playlistDetails", playlistId],
+    queryKey: ['playlistDetails', playlistId],
     queryFn: () => getPlaylistDetails(playlistId!),
     enabled: !!playlistId,
   });
@@ -77,7 +72,7 @@ export const usePlaylistDetails = (playlistId: string | undefined) => {
 
 export const useAlbumDetails = (albumId: string | undefined) => {
   return useQuery({
-    queryKey: ["albumDetails", albumId],
+    queryKey: ['albumDetails', albumId],
     queryFn: () => getAlbumDetails(albumId!),
     enabled: !!albumId,
   });
@@ -85,7 +80,7 @@ export const useAlbumDetails = (albumId: string | undefined) => {
 
 export const useArtistDetails = (artistId: string | undefined) => {
   return useQuery({
-    queryKey: ["artistDetails", artistId],
+    queryKey: ['artistDetails', artistId],
     queryFn: () => getArtistDetails(artistId!),
     enabled: !!artistId,
   });
@@ -93,7 +88,7 @@ export const useArtistDetails = (artistId: string | undefined) => {
 
 export const useSearchMusic = (query: string) => {
   return useQuery({
-    queryKey: ["searchMusic", query],
+    queryKey: ['searchMusic', query],
     queryFn: () => searchMusic(query),
     enabled: !!query,
   });

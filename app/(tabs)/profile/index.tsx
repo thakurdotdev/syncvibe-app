@@ -1,13 +1,13 @@
-import LoginScreen from "@/app/login";
-import DeveloperProfileModal from "@/components/DeveloperProfileModal";
-import Card from "@/components/ui/card";
-import { useTheme } from "@/context/ThemeContext";
-import { useUser } from "@/context/UserContext";
-import { getOptimizedImageUrl } from "@/utils/Cloudinary";
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import LoginScreen from '@/app/login';
+import DeveloperProfileModal from '@/components/DeveloperProfileModal';
+import Card from '@/components/ui/card';
+import { useTheme } from '@/context/ThemeContext';
+import { useUser } from '@/context/UserContext';
+import { getOptimizedImageUrl } from '@/utils/Cloudinary';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import {
   BellIcon,
   ChevronRightIcon,
@@ -22,8 +22,8 @@ import {
   ShieldCheckIcon,
   SunIcon,
   UserIcon,
-} from "lucide-react-native";
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+} from 'lucide-react-native';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -33,8 +33,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ThemeToggle = memo(() => {
   const { colors, setTheme, themePreference } = useTheme();
@@ -42,98 +42,83 @@ const ThemeToggle = memo(() => {
   const selectedTheme = themePreference;
 
   const handleThemeChange = useCallback(
-    (newTheme: "light" | "system" | "dark") => {
+    (newTheme: 'light' | 'system' | 'dark') => {
       setTheme(newTheme);
     },
-    [setTheme],
+    [setTheme]
   );
 
   const themeButtons = useMemo(
     () => (
       <View
         style={{
-          flexDirection: "row",
+          flexDirection: 'row',
           backgroundColor: colors.secondary,
           borderRadius: 20,
           padding: 4,
         }}
       >
         <TouchableOpacity
-          onPress={() => handleThemeChange("light")}
+          onPress={() => handleThemeChange('light')}
           style={{
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 16,
-            backgroundColor:
-              selectedTheme === "light" ? colors.primary : "transparent",
+            backgroundColor: selectedTheme === 'light' ? colors.primary : 'transparent',
             marginRight: 4,
           }}
           activeOpacity={0.7}
         >
           <SunIcon
             size={20}
-            color={
-              selectedTheme === "light"
-                ? colors.primaryForeground
-                : colors.mutedForeground
-            }
+            color={selectedTheme === 'light' ? colors.primaryForeground : colors.mutedForeground}
           />
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => handleThemeChange("system")}
+          onPress={() => handleThemeChange('system')}
           style={{
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 16,
-            backgroundColor:
-              selectedTheme === "system" ? colors.primary : "transparent",
+            backgroundColor: selectedTheme === 'system' ? colors.primary : 'transparent',
             marginRight: 4,
           }}
           activeOpacity={0.7}
         >
           <LaptopIcon
             size={20}
-            color={
-              selectedTheme === "system"
-                ? colors.primaryForeground
-                : colors.mutedForeground
-            }
+            color={selectedTheme === 'system' ? colors.primaryForeground : colors.mutedForeground}
           />
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => handleThemeChange("dark")}
+          onPress={() => handleThemeChange('dark')}
           style={{
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 16,
-            backgroundColor:
-              selectedTheme === "dark" ? colors.primary : "transparent",
+            backgroundColor: selectedTheme === 'dark' ? colors.primary : 'transparent',
           }}
           activeOpacity={0.7}
         >
           <MoonIcon
             size={20}
-            color={
-              selectedTheme === "dark"
-                ? colors.primaryForeground
-                : colors.mutedForeground
-            }
+            color={selectedTheme === 'dark' ? colors.primaryForeground : colors.mutedForeground}
           />
         </TouchableOpacity>
       </View>
     ),
-    [colors, selectedTheme, handleThemeChange],
+    [colors, selectedTheme, handleThemeChange]
   );
 
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
       <View
         style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           marginBottom: 8,
         }}
       >
@@ -141,7 +126,7 @@ const ThemeToggle = memo(() => {
           style={{
             color: colors.foreground,
             fontSize: 16,
-            fontWeight: "600",
+            fontWeight: '600',
           }}
         >
           Theme
@@ -188,22 +173,18 @@ const SettingItem = ({
   };
 
   return (
-    <Pressable
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onPress={onPress}
-    >
+    <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress}>
       <Animated.View
         style={{
           transform: [{ scale: pressScale }],
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           paddingVertical: 16,
           paddingHorizontal: 16,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <View
             style={{
               backgroundColor: colors.secondary,
@@ -219,7 +200,7 @@ const SettingItem = ({
               style={{
                 color: isDestructive ? colors.destructive : colors.foreground,
                 fontSize: 16,
-                fontWeight: "500",
+                fontWeight: '500',
               }}
             >
               {title}
@@ -237,9 +218,7 @@ const SettingItem = ({
             )}
           </View>
         </View>
-        {!isDestructive && (
-          <ChevronRightIcon size={20} color={colors.mutedForeground} />
-        )}
+        {!isDestructive && <ChevronRightIcon size={20} color={colors.mutedForeground} />}
       </Animated.View>
     </Pressable>
   );
@@ -254,7 +233,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     const getUser = async () => {
-      const token = await AsyncStorage.getItem("token");
+      const token = await AsyncStorage.getItem('token');
       if (!user && token) {
         getProfile();
       }
@@ -265,20 +244,20 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
+      'Logout',
+      'Are you sure you want to logout?',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Logout",
-          style: "destructive",
+          text: 'Logout',
+          style: 'destructive',
           onPress: async () => {
             await logout();
-            router.replace("/(tabs)/home");
+            router.replace('/(tabs)/home');
           },
         },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 
@@ -287,12 +266,12 @@ export default function ProfileScreen() {
       <View
         style={{
           flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
+          justifyContent: 'center',
+          alignItems: 'center',
           backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="small" color={colors.primary} />
+        <ActivityIndicator size='small' color={colors.primary} />
       </View>
     );
   }
@@ -312,7 +291,7 @@ export default function ProfileScreen() {
             end={{ x: 0, y: 1 }}
             style={{
               height: 280,
-              position: "absolute",
+              position: 'absolute',
               left: 0,
               right: 0,
               top: 0,
@@ -323,14 +302,14 @@ export default function ProfileScreen() {
           <View style={{ paddingTop: 32, paddingHorizontal: 24 }}>
             <View
               style={{
-                flexDirection: "row",
-                alignItems: "flex-start",
+                flexDirection: 'row',
+                alignItems: 'flex-start',
                 gap: 20,
               }}
             >
               {/* Avatar */}
               <Pressable
-                onPress={() => router.push("/update-profile-picture")}
+                onPress={() => router.push('/update-profile-picture')}
                 style={{
                   shadowColor: colors.primary,
                   shadowOffset: { width: 0, height: 8 },
@@ -353,22 +332,22 @@ export default function ProfileScreen() {
                       borderWidth: 3,
                       borderColor: colors.background,
                     }}
-                    resizeMode="cover"
+                    resizeMode='cover'
                   />
                   <Pressable
                     style={{
-                      position: "absolute",
+                      position: 'absolute',
                       bottom: -6,
                       right: -6,
                       backgroundColor: colors.primary,
                       borderRadius: 12,
                       width: 32,
                       height: 32,
-                      justifyContent: "center",
-                      alignItems: "center",
+                      justifyContent: 'center',
+                      alignItems: 'center',
                       borderWidth: 2,
                       borderColor: colors.background,
-                      shadowColor: "#000",
+                      shadowColor: '#000',
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.2,
                       shadowRadius: 4,
@@ -376,11 +355,7 @@ export default function ProfileScreen() {
                     }}
                     onPress={() => setOpen(true)}
                   >
-                    <Feather
-                      name="camera"
-                      size={14}
-                      color={colors.background}
-                    />
+                    <Feather name='camera' size={14} color={colors.background} />
                   </Pressable>
                 </Animated.View>
               </Pressable>
@@ -389,16 +364,16 @@ export default function ProfileScreen() {
               <View style={{ flex: 1, paddingTop: 6 }}>
                 <View
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    flexWrap: "wrap",
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
                     gap: 6,
                   }}
                 >
                   <Text
                     style={{
                       fontSize: 24,
-                      fontWeight: "700",
+                      fontWeight: '700',
                       color: colors.background,
                       letterSpacing: -0.5,
                     }}
@@ -407,7 +382,7 @@ export default function ProfileScreen() {
                   </Text>
                   {user?.verified && (
                     <MaterialCommunityIcons
-                      name="check-decagram"
+                      name='check-decagram'
                       size={22}
                       color={colors.background}
                       style={{ opacity: 0.9 }}
@@ -442,9 +417,9 @@ export default function ProfileScreen() {
         </View>
         <View style={{ padding: 20, gap: 16 }}>
           {/* Appearance Section */}
-          <Card variant="default">
+          <Card variant='default'>
             <Card.Header>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
                     backgroundColor: colors.secondary,
@@ -454,7 +429,7 @@ export default function ProfileScreen() {
                   }}
                 >
                   <Ionicons
-                    name={theme === "dark" ? "moon" : "sunny"}
+                    name={theme === 'dark' ? 'moon' : 'sunny'}
                     size={22}
                     color={colors.primary}
                   />
@@ -468,9 +443,9 @@ export default function ProfileScreen() {
           </Card>
 
           {/* Account Section */}
-          <Card variant="default">
+          <Card variant='default'>
             <Card.Header>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
                     backgroundColor: colors.secondary,
@@ -487,25 +462,25 @@ export default function ProfileScreen() {
             <Card.Content>
               <SettingItem
                 icon={<EditIcon size={20} color={colors.mutedForeground} />}
-                title="Edit Profile"
-                subtitle="Update your personal information"
-                onPress={() => router.push("/edit-profile")}
+                title='Edit Profile'
+                subtitle='Update your personal information'
+                onPress={() => router.push('/edit-profile')}
                 colors={colors}
               />
               <SettingItem
                 icon={<BellIcon size={20} color={colors.mutedForeground} />}
-                title="Notifications"
-                subtitle="Manage your notification preferences"
-                onPress={() => router.push("/notification-settings")}
+                title='Notifications'
+                subtitle='Manage your notification preferences'
+                onPress={() => router.push('/notification-settings')}
                 colors={colors}
               />
             </Card.Content>
           </Card>
 
           {/* Music Section */}
-          <Card variant="default">
+          <Card variant='default'>
             <Card.Header>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
                     backgroundColor: colors.secondary,
@@ -521,28 +496,26 @@ export default function ProfileScreen() {
             </Card.Header>
             <Card.Content>
               <SettingItem
-                icon={
-                  <LanguagesIcon size={20} color={colors.mutedForeground} />
-                }
-                title="Language Preferences"
-                subtitle="Set your preferred music languages"
-                onPress={() => router.push("/music-language")}
+                icon={<LanguagesIcon size={20} color={colors.mutedForeground} />}
+                title='Language Preferences'
+                subtitle='Set your preferred music languages'
+                onPress={() => router.push('/music-language')}
                 colors={colors}
               />
               <SettingItem
                 icon={<HeartIcon size={20} color={colors.mutedForeground} />}
-                title="Favorite Genres"
-                subtitle="Manage your music preferences"
-                onPress={() => router.push("/favorite-genres")}
+                title='Favorite Genres'
+                subtitle='Manage your music preferences'
+                onPress={() => router.push('/favorite-genres')}
                 colors={colors}
               />
             </Card.Content>
           </Card>
 
           {/* Security Section */}
-          <Card variant="default">
+          <Card variant='default'>
             <Card.Header>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
                     backgroundColor: colors.secondary,
@@ -559,8 +532,8 @@ export default function ProfileScreen() {
             <Card.Content>
               <SettingItem
                 icon={<LogOutIcon size={20} color={colors.destructive} />}
-                title="Logout"
-                subtitle="Sign out of your account"
+                title='Logout'
+                subtitle='Sign out of your account'
                 onPress={handleLogout}
                 colors={colors}
                 isDestructive={true}
@@ -569,9 +542,9 @@ export default function ProfileScreen() {
           </Card>
 
           {/* About Section */}
-          <Card variant="default">
+          <Card variant='default'>
             <Card.Header>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
                     backgroundColor: colors.secondary,
@@ -580,7 +553,7 @@ export default function ProfileScreen() {
                     marginRight: 12,
                   }}
                 >
-                  <Feather name="info" size={22} color={colors.primary} />
+                  <Feather name='info' size={22} color={colors.primary} />
                 </View>
                 <Card.Title>About</Card.Title>
               </View>
@@ -588,22 +561,20 @@ export default function ProfileScreen() {
             <Card.Content>
               <SettingItem
                 icon={<Code2Icon size={20} color={colors.mutedForeground} />}
-                title="Developer Info"
-                subtitle="Meet the developer behind SyncVibe"
+                title='Developer Info'
+                subtitle='Meet the developer behind SyncVibe'
                 onPress={() => setShowDeveloperModal(true)}
                 colors={colors}
               />
               <View
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   paddingVertical: 12,
                 }}
               >
-                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                  SyncVibe v1.0.0
-                </Text>
+                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>SyncVibe v1.0.0</Text>
               </View>
             </Card.Content>
           </Card>

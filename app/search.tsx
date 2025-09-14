@@ -1,13 +1,13 @@
-import { styles } from "@/assets/styles/search.style";
-import { SongCard } from "@/components/music/MusicCards";
-import SearchHistory from "@/components/music/SearchHistory";
-import { useTheme } from "@/context/ThemeContext";
-import { Song } from "@/types/song";
-import { searchSongs } from "@/utils/api/getSongs";
-import { useDebounce } from "@/utils/hooks/useDebounce";
-import { SearchHistoryItem, searchHistoryManager } from "@/utils/searchHistory";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { styles } from '@/assets/styles/search.style';
+import { SongCard } from '@/components/music/MusicCards';
+import SearchHistory from '@/components/music/SearchHistory';
+import { useTheme } from '@/context/ThemeContext';
+import { Song } from '@/types/song';
+import { searchSongs } from '@/utils/api/getSongs';
+import { useDebounce } from '@/utils/hooks/useDebounce';
+import { SearchHistoryItem, searchHistoryManager } from '@/utils/searchHistory';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,27 +20,25 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
   LinearTransition,
   SlideInRight,
   SlideOutLeft,
-} from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SearchMusic() {
   const { colors, theme } = useTheme();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [songs, setSongs] = useState<Song[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [showHistory, setShowHistory] = useState(true);
   const [historyKey, setHistoryKey] = useState(0); // For refreshing history component
-  const [searchSuggestions, setSearchSuggestions] = useState<
-    SearchHistoryItem[]
-  >([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<SearchHistoryItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const scrollY = new RNAnimated.Value(0);
   const inputRef = useRef<TextInput>(null);
@@ -53,14 +51,14 @@ export default function SearchMusic() {
     }
 
     setIsLoading(true);
-    setError("");
+    setError('');
     setShowHistory(false);
 
     try {
       const results = await searchSongs(query);
       setSongs(results);
     } catch (err) {
-      setError("Failed to search songs");
+      setError('Failed to search songs');
       setSongs([]);
     } finally {
       setIsLoading(false);
@@ -84,7 +82,7 @@ export default function SearchMusic() {
 
       debouncedSearch(text);
     },
-    [debouncedSearch],
+    [debouncedSearch]
   );
 
   const loadSearchSuggestions = useCallback(async (query: string) => {
@@ -92,7 +90,7 @@ export default function SearchMusic() {
       const filtered = await searchHistoryManager.getHistory(query);
       setSearchSuggestions(filtered.slice(0, 5));
     } catch (error) {
-      console.error("Error loading search suggestions:", error);
+      console.error('Error loading search suggestions:', error);
       setSearchSuggestions([]);
     }
   }, []);
@@ -104,15 +102,15 @@ export default function SearchMusic() {
       inputRef.current?.blur(); // Hide keyboard
       debouncedSearch(query);
     },
-    [debouncedSearch],
+    [debouncedSearch]
   );
 
   const clearSearch = useCallback(() => {
-    setSearchQuery("");
+    setSearchQuery('');
     setSongs([]);
     setShowHistory(true);
     setShowSuggestions(false);
-    setError("");
+    setError('');
     setHistoryKey((prev) => prev + 1); // Refresh history
     inputRef.current?.focus();
   }, []);
@@ -126,15 +124,12 @@ export default function SearchMusic() {
 
   // Handle keyboard dismiss
   useEffect(() => {
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => {
-        if (!searchQuery.trim()) {
-          setShowHistory(true);
-          setShowSuggestions(false);
-        }
-      },
-    );
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      if (!searchQuery.trim()) {
+        setShowHistory(true);
+        setShowSuggestions(false);
+      }
+    });
 
     return () => {
       keyboardDidHideListener.remove();
@@ -149,13 +144,13 @@ export default function SearchMusic() {
     const headerOpacity = scrollY.interpolate({
       inputRange: [0, 80, 120],
       outputRange: [1, 0.8, 0.8],
-      extrapolate: "clamp",
+      extrapolate: 'clamp',
     });
 
     const searchScale = scrollY.interpolate({
       inputRange: [0, 100],
       outputRange: [1, 0.98],
-      extrapolate: "clamp",
+      extrapolate: 'clamp',
     });
 
     return (
@@ -174,29 +169,27 @@ export default function SearchMusic() {
             {
               transform: [{ scale: searchScale }],
               backgroundColor:
-                theme === "light"
-                  ? "rgba(0, 0, 0, 0.05)"
-                  : "rgba(255, 255, 255, 0.05)",
+                theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
             },
           ]}
         >
           <Feather
-            name="search"
+            name='search'
             size={20}
             color={colors.mutedForeground}
             style={styles.searchIcon}
           />
           <TextInput
             ref={inputRef}
-            className="flex-1"
+            className='flex-1'
             style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder="Search for songs..."
+            placeholder='Search for songs...'
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={handleSearch}
             onFocus={handleInputFocus}
-            returnKeyType="search"
-            autoCapitalize="none"
+            returnKeyType='search'
+            autoCapitalize='none'
             autoFocus
           />
           {searchQuery ? (
@@ -214,13 +207,11 @@ export default function SearchMusic() {
                     styles.clearButtonInner,
                     {
                       backgroundColor:
-                        theme === "light"
-                          ? "rgba(0, 0, 0, 0.08)"
-                          : "rgba(255, 255, 255, 0.08)",
+                        theme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)',
                     },
                   ]}
                 >
-                  <Feather name="x" size={16} color={colors.foreground} />
+                  <Feather name='x' size={16} color={colors.foreground} />
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -240,12 +231,7 @@ export default function SearchMusic() {
         >
           <View style={styles.historySection}>
             <View style={styles.historySectionHeader}>
-              <Text
-                style={[
-                  styles.historySectionTitle,
-                  { color: colors.foreground },
-                ]}
-              >
+              <Text style={[styles.historySectionTitle, { color: colors.foreground }]}>
                 Suggestions
               </Text>
             </View>
@@ -256,9 +242,7 @@ export default function SearchMusic() {
                     styles.historyItem,
                     {
                       backgroundColor:
-                        theme === "light"
-                          ? "rgba(0, 0, 0, 0.03)"
-                          : "rgba(255, 255, 255, 0.03)",
+                        theme === 'light' ? 'rgba(0, 0, 0, 0.03)' : 'rgba(255, 255, 255, 0.03)',
                     },
                   ]}
                   onPress={() => handleHistoryItemPress(item.query)}
@@ -266,16 +250,13 @@ export default function SearchMusic() {
                 >
                   <View style={styles.historyItemContent}>
                     <Feather
-                      name="search"
+                      name='search'
                       size={16}
                       color={colors.mutedForeground}
                       style={styles.historyItemIcon}
                     />
                     <Text
-                      style={[
-                        styles.historyItemText,
-                        { color: colors.foreground },
-                      ]}
+                      style={[styles.historyItemText, { color: colors.foreground }]}
                       numberOfLines={1}
                     >
                       {item.query}
@@ -306,20 +287,13 @@ export default function SearchMusic() {
           entering={FadeIn.duration(300)}
           exiting={FadeOut.duration(200)}
         >
-          <View
-            style={[
-              styles.emptyIconContainer,
-              { backgroundColor: colors.secondary },
-            ]}
-          >
-            <Feather name="search" size={32} color={colors.primary} />
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.secondary }]}>
+            <Feather name='search' size={32} color={colors.primary} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
             No results for "{searchQuery}"
           </Text>
-          <Text
-            style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
-          >
+          <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
             Try different keywords or check your spelling
           </Text>
         </Animated.View>
@@ -332,17 +306,10 @@ export default function SearchMusic() {
         entering={FadeIn.duration(300)}
         exiting={FadeOut.duration(200)}
       >
-        <View
-          style={[
-            styles.emptyIconContainer,
-            { backgroundColor: colors.secondary },
-          ]}
-        >
-          <Ionicons name="musical-notes" size={32} color={colors.primary} />
+        <View style={[styles.emptyIconContainer, { backgroundColor: colors.secondary }]}>
+          <Ionicons name='musical-notes' size={32} color={colors.primary} />
         </View>
-        <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-          Search for music
-        </Text>
+        <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Search for music</Text>
         <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
           Find artists, songs, and albums
         </Text>
@@ -361,9 +328,7 @@ export default function SearchMusic() {
         onPress={async () => {
           // Track that user clicked on a song from this search query
           if (searchQuery.trim()) {
-            await searchHistoryManager.addToHistoryOnSongClick(
-              searchQuery.trim(),
-            );
+            await searchHistoryManager.addToHistoryOnSongClick(searchQuery.trim());
           }
         }}
       />
@@ -371,12 +336,10 @@ export default function SearchMusic() {
   );
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar
-        barStyle={theme === "light" ? "dark-content" : "light-content"}
-        backgroundColor="transparent"
+        barStyle={theme === 'light' ? 'dark-content' : 'light-content'}
+        backgroundColor='transparent'
         translucent
       />
 
@@ -388,7 +351,7 @@ export default function SearchMusic() {
           entering={FadeIn.duration(300)}
           exiting={FadeOut.duration(200)}
         >
-          <ActivityIndicator size="small" color={colors.primary} />
+          <ActivityIndicator size='small' color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
             Searching for "{searchQuery}"...
           </Text>
@@ -399,34 +362,21 @@ export default function SearchMusic() {
           entering={FadeIn.duration(300)}
           exiting={FadeOut.duration(200)}
         >
-          <View
-            style={[
-              styles.errorIconContainer,
-              { backgroundColor: colors.secondary },
-            ]}
-          >
-            <Ionicons name="alert-circle" size={32} color={colors.primary} />
+          <View style={[styles.errorIconContainer, { backgroundColor: colors.secondary }]}>
+            <Ionicons name='alert-circle' size={32} color={colors.primary} />
           </View>
-          <Text style={[styles.errorTitle, { color: colors.foreground }]}>
-            {error}
-          </Text>
+          <Text style={[styles.errorTitle, { color: colors.foreground }]}>{error}</Text>
           <TouchableOpacity
             style={[
               styles.retryButton,
               {
                 backgroundColor:
-                  theme === "light"
-                    ? "rgba(0, 0, 0, 0.05)"
-                    : "rgba(255, 255, 255, 0.05)",
+                  theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)',
               },
             ]}
             onPress={() => handleSearch(searchQuery)}
           >
-            <Text
-              style={[styles.retryButtonText, { color: colors.foreground }]}
-            >
-              Try Again
-            </Text>
+            <Text style={[styles.retryButtonText, { color: colors.foreground }]}>Try Again</Text>
           </TouchableOpacity>
         </Animated.View>
       ) : (
@@ -447,7 +397,7 @@ export default function SearchMusic() {
               initialNumToRender={10}
               maxToRenderPerBatch={5}
               windowSize={10}
-              ItemSeparatorComponent={() => <View className="h-3" />}
+              ItemSeparatorComponent={() => <View className='h-3' />}
             />
           )}
         </>

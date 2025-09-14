@@ -1,7 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,18 +12,18 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useChat } from "@/context/SocketContext";
-import useApi from "@/utils/hooks/useApi";
-import { useDebounce } from "@/utils/hooks/useDebounce";
-import { useUser } from "@/context/UserContext";
-import { useTheme } from "@/context/ThemeContext";
-import { getProfileCloudinaryUrl } from "@/utils/Cloudinary";
-import { TimeAgo } from "@/utils/TimeAgo";
-import LoginScreen from "@/app/login";
-import Card from "@/components/ui/card";
+import { useChat } from '@/context/SocketContext';
+import useApi from '@/utils/hooks/useApi';
+import { useDebounce } from '@/utils/hooks/useDebounce';
+import { useUser } from '@/context/UserContext';
+import { useTheme } from '@/context/ThemeContext';
+import { getProfileCloudinaryUrl } from '@/utils/Cloudinary';
+import { TimeAgo } from '@/utils/TimeAgo';
+import LoginScreen from '@/app/login';
+import Card from '@/components/ui/card';
 
 const AVATAR_SIZE = 40;
 const ONLINE_INDICATOR_SIZE = 10;
@@ -51,7 +51,7 @@ const SearchUser: React.FC = () => {
     onlineStatuses,
   } = useChat();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -72,18 +72,18 @@ const SearchUser: React.FC = () => {
         setSearchResults(response.data.users || []);
       } catch (error: any) {
         setSearchResults([]);
-        console.error("Search error:", error);
+        console.error('Search error:', error);
       } finally {
         setLoading(false);
       }
     },
-    [api, setLoading],
+    [api, setLoading]
   );
 
   // Make sure debouncedSearch is properly memoized
   const debouncedSearch = useCallback(
     useDebounce((query: string) => searchUsers(query), 400),
-    [searchUsers],
+    [searchUsers]
   );
 
   useEffect(() => {
@@ -106,20 +106,20 @@ const SearchUser: React.FC = () => {
 
         if (response.status === 200) {
           setCurrentChat(response.data.chat);
-          socket?.emit("join-room", response.data.chat.chatid);
+          socket?.emit('join-room', response.data.chat.chatid);
           await getAllExistingChats();
           setSearchResults([]);
-          setSearchQuery("");
+          setSearchQuery('');
           Keyboard.dismiss();
-          router.push("/message");
+          router.push('/message');
         }
       } catch (error) {
-        console.error("Create chat error:", error);
+        console.error('Create chat error:', error);
       } finally {
         setLoading(false);
       }
     },
-    [api, setLoading, setCurrentChat, socket, getAllExistingChats],
+    [api, setLoading, setCurrentChat, socket, getAllExistingChats]
   );
 
   const handleUserSelect = useCallback(
@@ -128,14 +128,14 @@ const SearchUser: React.FC = () => {
         createChat(item.userid);
       } else {
         setCurrentChat(item);
-        router.push("/message");
+        router.push('/message');
       }
     },
-    [createChat, setCurrentChat],
+    [createChat, setCurrentChat]
   );
 
   const clearSearch = () => {
-    setSearchQuery("");
+    setSearchQuery('');
     setSearchResults([]);
     Keyboard.dismiss();
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -178,7 +178,7 @@ const SearchUser: React.FC = () => {
           activeOpacity={0.7}
           style={{ marginVertical: 4 }}
         >
-          <Card variant="ghost" className="flex-row items-center p-3">
+          <Card variant='ghost' className='flex-row items-center p-3'>
             <View style={styles.avatarContainer}>
               <Image
                 source={{ uri: getProfileCloudinaryUrl(user?.profilepic) }}
@@ -205,63 +205,47 @@ const SearchUser: React.FC = () => {
             </View>
 
             <View style={styles.userInfo}>
-              <Text
-                style={[styles.userName, { color: colors.foreground }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.userName, { color: colors.foreground }]} numberOfLines={1}>
                 {user?.name}
               </Text>
 
               {!isSearchResult &&
                 (isTyping ? (
                   <View style={styles.typingContainer}>
-                    <Text
-                      style={[styles.typingText, { color: colors.primary }]}
-                    >
-                      typing...
-                    </Text>
+                    <Text style={[styles.typingText, { color: colors.primary }]}>typing...</Text>
                   </View>
                 ) : (
                   <Text
-                    style={[
-                      styles.lastMessage,
-                      { color: colors.mutedForeground },
-                    ]}
+                    style={[styles.lastMessage, { color: colors.mutedForeground }]}
                     numberOfLines={1}
                   >
-                    {item?.lastmessage || ""}
+                    {item?.lastmessage || ''}
                   </Text>
                 ))}
             </View>
 
             {!isSearchResult && (
-              <Text
-                style={[styles.timeText, { color: colors.mutedForeground }]}
-              >
-                {item?.updatedat ? TimeAgo(item.updatedat) : ""}
+              <Text style={[styles.timeText, { color: colors.mutedForeground }]}>
+                {item?.updatedat ? TimeAgo(item.updatedat) : ''}
               </Text>
             )}
           </Card>
         </TouchableOpacity>
       );
     },
-    [handleUserSelect, onlineStatuses, searchResults],
+    [handleUserSelect, onlineStatuses, searchResults]
   );
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons
-        name="chatbubble-ellipses-outline"
-        size={48}
-        color={colors.mutedForeground}
-      />
+      <Ionicons name='chatbubble-ellipses-outline' size={48} color={colors.mutedForeground} />
       <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-        {searchQuery.length > 0 ? "No users found" : "No conversations yet"}
+        {searchQuery.length > 0 ? 'No users found' : 'No conversations yet'}
       </Text>
       <Text style={[styles.emptySubText, { color: colors.mutedForeground }]}>
         {searchQuery.length > 0
-          ? "Try a different search term"
-          : "Search for users to start messaging"}
+          ? 'Try a different search term'
+          : 'Search for users to start messaging'}
       </Text>
     </View>
   );
@@ -271,7 +255,7 @@ const SearchUser: React.FC = () => {
       <Text style={[styles.listHeaderText, { color: colors.mutedForeground }]}>
         {searchResults.length > 0
           ? `Search Results (${searchResults.length})`
-          : "Recent Conversations"}
+          : 'Recent Conversations'}
       </Text>
     </View>
   );
@@ -283,50 +267,41 @@ const SearchUser: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top"]}
+      edges={['top']}
     >
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Messages
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
       </View>
 
       <View style={styles.searchBarWrapper}>
         <BlurView
           intensity={20}
-          tint={theme === "dark" ? "dark" : "light"}
+          tint={theme === 'dark' ? 'dark' : 'light'}
           style={styles.searchBarBlur}
         >
           <View
             style={[styles.searchContainer, { backgroundColor: colors.muted }]}
-            className="rounded-full"
+            className='rounded-full'
           >
             <Ionicons
-              name="search"
+              name='search'
               size={18}
               color={colors.mutedForeground}
               style={styles.searchIcon}
             />
             <TextInput
               ref={inputRef}
-              placeholder="Search for users..."
+              placeholder='Search for users...'
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={[styles.searchInput, { color: colors.text }]}
               placeholderTextColor={colors.mutedForeground}
-              returnKeyType="search"
-              autoCapitalize="none"
+              returnKeyType='search'
+              autoCapitalize='none'
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={clearSearch}
-                style={styles.clearButton}
-              >
-                <Ionicons
-                  name="close-circle"
-                  size={18}
-                  color={colors.mutedForeground}
-                />
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <Ionicons name='close-circle' size={18} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
           </View>
@@ -335,13 +310,13 @@ const SearchUser: React.FC = () => {
 
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.primary} />
+          <ActivityIndicator size='small' color={colors.primary} />
         </View>
       )}
 
       <View style={styles.listContainer}>
         <FlatList
-          key={searchResults.length > 0 ? "search" : "users"}
+          key={searchResults.length > 0 ? 'search' : 'users'}
           ref={flatListRef}
           data={searchResults.length > 0 ? searchResults : users}
           keyExtractor={(item, index) =>
@@ -376,7 +351,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: '700',
     // color value is applied dynamically through style prop
   },
   searchBarWrapper: {
@@ -385,11 +360,11 @@ const styles = StyleSheet.create({
   },
   searchBarBlur: {
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     height: 42,
   },
@@ -407,7 +382,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     padding: 20,
-    alignItems: "center",
+    alignItems: 'center',
   },
   listContainer: {
     flex: 1,
@@ -423,12 +398,12 @@ const styles = StyleSheet.create({
   },
   listHeaderText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     // color value is applied dynamically through style prop
   },
   userCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     // backgroundColor value is applied dynamically through style prop
     borderRadius: 12,
     padding: 12,
@@ -439,7 +414,7 @@ const styles = StyleSheet.create({
     // borderLeftColor value is applied dynamically through style prop
   },
   avatarContainer: {
-    position: "relative",
+    position: 'relative',
     marginRight: 12,
   },
   avatar: {
@@ -449,7 +424,7 @@ const styles = StyleSheet.create({
     // backgroundColor value is applied dynamically through style prop
   },
   onlineIndicator: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
     right: 0,
     width: ONLINE_INDICATOR_SIZE,
@@ -460,35 +435,35 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   userName: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: '600',
     // color value is applied dynamically through style prop
     marginBottom: 2,
   },
   typingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   typingText: {
     fontSize: 13,
     // color value is applied dynamically through style prop
-    fontWeight: "500",
+    fontWeight: '500',
   },
   lastMessage: {
     fontSize: 13,
     // color value is applied dynamically through style prop
   },
   emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 60,
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     // color value is applied dynamically through style prop
     marginTop: 16,
   },
@@ -496,14 +471,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     // color value is applied dynamically through style prop
     marginTop: 8,
-    textAlign: "center",
-    maxWidth: "80%",
+    textAlign: 'center',
+    maxWidth: '80%',
   },
   timeText: {
     fontSize: 12,
     marginLeft: 6,
-    fontWeight: "400",
-    alignSelf: "flex-start",
+    fontWeight: '400',
+    alignSelf: 'flex-start',
   },
 });
 

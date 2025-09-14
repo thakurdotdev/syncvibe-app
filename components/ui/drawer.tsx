@@ -1,4 +1,4 @@
-import React, { ReactNode, useCallback, useEffect, useState } from "react";
+import React, { ReactNode, useCallback, useEffect, useState } from 'react';
 import {
   Dimensions,
   StyleSheet,
@@ -6,8 +6,8 @@ import {
   useColorScheme,
   View,
   ViewStyle,
-} from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+} from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   runOnJS,
@@ -15,7 +15,7 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
+} from 'react-native-reanimated';
 
 export interface BottomDrawerProps {
   isOpen: boolean;
@@ -29,11 +29,11 @@ export interface BottomDrawerProps {
   overlayOpacity?: number;
   borderRadius?: number;
   handleIndicator?: boolean;
-  darkMode?: boolean | "auto";
+  darkMode?: boolean | 'auto';
   closeOnBackdropPress?: boolean;
 }
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 80;
 
 export const Drawer: React.FC<BottomDrawerProps> = ({
@@ -52,13 +52,12 @@ export const Drawer: React.FC<BottomDrawerProps> = ({
   closeOnBackdropPress = true,
 }) => {
   const systemColorScheme = useColorScheme();
-  const isDarkMode =
-    darkMode === "auto" ? systemColorScheme === "dark" : Boolean(darkMode);
+  const isDarkMode = darkMode === 'auto' ? systemColorScheme === 'dark' : Boolean(darkMode);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // Calculate actual drawer height
   const getDrawerHeight = useCallback((): number => {
-    if (typeof drawerHeight === "string") {
+    if (typeof drawerHeight === 'string') {
       return SCREEN_HEIGHT * (parseInt(drawerHeight, 10) / 100);
     }
     return drawerHeight as number;
@@ -81,7 +80,7 @@ export const Drawer: React.FC<BottomDrawerProps> = ({
       },
       () => {
         runOnJS(setIsAnimating)(false);
-      },
+      }
     );
 
     overlayOpacityValue.value = withTiming(overlayOpacity, {
@@ -104,7 +103,7 @@ export const Drawer: React.FC<BottomDrawerProps> = ({
         runOnJS(setIsAnimating)(false);
         runOnJS(onClose)();
         gestureTranslateY.value = 0;
-      },
+      }
     );
 
     overlayOpacityValue.value = withTiming(0, {
@@ -163,18 +162,16 @@ export const Drawer: React.FC<BottomDrawerProps> = ({
 
   // Theme colors
   const colors = {
-    background: isDarkMode ? "#121212" : "#FFFFFF",
-    overlay: "#000000",
-    handle: isDarkMode ? "rgba(255, 255, 255, 0.5)" : "rgba(0, 0, 0, 0.3)",
-    shadow: isDarkMode ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0.2)",
+    background: isDarkMode ? '#121212' : '#FFFFFF',
+    overlay: '#000000',
+    handle: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.3)',
+    shadow: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.2)',
   };
 
   return (
-    <View style={styles.container} pointerEvents={isOpen ? "auto" : "none"}>
+    <View style={styles.container} pointerEvents={isOpen ? 'auto' : 'none'}>
       {/* Backdrop/Overlay */}
-      <TouchableWithoutFeedback
-        onPress={closeOnBackdropPress ? closeDrawer : undefined}
-      >
+      <TouchableWithoutFeedback onPress={closeOnBackdropPress ? closeDrawer : undefined}>
         <Animated.View
           style={[
             styles.overlay,
@@ -204,15 +201,11 @@ export const Drawer: React.FC<BottomDrawerProps> = ({
           {/* Handle indicator */}
           {handleIndicator && (
             <View style={styles.handleContainer}>
-              <View
-                style={[styles.handle, { backgroundColor: colors.handle }]}
-              />
+              <View style={[styles.handle, { backgroundColor: colors.handle }]} />
             </View>
           )}
 
-          <View style={[styles.contentContainer, contentContainerStyle]}>
-            {children}
-          </View>
+          <View style={[styles.contentContainer, contentContainerStyle]}>{children}</View>
         </Animated.View>
       </GestureDetector>
     </View>
@@ -228,7 +221,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   drawer: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
@@ -238,7 +231,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   handleContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: 12,
   },
   handle: {

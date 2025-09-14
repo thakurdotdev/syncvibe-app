@@ -1,6 +1,6 @@
-import { useTheme } from "@/context/ThemeContext";
-import { cn } from "@/lib/utils";
-import React, { forwardRef, useState } from "react";
+import { useTheme } from '@/context/ThemeContext';
+import { cn } from '@/lib/utils';
+import React, { forwardRef, useState } from 'react';
 import {
   StyleProp,
   Text,
@@ -9,13 +9,13 @@ import {
   TextStyle,
   View,
   ViewStyle,
-} from "react-native";
+} from 'react-native';
 
 // Input variants
-export type InputVariant = "default" | "outline" | "filled" | "ghost";
-export type InputSize = "sm" | "md" | "lg";
+export type InputVariant = 'default' | 'outline' | 'filled' | 'ghost';
+export type InputSize = 'sm' | 'md' | 'lg';
 
-export interface InputProps extends Omit<TextInputProps, "style"> {
+export interface InputProps extends Omit<TextInputProps, 'style'> {
   variant?: InputVariant;
   size?: InputSize;
   leftIcon?: React.ReactNode;
@@ -32,8 +32,8 @@ export interface InputProps extends Omit<TextInputProps, "style"> {
 const Input = forwardRef<TextInput, InputProps>(
   (
     {
-      variant = "default",
-      size = "md",
+      variant = 'default',
+      size = 'md',
       leftIcon,
       rightIcon,
       error = false,
@@ -46,7 +46,7 @@ const Input = forwardRef<TextInput, InputProps>(
       placeholderTextColor,
       ...props
     },
-    ref,
+    ref
   ) => {
     const { colors, theme } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
@@ -54,21 +54,21 @@ const Input = forwardRef<TextInput, InputProps>(
     // Generate size-based styles
     const getSizeStyles = () => {
       switch (size) {
-        case "sm":
+        case 'sm':
           return {
-            input: "h-8 px-3 text-sm",
-            icon: "h-8 w-8",
+            input: 'h-8 px-3 text-sm',
+            icon: 'h-8 w-8',
           };
-        case "lg":
+        case 'lg':
           return {
-            input: "h-12 px-4 text-lg",
-            icon: "h-12 w-12",
+            input: 'h-12 px-4 text-lg',
+            icon: 'h-12 w-12',
           };
-        case "md":
+        case 'md':
         default:
           return {
-            input: "h-10 px-4",
-            icon: "h-10 w-10",
+            input: 'h-10 px-4',
+            icon: 'h-10 w-10',
           };
       }
     };
@@ -76,57 +76,53 @@ const Input = forwardRef<TextInput, InputProps>(
     // Generate variant-based styles
     const getVariantStyles = () => {
       // Use a consistent border width to prevent layout shifts
-      const borderWidth = variant === "default" ? undefined : 1;
+      const borderWidth = variant === 'default' ? undefined : 1;
 
       switch (variant) {
-        case "outline":
+        case 'outline':
           return {
             input: {
-              backgroundColor: "transparent",
-              borderColor: error
-                ? colors.destructive
-                : isFocused
-                ? colors.primary
-                : colors.border,
+              backgroundColor: 'transparent',
+              borderColor: error ? colors.destructive : isFocused ? colors.primary : colors.border,
               borderWidth,
             },
           };
-        case "filled":
+        case 'filled':
           return {
             input: {
               backgroundColor:
-                theme === "light"
+                theme === 'light'
                   ? isFocused
-                    ? "rgba(0,0,0,0.02)"
+                    ? 'rgba(0,0,0,0.02)'
                     : colors.muted
                   : isFocused
-                  ? "rgba(255,255,255,0.05)"
-                  : colors.secondary,
+                    ? 'rgba(255,255,255,0.05)'
+                    : colors.secondary,
               borderWidth,
-              borderColor: isFocused ? colors.primary : "transparent",
+              borderColor: isFocused ? colors.primary : 'transparent',
             },
           };
-        case "ghost":
+        case 'ghost':
           return {
             input: {
-              backgroundColor: "transparent",
+              backgroundColor: 'transparent',
               borderWidth: 0,
               borderBottomWidth: isFocused ? 1 : 0,
               borderBottomColor: isFocused ? colors.primary : undefined,
             },
           };
-        case "default":
+        case 'default':
         default:
           return {
             input: {
-              backgroundColor: "transparent",
+              backgroundColor: 'transparent',
               borderWidth: 0,
               borderBottomWidth: 1,
               borderBottomColor: error
                 ? colors.destructive
                 : isFocused
-                ? colors.primary
-                : colors.input,
+                  ? colors.primary
+                  : colors.input,
             },
           };
       }
@@ -146,21 +142,21 @@ const Input = forwardRef<TextInput, InputProps>(
       : {};
 
     return (
-      <View style={containerStyle} className={cn("w-full", className)}>
+      <View style={containerStyle} className={cn('w-full', className)}>
         {labelText && (
           <Text
             style={{ color: isFocused ? colors.primary : colors.foreground }}
-            className="mb-2 text-sm font-medium"
+            className='mb-2 text-sm font-medium'
           >
             {labelText}
           </Text>
         )}
-        <View className="relative flex flex-row items-center w-full">
+        <View className='relative flex flex-row items-center w-full'>
           {leftIcon && (
             <View
               className={cn(
-                "absolute left-0 flex items-center justify-center z-10 px-3",
-                iconClassName,
+                'absolute left-0 flex items-center justify-center z-10 px-3',
+                iconClassName
               )}
             >
               {leftIcon}
@@ -170,24 +166,19 @@ const Input = forwardRef<TextInput, InputProps>(
           <TextInput
             ref={ref}
             style={{
-              color:
-                props.editable === false
-                  ? colors.mutedForeground
-                  : colors.foreground,
-              width: "100%", // Explicitly set width to 100%
+              color: props.editable === false ? colors.mutedForeground : colors.foreground,
+              width: '100%', // Explicitly set width to 100%
               flex: 1,
               ...variantStyles.input,
               ...(inputStyle as any),
             }}
-            placeholderTextColor={
-              placeholderTextColor || defaultPlaceholderColor
-            }
+            placeholderTextColor={placeholderTextColor || defaultPlaceholderColor}
             className={cn(
-              "flex-1 rounded-md outline-none w-full",
+              'flex-1 rounded-md outline-none w-full',
               sizeStyles.input,
-              leftIcon && "pl-10",
-              rightIcon && "pr-10",
-              props.editable === false && "opacity-70",
+              leftIcon && 'pl-10',
+              rightIcon && 'pr-10',
+              props.editable === false && 'opacity-70'
             )}
             onFocus={(e) => {
               setIsFocused(true);
@@ -203,8 +194,8 @@ const Input = forwardRef<TextInput, InputProps>(
           {rightIcon && (
             <View
               className={cn(
-                "absolute right-0 flex items-center justify-center z-10 px-3",
-                iconClassName,
+                'absolute right-0 flex items-center justify-center z-10 px-3',
+                iconClassName
               )}
             >
               {rightIcon}
@@ -213,16 +204,16 @@ const Input = forwardRef<TextInput, InputProps>(
         </View>
 
         {error && errorText && (
-          <Text style={{ color: colors.destructive }} className="mt-1 text-xs">
+          <Text style={{ color: colors.destructive }} className='mt-1 text-xs'>
             {errorText}
           </Text>
         )}
       </View>
     );
-  },
+  }
 );
 
-Input.displayName = "Input";
+Input.displayName = 'Input';
 
 export { Input };
 export default Input;

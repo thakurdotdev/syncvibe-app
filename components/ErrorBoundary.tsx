@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface Props {
   children: React.ReactNode;
@@ -21,7 +21,7 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    console.error("App crashed:", error, info);
+    console.error('App crashed:', error, info);
     // You could log this to a service
   }
 
@@ -33,9 +33,7 @@ class ErrorBoundary extends React.Component<Props, State> {
             <Text style={styles.title}>Something went wrong</Text>
 
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
-                {this.state.error?.toString()}
-              </Text>
+              <Text style={styles.errorText}>{this.state.error?.toString()}</Text>
             </View>
 
             <TouchableOpacity
@@ -56,54 +54,54 @@ class ErrorBoundary extends React.Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#121212", // Dark background
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#121212', // Dark background
     padding: 20,
   },
   card: {
-    width: "100%",
+    width: '100%',
     maxWidth: 400,
-    backgroundColor: "#1E1E1E", // Slightly lighter than background
+    backgroundColor: '#1E1E1E', // Slightly lighter than background
     borderRadius: 12,
     padding: 24,
-    alignItems: "center",
-    shadowColor: "#000",
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
   title: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 22,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 20,
   },
   errorContainer: {
-    backgroundColor: "#2A2A2A",
+    backgroundColor: '#2A2A2A',
     borderRadius: 8,
     padding: 16,
-    width: "100%",
+    width: '100%',
     marginBottom: 24,
   },
   errorText: {
-    color: "#E0E0E0",
+    color: '#E0E0E0',
     fontSize: 14,
-    fontFamily: "monospace",
+    fontFamily: 'monospace',
   },
   button: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    width: "100%",
-    alignItems: "center",
+    width: '100%',
+    alignItems: 'center',
   },
   buttonText: {
-    color: "#121212",
+    color: '#121212',
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });
 

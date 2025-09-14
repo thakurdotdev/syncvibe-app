@@ -1,9 +1,9 @@
-import { Song } from "@/types/song";
-import * as Network from "expo-network";
-import { Track } from "react-native-track-player";
+import { Song } from '@/types/song';
+import * as Network from 'expo-network';
+import { Track } from 'react-native-track-player';
 
 interface StreamingConfig {
-  preferredQuality: "320kbps" | "128kbps" | "48kbps" | "12kbps";
+  preferredQuality: '320kbps' | '128kbps' | '48kbps' | '12kbps';
   enableCaching: boolean;
   preloadNextTrack: boolean;
   bufferSize: number;
@@ -30,18 +30,13 @@ class StreamingManager {
   private networkState: NetworkState;
   private trackCache = new Map<string, CachedTrack>();
   private preloadCache = new Map<string, Promise<string>>();
-  private qualityFallback: string[] = [
-    "320kbps",
-    "128kbps",
-    "48kbps",
-    "12kbps",
-  ];
+  private qualityFallback: string[] = ['320kbps', '128kbps', '48kbps', '12kbps'];
   private readonly MAX_CACHE_ENTRIES = 100;
   private readonly CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor(config?: Partial<StreamingConfig>) {
     this.config = {
-      preferredQuality: "320kbps",
+      preferredQuality: '320kbps',
       enableCaching: true,
       preloadNextTrack: true,
       bufferSize: 1024 * 1024 * 10, // 10MB buffer
@@ -70,9 +65,9 @@ class StreamingManager {
         isInternetReachable: initialState.isInternetReachable ?? null,
       };
 
-      console.log("Initial network state:", this.networkState);
+      console.log('Initial network state:', this.networkState);
     } catch (error) {
-      console.error("Failed to get initial network state:", error);
+      console.error('Failed to get initial network state:', error);
       this.networkState = {
         isConnected: false,
         type: null,
@@ -99,11 +94,11 @@ class StreamingManager {
 
         // If network came back online, resume any pending operations
         if (!previousConnected && this.networkState.isConnected) {
-          console.log("Network restored, resuming streaming operations");
+          console.log('Network restored, resuming streaming operations');
           this.handleNetworkRestoration();
         }
       } catch (error) {
-        console.error("Network polling error:", error);
+        console.error('Network polling error:', error);
       }
     }, 5000);
   }
@@ -111,12 +106,12 @@ class StreamingManager {
   private async loadCacheFromStorage() {
     // In a real app, you'd load this from AsyncStorage or a database
     // For now, we'll just initialize an empty cache
-    console.log("Cache loaded from storage");
+    console.log('Cache loaded from storage');
   }
 
   private async saveCacheToStorage() {
     // In a real app, you'd save this to AsyncStorage or a database
-    console.log("Cache saved to storage");
+    console.log('Cache saved to storage');
   }
 
   private handleNetworkRestoration() {
@@ -141,8 +136,8 @@ class StreamingManager {
   private isHighSpeedConnection(): boolean {
     const { type } = this.networkState;
 
-    if (type === "WIFI") return true;
-    if (type === "CELLULAR") {
+    if (type === 'WIFI') return true;
+    if (type === 'CELLULAR') {
       // For cellular, assume high speed since expo-network doesn't provide effective type
       return true;
     }
@@ -170,7 +165,7 @@ class StreamingManager {
     }
 
     // Fallback to any available URL
-    return song.download_url[0]?.link || "";
+    return song.download_url[0]?.link || '';
   }
 
   private async preloadTrack(song: Song): Promise<void> {
@@ -236,7 +231,7 @@ class StreamingManager {
     // Remove oldest entries if cache is full
     if (this.trackCache.size >= this.MAX_CACHE_ENTRIES) {
       const oldestEntry = Array.from(this.trackCache.entries()).sort(
-        ([, a], [, b]) => a.cachedAt - b.cachedAt,
+        ([, a], [, b]) => a.cachedAt - b.cachedAt
       )[0];
 
       if (oldestEntry) {
@@ -258,30 +253,25 @@ class StreamingManager {
     try {
       const audioUrl = await this.getStreamingUrl(song);
 
-      const artwork =
-        song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
+      const artwork = song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
 
       const track: Track = {
         id: song.id,
         url: audioUrl,
-        title: song.name || "Unknown Title",
-        artist:
-          song?.artist_map?.primary_artists?.[0]?.name || "Unknown Artist",
-        album: song.album || "Unknown Album",
+        title: song.name || 'Unknown Title',
+        artist: song?.artist_map?.primary_artists?.[0]?.name || 'Unknown Artist',
+        album: song.album || 'Unknown Album',
         artwork: artwork,
         duration: song.duration || 0,
         headers: {
-          "User-Agent": "SyncVibe/1.0",
-          Accept: "audio/*",
+          'User-Agent': 'SyncVibe/1.0',
+          Accept: 'audio/*',
         },
       };
 
       return track;
     } catch (error) {
-      console.error(
-        `Failed to convert song to streaming track: ${song.name}`,
-        error,
-      );
+      console.error(`Failed to convert song to streaming track: ${song.name}`, error);
       throw error;
     }
   }
@@ -296,8 +286,8 @@ class StreamingManager {
 
     const preloadPromises = tracksToPreload.map((song) =>
       this.preloadTrack(song).catch((error) =>
-        console.error(`Failed to preload ${song.name}:`, error),
-      ),
+        console.error(`Failed to preload ${song.name}:`, error)
+      )
     );
 
     await Promise.allSettled(preloadPromises);
@@ -307,7 +297,7 @@ class StreamingManager {
     this.trackCache.clear();
     this.preloadCache.clear();
     this.saveCacheToStorage();
-    console.log("Streaming cache cleared");
+    console.log('Streaming cache cleared');
   }
 
   public getCacheStats() {

@@ -1,5 +1,5 @@
-import { colorPalettes, ColorTheme, ThemeColors } from "@/theme/color";
-import { storageCache } from "@/utils/storageCache";
+import { colorPalettes, ColorTheme, ThemeColors } from '@/theme/color';
+import { storageCache } from '@/utils/storageCache';
 import React, {
   createContext,
   ReactNode,
@@ -10,17 +10,12 @@ import React, {
   useRef,
   useState,
   useTransition,
-} from "react";
-import {
-  Appearance,
-  AppState,
-  InteractionManager,
-  useColorScheme,
-} from "react-native";
+} from 'react';
+import { Appearance, AppState, InteractionManager, useColorScheme } from 'react-native';
 
-const THEME_PREFERENCE_KEY = "@theme_preference";
+const THEME_PREFERENCE_KEY = '@theme_preference';
 
-type ThemePreference = ColorTheme | "system";
+type ThemePreference = ColorTheme | 'system';
 
 interface ThemeContextType {
   theme: ColorTheme;
@@ -40,11 +35,8 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const deviceColorScheme = useColorScheme() as ColorTheme | null;
-  const [theme, setThemeState] = useState<ColorTheme>(
-    deviceColorScheme || "light",
-  );
-  const [themePreference, setThemePreference] =
-    useState<ThemePreference>("system");
+  const [theme, setThemeState] = useState<ColorTheme>(deviceColorScheme || 'light');
+  const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPending, startTransition] = useTransition();
 
@@ -63,8 +55,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         clearTimeout(pendingThemeUpdate.current);
       }
 
-      if (newTheme === "system") {
-        setThemeState(deviceColorScheme || "light");
+      if (newTheme === 'system') {
+        setThemeState(deviceColorScheme || 'light');
       } else {
         setThemeState(newTheme as ColorTheme);
       }
@@ -73,16 +65,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         setThemePreference(newTheme);
         pendingThemeUpdate.current = setTimeout(() => {
           InteractionManager.runAfterInteractions(() => {
-            storageCache
-              .setItem(THEME_PREFERENCE_KEY, newTheme)
-              .catch((error) => {
-                console.log("Error saving theme preference:", error);
-              });
+            storageCache.setItem(THEME_PREFERENCE_KEY, newTheme).catch((error) => {
+              console.log('Error saving theme preference:', error);
+            });
           });
         }, 300);
       });
     },
-    [deviceColorScheme, startTransition],
+    [deviceColorScheme, startTransition]
   );
 
   useEffect(() => {
@@ -96,17 +86,17 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
         if (savedTheme !== null) {
           setThemePreference(savedTheme as ThemePreference);
-          if (savedTheme === "system") {
-            setThemeState(deviceColorScheme || "light");
+          if (savedTheme === 'system') {
+            setThemeState(deviceColorScheme || 'light');
           } else {
             setThemeState(savedTheme as ColorTheme);
           }
         } else {
-          setThemePreference("system");
-          setThemeState(deviceColorScheme || "light");
+          setThemePreference('system');
+          setThemeState(deviceColorScheme || 'light');
         }
       } catch (error) {
-        console.log("Error loading preferences:", error);
+        console.log('Error loading preferences:', error);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -116,10 +106,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     loadPreferences();
 
-    const subscription = AppState.addEventListener("change", (nextAppState) => {
-      if (nextAppState === "active" && themePreference === "system") {
-        const currentColorScheme =
-          Appearance.getColorScheme() as ColorTheme | null;
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && themePreference === 'system') {
+        const currentColorScheme = Appearance.getColorScheme() as ColorTheme | null;
         if (currentColorScheme && currentColorScheme !== theme) {
           setThemeState(currentColorScheme);
         }
@@ -133,7 +122,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (deviceColorScheme && themePreference === "system") {
+    if (deviceColorScheme && themePreference === 'system') {
       setThemeState(deviceColorScheme);
     }
   }, [deviceColorScheme, themePreference]);
@@ -143,15 +132,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
+    const newTheme = theme === 'light' ? 'dark' : 'light';
     updateTheme(newTheme);
   };
 
   const setSystemTheme = () => {
-    updateTheme("system");
+    updateTheme('system');
   };
 
-  const themeColors = useMemo(() => colorPalettes["default"][theme], [theme]);
+  const themeColors = useMemo(() => colorPalettes['default'][theme], [theme]);
 
   const contextValue = useMemo(
     () => ({
@@ -163,20 +152,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       setSystemTheme,
       themePreference,
     }),
-    [theme, themeColors, isLoading, toggleTheme, themePreference],
+    [theme, themeColors, isLoading, toggleTheme, themePreference]
   );
 
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 };
 
 export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
+    throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
 };

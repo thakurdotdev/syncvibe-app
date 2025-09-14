@@ -1,14 +1,14 @@
-import { Card } from "@/components/ui/card";
-import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
-import { useTheme } from "@/context/ThemeContext";
-import { toast } from "@/context/ToastContext";
-import { Song } from "@/types/song";
-import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import SwipeableModal from "../common/SwipeableModal";
-import AddToPlaylist from "./AddToPlaylist";
+import { Card } from '@/components/ui/card';
+import { usePlayer, usePlayerState, usePlaylist } from '@/context/MusicContext';
+import { useTheme } from '@/context/ThemeContext';
+import { toast } from '@/context/ToastContext';
+import { Song } from '@/types/song';
+import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import SwipeableModal from '../common/SwipeableModal';
+import AddToPlaylist from './AddToPlaylist';
 
 interface PlayerDrawerProps {
   isVisible: boolean;
@@ -16,20 +16,14 @@ interface PlayerDrawerProps {
   song: Song;
 }
 
-const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
-  isVisible,
-  onClose,
-  song,
-}) => {
+const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({ isVisible, onClose, song }) => {
   const { colors } = useTheme();
   const [playlistModal, setPlaylistModal] = useState(false);
   const { addToQueue, removeFromQueue } = usePlayer();
   const { currentSong } = usePlayerState();
   const { playlist } = usePlaylist();
 
-  const artistName = song.artist_map?.artists || [
-    { name: "Unknown Artist", id: null },
-  ];
+  const artistName = song.artist_map?.artists || [{ name: 'Unknown Artist', id: null }];
   const albumArt = song.image?.[2]?.link || song.image?.[1]?.link;
 
   const handlePress = (id: string, path: string) => {
@@ -41,8 +35,8 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
   };
 
   const paths = {
-    artist: "/artist",
-    albums: "/albums",
+    artist: '/artist',
+    albums: '/albums',
   };
 
   const isSongInQueue = playlist.some((item) => item.id === song.id);
@@ -50,10 +44,10 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
   const handleAddToQueue = () => {
     if (isSongInQueue) {
       removeFromQueue(song.id);
-      toast("Removed from Queue");
+      toast('Removed from Queue');
     } else {
       addToQueue(song);
-      toast("Added to Queue");
+      toast('Added to Queue');
     }
     onClose();
   };
@@ -61,27 +55,14 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
   return (
     <>
       <SwipeableModal isVisible={isVisible} onClose={onClose}>
-        <View
-          style={[styles.container, { backgroundColor: colors.background }]}
-        >
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           {/* Header - Current Song Info */}
           <View style={styles.headerContainer}>
-            <Card
-              variant="default"
-              className="overflow-hidden"
-              style={styles.albumArtContainer}
-            >
-              <Image
-                source={{ uri: albumArt }}
-                style={styles.albumArt}
-                resizeMode="cover"
-              />
+            <Card variant='default' className='overflow-hidden' style={styles.albumArtContainer}>
+              <Image source={{ uri: albumArt }} style={styles.albumArt} resizeMode='cover' />
             </Card>
             <View style={styles.songInfoContainer}>
-              <Text
-                style={[styles.songTitle, { color: colors.foreground }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.songTitle, { color: colors.foreground }]} numberOfLines={1}>
                 {song.name}
               </Text>
               <Text
@@ -95,7 +76,7 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
               style={[styles.closeButton, { backgroundColor: colors.muted }]}
               onPress={onClose}
             >
-              <Feather name="x" size={20} color={colors.foreground} />
+              <Feather name='x' size={20} color={colors.foreground} />
             </TouchableOpacity>
           </View>
 
@@ -110,20 +91,11 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
                 style={[styles.optionRow, { backgroundColor: colors.card }]}
                 onPress={handleAddToQueue}
               >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: colors.muted },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="queue-music"
-                    size={22}
-                    color={colors.foreground}
-                  />
+                <View style={[styles.iconContainer, { backgroundColor: colors.muted }]}>
+                  <MaterialIcons name='queue-music' size={22} color={colors.foreground} />
                 </View>
                 <Text style={[styles.optionText, { color: colors.foreground }]}>
-                  {isSongInQueue ? "Remove from Queue" : "Add to Queue"}
+                  {isSongInQueue ? 'Remove from Queue' : 'Add to Queue'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -133,21 +105,10 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
               style={[styles.optionRow, { backgroundColor: colors.card }]}
               onPress={() => setPlaylistModal(true)}
             >
-              <View
-                style={[
-                  styles.iconContainer,
-                  { backgroundColor: colors.muted },
-                ]}
-              >
-                <MaterialIcons
-                  name="playlist-add"
-                  size={22}
-                  color={colors.foreground}
-                />
+              <View style={[styles.iconContainer, { backgroundColor: colors.muted }]}>
+                <MaterialIcons name='playlist-add' size={22} color={colors.foreground} />
               </View>
-              <Text style={[styles.optionText, { color: colors.foreground }]}>
-                Add to Playlist
-              </Text>
+              <Text style={[styles.optionText, { color: colors.foreground }]}>Add to Playlist</Text>
             </TouchableOpacity>
 
             {/* View Artist */}
@@ -156,21 +117,10 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
                 style={[styles.optionRow, { backgroundColor: colors.card }]}
                 onPress={() => handlePress(artistName?.[0].id, paths.artist)}
               >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: colors.muted },
-                  ]}
-                >
-                  <Ionicons
-                    name="person-outline"
-                    size={20}
-                    color={colors.foreground}
-                  />
+                <View style={[styles.iconContainer, { backgroundColor: colors.muted }]}>
+                  <Ionicons name='person-outline' size={20} color={colors.foreground} />
                 </View>
-                <Text style={[styles.optionText, { color: colors.foreground }]}>
-                  View Artist
-                </Text>
+                <Text style={[styles.optionText, { color: colors.foreground }]}>View Artist</Text>
               </TouchableOpacity>
             )}
 
@@ -180,21 +130,10 @@ const NewPlayerDrawer: React.FC<PlayerDrawerProps> = ({
                 style={[styles.optionRow, { backgroundColor: colors.card }]}
                 onPress={() => handlePress(song.album_id, paths.albums)}
               >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: colors.muted },
-                  ]}
-                >
-                  <Ionicons
-                    name="disc-outline"
-                    size={20}
-                    color={colors.foreground}
-                  />
+                <View style={[styles.iconContainer, { backgroundColor: colors.muted }]}>
+                  <Ionicons name='disc-outline' size={20} color={colors.foreground} />
                 </View>
-                <Text style={[styles.optionText, { color: colors.foreground }]}>
-                  View Album
-                </Text>
+                <Text style={[styles.optionText, { color: colors.foreground }]}>View Album</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -218,8 +157,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
   headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
@@ -227,11 +166,11 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   albumArt: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   songInfoContainer: {
     flex: 1,
@@ -239,7 +178,7 @@ const styles = StyleSheet.create({
   },
   songTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 4,
   },
   artistName: {
@@ -249,8 +188,8 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   divider: {
     height: 1,
@@ -263,8 +202,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 12,
@@ -273,13 +212,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
   optionText: {
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: '500',
   },
 });
 

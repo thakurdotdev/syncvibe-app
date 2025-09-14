@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,12 @@ import {
   TouchableOpacityProps,
   Platform,
   Pressable,
-} from "react-native";
-import { useTheme } from "@/context/ThemeContext";
-import { cn } from "@/lib/utils";
+} from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { cn } from '@/lib/utils';
 
 // Card variants
-export type CardVariant = "default" | "outline" | "secondary" | "ghost";
+export type CardVariant = 'default' | 'outline' | 'secondary' | 'ghost';
 
 export interface CardProps {
   variant?: CardVariant;
@@ -67,7 +67,7 @@ export interface CardActionProps extends TouchableOpacityProps {
 
 // Main Card Component
 export const Card: React.FC<CardProps> = ({
-  variant = "default",
+  variant = 'default',
   style,
   children,
   className,
@@ -78,25 +78,25 @@ export const Card: React.FC<CardProps> = ({
   // Generate styles for different card variants
   const getVariantStyles = () => {
     switch (variant) {
-      case "default":
+      case 'default':
         return {
           backgroundColor: colors.card,
           borderColor: colors.border,
           borderWidth: 1,
         };
-      case "outline":
+      case 'outline':
         return {
-          backgroundColor: "transparent",
+          backgroundColor: 'transparent',
           borderColor: colors.border,
           borderWidth: 1,
         };
-      case "secondary":
+      case 'secondary':
         return {
           backgroundColor: colors.secondary,
         };
-      case "ghost":
+      case 'ghost':
         return {
-          backgroundColor: "transparent",
+          backgroundColor: 'transparent',
         };
       default:
         return {
@@ -118,7 +118,7 @@ export const Card: React.FC<CardProps> = ({
         ...(style as any),
       }}
       {...props}
-      className={cn("rounded-lg overflow-hidden", className)}
+      className={cn('rounded-lg overflow-hidden', className)}
     >
       {children}
     </View>
@@ -126,24 +126,16 @@ export const Card: React.FC<CardProps> = ({
 };
 
 // Card Header Component
-export const CardHeader: React.FC<CardHeaderProps> = ({
-  style,
-  children,
-  className,
-}) => {
+export const CardHeader: React.FC<CardHeaderProps> = ({ style, children, className }) => {
   return (
-    <View style={style} className={cn("p-4 pb-0", className)}>
+    <View style={style} className={cn('p-4 pb-0', className)}>
       {children}
     </View>
   );
 };
 
 // Card Title Component
-export const CardTitle: React.FC<CardTitleProps> = ({
-  style,
-  children,
-  className,
-}) => {
+export const CardTitle: React.FC<CardTitleProps> = ({ style, children, className }) => {
   const { colors } = useTheme();
 
   return (
@@ -152,7 +144,7 @@ export const CardTitle: React.FC<CardTitleProps> = ({
         color: colors.cardForeground,
         ...(style as any),
       }}
-      className={cn("text-lg font-semibold mb-1", className)}
+      className={cn('text-lg font-semibold mb-1', className)}
     >
       {children}
     </Text>
@@ -160,11 +152,7 @@ export const CardTitle: React.FC<CardTitleProps> = ({
 };
 
 // Card Description Component
-export const CardDescription: React.FC<CardDescriptionProps> = ({
-  style,
-  children,
-  className,
-}) => {
+export const CardDescription: React.FC<CardDescriptionProps> = ({ style, children, className }) => {
   const { colors } = useTheme();
 
   return (
@@ -173,7 +161,7 @@ export const CardDescription: React.FC<CardDescriptionProps> = ({
         color: colors.mutedForeground,
         ...(style as any),
       }}
-      className={cn("text-sm mb-2", className)}
+      className={cn('text-sm mb-2', className)}
     >
       {children}
     </Text>
@@ -181,58 +169,41 @@ export const CardDescription: React.FC<CardDescriptionProps> = ({
 };
 
 // Card Content Component
-export const CardContent: React.FC<CardContentProps> = ({
-  style,
-  children,
-  className,
-}) => {
+export const CardContent: React.FC<CardContentProps> = ({ style, children, className }) => {
   return (
-    <View style={style} className={cn("p-4 pt-2", className)}>
+    <View style={style} className={cn('p-4 pt-2', className)}>
       {children}
     </View>
   );
 };
 
 // Card Footer Component
-export const CardFooter: React.FC<CardFooterProps> = ({
-  style,
-  children,
-  className,
-}) => {
+export const CardFooter: React.FC<CardFooterProps> = ({ style, children, className }) => {
   return (
-    <View
-      style={style}
-      className={cn("p-4 pt-0 flex-row justify-end gap-2", className)}
-    >
+    <View style={style} className={cn('p-4 pt-0 flex-row justify-end gap-2', className)}>
       {children}
     </View>
   );
 };
 
 // Card Action Component
-export const CardAction: React.FC<CardActionProps> = ({
-  style,
-  children,
-  className,
-  ...props
-}) => {
+export const CardAction: React.FC<CardActionProps> = ({ style, children, className, ...props }) => {
   const { theme } = useTheme();
 
   // Get ripple color for Android
   const getRippleColor = () => {
     return Platform.select({
-      android: theme === "light" ? "#00000010" : "#FFFFFF10", // 10% opacity
-      default: "transparent",
+      android: theme === 'light' ? '#00000010' : '#FFFFFF10', // 10% opacity
+      default: 'transparent',
     });
   };
 
   // Use Pressable on Android for ripple effect, TouchableOpacity on iOS
-  const ActionComponent =
-    Platform.OS === "android" ? Pressable : TouchableOpacity;
+  const ActionComponent = Platform.OS === 'android' ? Pressable : TouchableOpacity;
 
   // Android-specific props
   const androidProps =
-    Platform.OS === "android"
+    Platform.OS === 'android'
       ? {
           android_ripple: {
             color: getRippleColor(),
@@ -245,7 +216,7 @@ export const CardAction: React.FC<CardActionProps> = ({
   return (
     <ActionComponent
       style={style}
-      className={cn("rounded-md overflow-hidden", className)}
+      className={cn('rounded-md overflow-hidden', className)}
       {...androidProps}
       {...props}
     >

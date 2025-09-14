@@ -1,8 +1,8 @@
-import { API_URL } from "@/constants";
-import { Song } from "@/types/song";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { AppState } from "react-native";
+import { API_URL } from '@/constants';
+import { Song } from '@/types/song';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { AppState } from 'react-native';
 
 interface PlaybackProgress {
   songId: string;
@@ -14,7 +14,7 @@ interface PlaybackProgress {
   isPlaying?: boolean; // Add isPlaying flag
 }
 
-const CURRENT_SONG_KEY = "@syncvibe/current_song";
+const CURRENT_SONG_KEY = '@syncvibe/current_song';
 const LOCAL_UPDATE_INTERVAL = 5000; // 5 seconds
 const SERVER_SYNC_INTERVAL = 15000; // 15 seconds
 
@@ -23,7 +23,7 @@ class PlaybackHistoryManager {
   private syncTimeout: NodeJS.Timeout | null = null;
   private currentSong: PlaybackProgress | null = null;
   private syncInProgress: boolean = false;
-  private appState: string = "active";
+  private appState: string = 'active';
   private isPlaying: boolean = false; // Track playback state
 
   private constructor() {
@@ -31,7 +31,7 @@ class PlaybackHistoryManager {
 
     // Add local update timer (every 5 seconds)
     setInterval(async () => {
-      if (this.currentSong && this.appState === "active" && this.isPlaying) {
+      if (this.currentSong && this.appState === 'active' && this.isPlaying) {
         // Estimate current position based on elapsed time if playing
         const now = Date.now();
         const elapsed = (now - this.currentSong.timestamp) / 1000; // Convert to seconds
@@ -40,7 +40,7 @@ class PlaybackHistoryManager {
           // Update position based on elapsed time since last update
           this.currentSong.position = Math.min(
             this.currentSong.position + elapsed,
-            this.currentSong.duration,
+            this.currentSong.duration
           );
           this.currentSong.timestamp = now;
           this.currentSong.synced = false;
@@ -60,14 +60,14 @@ class PlaybackHistoryManager {
   }
 
   private async getToken(): Promise<string | null> {
-    return await AsyncStorage.getItem("token");
+    return await AsyncStorage.getItem('token');
   }
 
   private async saveToLocal(progress: PlaybackProgress): Promise<void> {
     try {
       await AsyncStorage.setItem(CURRENT_SONG_KEY, JSON.stringify(progress));
     } catch (error) {
-      console.error("Error saving current song progress locally:", error);
+      console.error('Error saving current song progress locally:', error);
     }
   }
 
@@ -76,7 +76,7 @@ class PlaybackHistoryManager {
       const data = await AsyncStorage.getItem(CURRENT_SONG_KEY);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error("Error reading current song data:", error);
+      console.error('Error reading current song data:', error);
       return null;
     }
   }
@@ -104,10 +104,10 @@ class PlaybackHistoryManager {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           timeout: 10000, // 10 second timeout
-        },
+        }
       );
 
       if (response.status === 200) {
@@ -117,11 +117,11 @@ class PlaybackHistoryManager {
 
         // Only log in development or when debugging
         if (__DEV__) {
-          console.log("Successfully synced current song progress");
+          console.log('Successfully synced current song progress');
         }
       }
     } catch (error) {
-      console.error("Error syncing current song progress:", error);
+      console.error('Error syncing current song progress:', error);
     } finally {
       this.syncInProgress = false;
     }
@@ -144,7 +144,7 @@ class PlaybackHistoryManager {
     song: Song,
     position: number,
     duration: number,
-    isPlaying: boolean = true,
+    isPlaying: boolean = true
   ): Promise<void> {
     if (!song?.id) return;
 
@@ -204,7 +204,7 @@ class PlaybackHistoryManager {
       }
       return null;
     } catch (error) {
-      console.error("Error getting last played song:", error);
+      console.error('Error getting last played song:', error);
       return null;
     }
   }
@@ -217,7 +217,7 @@ class PlaybackHistoryManager {
         this.currentSong = progress;
       }
     } catch (error) {
-      console.error("Error preloading history data:", error);
+      console.error('Error preloading history data:', error);
     }
   }
 
@@ -270,7 +270,7 @@ class PlaybackHistoryManager {
         this.syncWithServer(),
         new Promise((resolve) => setTimeout(resolve, 3000)), // 3 second timeout
       ]).catch((err) => {
-        console.error("Error during final sync:", err);
+        console.error('Error during final sync:', err);
       });
     }
   }

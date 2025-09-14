@@ -1,46 +1,44 @@
-import { useTheme } from "@/context/ThemeContext";
-import { useUser } from "@/context/UserContext";
-import { router } from "expo-router";
-import { MusicIcon, CheckIcon } from "lucide-react-native";
-import React, { useState } from "react";
-import { View, Text, ScrollView, FlatList, Animated } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button } from "@/components/ui/button";
+import { useTheme } from '@/context/ThemeContext';
+import { useUser } from '@/context/UserContext';
+import { router } from 'expo-router';
+import { MusicIcon, CheckIcon } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, FlatList, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from '@/components/ui/button';
 
 const GENRES = [
-  "Pop",
-  "Rock",
-  "Hip Hop",
-  "R&B",
-  "Electronic",
-  "Jazz",
-  "Classical",
-  "Country",
-  "Metal",
-  "Folk",
-  "Blues",
-  "Reggae",
-  "Indie",
-  "Alternative",
-  "Punk",
-  "Soul",
-  "Funk",
-  "Latin",
-  "World",
-  "Gospel",
+  'Pop',
+  'Rock',
+  'Hip Hop',
+  'R&B',
+  'Electronic',
+  'Jazz',
+  'Classical',
+  'Country',
+  'Metal',
+  'Folk',
+  'Blues',
+  'Reggae',
+  'Indie',
+  'Alternative',
+  'Punk',
+  'Soul',
+  'Funk',
+  'Latin',
+  'World',
+  'Gospel',
 ];
 
 export default function FavoriteGenresScreen() {
   const { user } = useUser();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [selectedGenres, setSelectedGenres] = useState<string[]>(
-    user?.favoriteGenres || [],
-  );
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(user?.favoriteGenres || []);
 
   const handleGenreToggle = (genre: string) => {
     setSelectedGenres((prev) =>
-      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre],
+      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
   };
 
@@ -48,7 +46,7 @@ export default function FavoriteGenresScreen() {
     try {
       router.back();
     } catch (error) {
-      console.error("Error updating favorite genres:", error);
+      console.error('Error updating favorite genres:', error);
     }
   };
 
@@ -70,19 +68,17 @@ export default function FavoriteGenresScreen() {
             renderItem={({ item: genre }) => (
               <Button
                 onPress={() => handleGenreToggle(genre)}
-                variant={selectedGenres.includes(genre) ? "default" : "outline"}
-                size="sm"
+                variant={selectedGenres.includes(genre) ? 'default' : 'outline'}
+                size='sm'
                 style={{
                   flex: 1,
                   minHeight: 60,
-                  flexDirection: "row",
+                  flexDirection: 'row',
                   gap: 8,
                   paddingHorizontal: 12,
                 }}
               >
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   {selectedGenres.includes(genre) && (
                     <CheckIcon size={14} color={colors.primaryForeground} />
                   )}
@@ -93,7 +89,7 @@ export default function FavoriteGenresScreen() {
                       ? colors.primaryForeground
                       : colors.primary,
                     fontSize: 14,
-                    fontWeight: "500",
+                    fontWeight: '500',
                   }}
                 >
                   {genre}
@@ -103,12 +99,7 @@ export default function FavoriteGenresScreen() {
             keyExtractor={(item) => item}
           />
 
-          <Button
-            onPress={handleSave}
-            variant="default"
-            size="lg"
-            style={{ marginTop: 20 }}
-          >
+          <Button onPress={handleSave} variant='default' size='lg' style={{ marginTop: 20 }}>
             Save Changes
           </Button>
         </View>

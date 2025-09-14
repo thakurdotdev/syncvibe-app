@@ -1,17 +1,9 @@
-import { useVideoCall } from "@/context/VideoCallContext";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import * as Haptics from "expo-haptics";
-import React, { memo, useEffect } from "react";
-import {
-  Image,
-  Platform,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { useVideoCall } from '@/context/VideoCallContext';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import React, { memo, useEffect } from 'react';
+import { Image, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -21,8 +13,8 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const IncomingCallModal = () => {
   const { incomingCall, answerCall, rejectCall } = useVideoCall();
@@ -40,10 +32,10 @@ const IncomingCallModal = () => {
     scale.value = withRepeat(
       withSequence(
         withTiming(1.1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
       ),
       -1, // Infinite repetition
-      true,
+      true
     );
 
     // Slide up and fade in animation
@@ -68,7 +60,7 @@ const IncomingCallModal = () => {
 
     // Fade out animation before answering
     opacity.value = withTiming(0, { duration: 300 }, (finished) => {
-      "worklet";
+      'worklet';
       if (finished) {
         runOnJS(answerCall)();
       }
@@ -80,7 +72,7 @@ const IncomingCallModal = () => {
 
     // Fade out animation before rejecting
     opacity.value = withTiming(0, { duration: 300 }, (finished) => {
-      "worklet";
+      'worklet';
       if (finished) {
         runOnJS(rejectCall)();
       }
@@ -106,8 +98,8 @@ const IncomingCallModal = () => {
 
   return (
     <Animated.View style={[styles.container, containerAnimStyle]}>
-      <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.7)" />
-      <BlurView intensity={80} style={styles.blurContainer} tint="dark">
+      <StatusBar barStyle='light-content' backgroundColor='rgba(0,0,0,0.7)' />
+      <BlurView intensity={80} style={styles.blurContainer} tint='dark'>
         <View
           style={[
             styles.contentContainer,
@@ -121,7 +113,7 @@ const IncomingCallModal = () => {
                 <Image
                   source={{ uri: incomingCall.profilepic }}
                   style={styles.avatar}
-                  resizeMode="cover"
+                  resizeMode='cover'
                 />
               ) : (
                 <View style={styles.fallbackAvatar}>
@@ -134,11 +126,7 @@ const IncomingCallModal = () => {
 
             <Text style={styles.callerName}>{incomingCall.name}</Text>
             <View style={styles.callStatusContainer}>
-              <Ionicons
-                name="videocam"
-                size={18}
-                color="rgba(255, 255, 255, 0.9)"
-              />
+              <Ionicons name='videocam' size={18} color='rgba(255, 255, 255, 0.9)' />
               <Text style={styles.callStatusText}>Incoming video call</Text>
             </View>
           </View>
@@ -151,7 +139,7 @@ const IncomingCallModal = () => {
                 onPress={handleReject}
                 activeOpacity={0.7}
               >
-                <MaterialIcons name="call-end" size={30} color="#fff" />
+                <MaterialIcons name='call-end' size={30} color='#fff' />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -159,7 +147,7 @@ const IncomingCallModal = () => {
                 onPress={handleAnswer}
                 activeOpacity={0.7}
               >
-                <Ionicons name="videocam" size={30} color="#fff" />
+                <Ionicons name='videocam' size={30} color='#fff' />
               </TouchableOpacity>
             </View>
 
@@ -176,7 +164,7 @@ const IncomingCallModal = () => {
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     bottom: 0,
     left: 0,
@@ -185,19 +173,19 @@ const styles = StyleSheet.create({
   },
   blurContainer: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
   },
   contentContainer: {
     flex: 1,
-    justifyContent: "space-between",
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
   callerInfoContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: 60,
   },
   avatarContainer: {
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -208,35 +196,35 @@ const styles = StyleSheet.create({
     height: 130,
     borderRadius: 65,
     borderWidth: 3,
-    borderColor: "#fff",
+    borderColor: '#fff',
   },
   fallbackAvatar: {
     width: 130,
     height: 130,
     borderRadius: 65,
-    backgroundColor: "#2c2c2c",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#2c2c2c',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 3,
-    borderColor: "#fff",
+    borderColor: '#fff',
   },
   fallbackText: {
     fontSize: 50,
-    color: "#fff",
-    fontWeight: "bold",
+    color: '#fff',
+    fontWeight: 'bold',
   },
   callerName: {
     fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
+    fontWeight: 'bold',
+    color: '#fff',
     marginTop: 24,
     marginBottom: 12,
-    textAlign: "center",
+    textAlign: 'center',
   },
   callStatusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
@@ -244,21 +232,21 @@ const styles = StyleSheet.create({
   },
   callStatusText: {
     fontSize: 14,
-    color: "rgba(255, 255, 255, 0.9)",
+    color: 'rgba(255, 255, 255, 0.9)',
     marginLeft: 8,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   actionsContainer: {
-    marginBottom: Platform.OS === "ios" ? 40 : 30,
+    marginBottom: Platform.OS === 'ios' ? 40 : 30,
   },
   actionButtonsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginHorizontal: 30,
   },
   actionLabelsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginHorizontal: 30,
     marginTop: 12,
   },
@@ -266,26 +254,26 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
   },
   rejectButton: {
-    backgroundColor: "#FF3B30",
+    backgroundColor: '#FF3B30',
   },
   answerButton: {
-    backgroundColor: "#34C759",
+    backgroundColor: '#34C759',
   },
   actionLabelText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     width: 70,
-    textAlign: "center",
+    textAlign: 'center',
   },
 });
 

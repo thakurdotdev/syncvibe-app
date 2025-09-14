@@ -57,7 +57,7 @@ export interface Song {
   label_url: string;
   origin: string;
   is_dolby_content: boolean;
-  "320kbps": boolean;
+  '320kbps': boolean;
   download_url: DownloadQuality[];
   duration: number;
   rights: Rights;

@@ -1,7 +1,7 @@
-import { useVideoCall } from "@/context/VideoCallContext";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import React, { useEffect, useRef, useState } from "react";
+import { useVideoCall } from '@/context/VideoCallContext';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -10,17 +10,15 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import Animated from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { RTCView } from "react-native-webrtc";
+} from 'react-native';
+import Animated from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { RTCView } from 'react-native-webrtc';
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs
-    .toString()
-    .padStart(2, "0")}`;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
 const CallScreen: React.FC = () => {
@@ -49,7 +47,7 @@ const CallScreen: React.FC = () => {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (connectionState === "connected") {
+    if (connectionState === 'connected') {
       interval = setInterval(() => {
         setCallDuration((prev) => prev + 1);
       }, 1000);
@@ -66,12 +64,12 @@ const CallScreen: React.FC = () => {
 
   const getStatusMessage = () => {
     switch (connectionState) {
-      case "connected":
+      case 'connected':
         return formatTime(callDuration);
-      case "connecting":
-        return "Connecting...";
-      case "reconnecting":
-        return "Reconnecting...";
+      case 'connecting':
+        return 'Connecting...';
+      case 'reconnecting':
+        return 'Reconnecting...';
       default:
         return connectionState;
     }
@@ -81,39 +79,30 @@ const CallScreen: React.FC = () => {
     <View style={styles.loadingContainer}>
       <View style={styles.avatarPlaceholder}>
         {currentCall?.profilepic ? (
-          <Image
-            source={{ uri: currentCall.profilepic }}
-            style={styles.avatarImage}
-          />
+          <Image source={{ uri: currentCall.profilepic }} style={styles.avatarImage} />
         ) : (
-          <Text style={styles.avatarText}>
-            {currentCall?.name?.charAt(0) || "?"}
-          </Text>
+          <Text style={styles.avatarText}>{currentCall?.name?.charAt(0) || '?'}</Text>
         )}
       </View>
 
       <Text style={styles.callerName}>{currentCall?.name}</Text>
       <Text style={styles.callingText}>
-        {connectionState === "connecting" ? "Connecting..." : "Calling..."}
+        {connectionState === 'connecting' ? 'Connecting...' : 'Calling...'}
       </Text>
-      <ActivityIndicator
-        size="large"
-        color="#FFFFFF"
-        style={styles.loadingIndicator}
-      />
+      <ActivityIndicator size='large' color='#FFFFFF' style={styles.loadingIndicator} />
     </View>
   );
 
   if (!isInCall) return null;
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.videoContainer}>
         {remoteStream ? (
           <RTCView
             streamURL={remoteStream.toURL()}
             style={styles.remoteStream}
-            objectFit="cover"
+            objectFit='cover'
             mirror={false}
           />
         ) : (
@@ -124,12 +113,7 @@ const CallScreen: React.FC = () => {
       <View style={styles.statusBar}>
         <View style={styles.statusRow}>
           <View style={styles.callTimerContainer}>
-            <Ionicons
-              name="time-outline"
-              size={14}
-              color="white"
-              style={styles.timeIcon}
-            />
+            <Ionicons name='time-outline' size={14} color='white' style={styles.timeIcon} />
             <Text style={styles.statusText}>{getStatusMessage()}</Text>
           </View>
         </View>
@@ -140,46 +124,30 @@ const CallScreen: React.FC = () => {
           <RTCView
             streamURL={localStream.toURL()}
             style={styles.localStream}
-            objectFit="cover"
+            objectFit='cover'
             mirror={true}
           />
         </View>
       )}
 
       <Animated.View style={styles.controlsContainer}>
-        <BlurView intensity={50} tint="dark" style={styles.controlsBlur}>
+        <BlurView intensity={50} tint='dark' style={styles.controlsBlur}>
           <View style={styles.controlsRow}>
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={flipCamera}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.controlButton} onPress={flipCamera} activeOpacity={0.7}>
               <View style={[styles.iconContainer]}>
-                <Ionicons name="camera-reverse" size={24} color="#fff" />
+                <Ionicons name='camera-reverse' size={24} color='#fff' />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={toggleMute}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.controlButton} onPress={toggleMute} activeOpacity={0.7}>
               <View style={[styles.iconContainer]}>
-                <Ionicons
-                  name={isMuted ? "mic-off" : "mic"}
-                  size={24}
-                  color="#fff"
-                />
+                <Ionicons name={isMuted ? 'mic-off' : 'mic'} size={24} color='#fff' />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={endCall}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.iconContainer]} className="bg-red-600">
-                <MaterialIcons name="call-end" size={28} color="red" />
+            <TouchableOpacity style={styles.controlButton} onPress={endCall} activeOpacity={0.7}>
+              <View style={[styles.iconContainer]} className='bg-red-600'>
+                <MaterialIcons name='call-end' size={28} color='red' />
               </View>
             </TouchableOpacity>
           </View>
@@ -192,20 +160,20 @@ const CallScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
-    position: "absolute",
+    backgroundColor: '#000',
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     zIndex: 1000,
-    height: "100%",
+    height: '100%',
   },
   videoContainer: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: '#121212',
   },
   statusBar: {
-    position: "absolute",
+    position: 'absolute',
     top: 10,
     left: 0,
     right: 0,
@@ -213,28 +181,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
   },
   statusText: {
-    color: "white",
+    color: 'white',
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     marginLeft: 4,
   },
   connectionQualityContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   callTimerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -244,42 +212,42 @@ const styles = StyleSheet.create({
   },
   remoteStream: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: '#121212',
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#121212",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#121212',
   },
   avatarPlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
   },
   avatarText: {
-    color: "white",
+    color: 'white',
     fontSize: 40,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   avatarImage: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
     borderRadius: 50,
   },
 
   callerName: {
-    color: "white",
+    color: 'white',
     fontSize: 26,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 12,
   },
   callingText: {
-    color: "rgba(255, 255, 255, 0.8)",
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 16,
     marginBottom: 24,
   },
@@ -287,16 +255,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   localStreamContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 10,
     right: 10,
     width: 110,
     height: 150,
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
     borderWidth: 2,
-    borderColor: "#fff",
-    shadowColor: "#000",
+    borderColor: '#fff',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
     shadowRadius: 6,
@@ -304,31 +272,31 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   localStream: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   localStreamOverlay: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     right: 0,
     borderTopRightRadius: 10,
     borderBottomLeftRadius: 10,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   flipCameraButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   callerInfoContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 16,
-    alignSelf: "center",
+    alignSelf: 'center',
     borderRadius: 20,
-    overflow: "hidden",
+    overflow: 'hidden',
     zIndex: 10,
   },
   callerInfoBlur: {
@@ -336,59 +304,59 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   callerInfoName: {
-    color: "white",
+    color: 'white',
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   controlsContainer: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     zIndex: 10,
   },
   controlsBlur: {
-    overflow: "hidden",
+    overflow: 'hidden',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     marginHorizontal: 8,
     marginBottom: 8,
   },
   controlsRow: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
     paddingVertical: 20,
-    paddingBottom: Platform.OS === "ios" ? 36 : 20,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 20,
   },
   controlButton: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconContainer: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "rgba(40, 40, 40, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(40, 40, 40, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
   activeIconContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
   },
   endCallButton: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#FF3B30",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   controlLabel: {
-    color: "white",
+    color: 'white',
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: '500',
   },
 });
 

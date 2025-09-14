@@ -1,28 +1,28 @@
-import { Stack } from "expo-router";
-import React from "react";
-import { StatusBar } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Stack } from 'expo-router';
+import React from 'react';
+import { StatusBar } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import ErrorBoundary from "@/components/ErrorBoundary";
-import Player from "@/components/music/Player";
-import CallScreen from "@/components/video/CallScreen";
-import IncomingCallModal from "@/components/video/IncomingCall";
-import { GroupMusicProvider } from "@/context/GroupMusicContext";
-import { MusicProvider } from "@/context/MusicContext";
-import { NotificationProvider } from "@/context/NotificationContext";
-import { ChatProvider } from "@/context/SocketContext";
-import { ThemeProvider, useTheme } from "@/context/ThemeContext";
-import { ToastProvider } from "@/context/ToastContext";
-import { UserProvider } from "@/context/UserContext";
-import { useVideoCall, VideoCallProvider } from "@/context/VideoCallContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import * as Notifications from "expo-notifications";
-import TrackPlayer from "react-native-track-player";
-import "../global.css";
-import { PlaybackService } from "../service";
+import ErrorBoundary from '@/components/ErrorBoundary';
+import Player from '@/components/music/Player';
+import CallScreen from '@/components/video/CallScreen';
+import IncomingCallModal from '@/components/video/IncomingCall';
+import { GroupMusicProvider } from '@/context/GroupMusicContext';
+import { MusicProvider } from '@/context/MusicContext';
+import { NotificationProvider } from '@/context/NotificationContext';
+import { ChatProvider } from '@/context/SocketContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { ToastProvider } from '@/context/ToastContext';
+import { UserProvider } from '@/context/UserContext';
+import { useVideoCall, VideoCallProvider } from '@/context/VideoCallContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import * as Notifications from 'expo-notifications';
+import TrackPlayer from 'react-native-track-player';
+import '../global.css';
+import { PlaybackService } from '../service';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -88,20 +88,20 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar
-        barStyle={theme === "dark" ? "light-content" : "dark-content"}
+        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
-        showHideTransition="none"
+        showHideTransition='none'
       />
       <Stack
         screenOptions={{
-          animation: "none",
-          presentation: "card",
+          animation: 'none',
+          presentation: 'card',
           headerStyle: {
             backgroundColor: colors.background,
           },
           headerTintColor: colors.text,
           headerTitleStyle: {
-            fontWeight: "600",
+            fontWeight: '600',
             fontSize: 18,
           },
           headerShadowVisible: false,
@@ -109,131 +109,131 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen
-          name="index"
+          name='index'
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          name="login"
+          name='login'
           options={{
             navigationBarColor: colors.background,
-            title: "Login",
-            presentation: "modal",
+            title: 'Login',
+            presentation: 'modal',
             headerShown: false,
             gestureEnabled: false,
           }}
         />
         <Stack.Screen
-          name="(tabs)"
+          name='(tabs)'
           options={{
             headerShown: false,
             gestureEnabled: false,
           }}
         />
         <Stack.Screen
-          name="playlists"
+          name='playlists'
           options={{
             navigationBarColor: colors.background,
-            title: "Playlist",
+            title: 'Playlist',
           }}
         />
         <Stack.Screen
-          name="search"
+          name='search'
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          name="albums"
+          name='albums'
           options={{
             navigationBarColor: colors.background,
-            title: "Album",
+            title: 'Album',
           }}
         />
         <Stack.Screen
-          name="artist"
+          name='artist'
           options={{
             navigationBarColor: colors.background,
-            title: "Artist",
+            title: 'Artist',
           }}
         />
         <Stack.Screen
-          name="user-playlist"
+          name='user-playlist'
           options={{
             navigationBarColor: colors.background,
-            title: "User Playlist",
+            title: 'User Playlist',
           }}
         />
         <Stack.Screen
-          name="message"
+          name='message'
           options={{
             headerShown: false,
-            title: "Message",
+            title: 'Message',
           }}
         />
         <Stack.Screen
-          name="followers"
+          name='followers'
           options={{
             navigationBarColor: colors.background,
-            title: "Followers",
+            title: 'Followers',
           }}
         />
         <Stack.Screen
-          name="followings"
+          name='followings'
           options={{
             navigationBarColor: colors.background,
-            title: "Followings",
+            title: 'Followings',
           }}
         />
         <Stack.Screen
-          name="music-language"
+          name='music-language'
           options={{
-            title: "Update Language Preferences",
+            title: 'Update Language Preferences',
           }}
         />
         <Stack.Screen
-          name="song-history"
-          options={{
-            headerShown: false,
-            title: "Your Listening History",
-          }}
-        />
-        <Stack.Screen
-          name="qr-scanner"
+          name='song-history'
           options={{
             headerShown: false,
-            title: "QR Scanner",
+            title: 'Your Listening History',
           }}
         />
         <Stack.Screen
-          name="oauthredirect"
+          name='qr-scanner'
           options={{
             headerShown: false,
+            title: 'QR Scanner',
           }}
         />
         <Stack.Screen
-          name="[...unmatched]"
+          name='oauthredirect'
           options={{
             headerShown: false,
           }}
         />
         <Stack.Screen
-          name="edit-profile"
+          name='[...unmatched]'
           options={{
-            title: "Edit Profile",
+            headerShown: false,
           }}
         />
         <Stack.Screen
-          name="favorite-genres"
+          name='edit-profile'
           options={{
-            title: "Favorite Genres",
+            title: 'Edit Profile',
           }}
         />
         <Stack.Screen
-          name="notification-settings"
+          name='favorite-genres'
           options={{
-            title: "Notification Settings",
+            title: 'Favorite Genres',
+          }}
+        />
+        <Stack.Screen
+          name='notification-settings'
+          options={{
+            title: 'Notification Settings',
           }}
         />
       </Stack>

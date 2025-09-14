@@ -1,5 +1,5 @@
-import IncomingCallModal from "@/components/video/IncomingCall";
-import React from "react";
+import IncomingCallModal from '@/components/video/IncomingCall';
+import React from 'react';
 
 const call = () => {
   return <IncomingCallModal />;

@@ -1,9 +1,9 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { useTheme } from "@/context/ThemeContext";
-import Button from "./ui/button";
-import Card from "./ui/card";
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useTheme } from '@/context/ThemeContext';
+import Button from './ui/button';
+import Card from './ui/card';
 
 const CardDemo: React.FC = () => {
   const { colors, theme, toggleTheme } = useTheme();
@@ -14,53 +14,41 @@ const CardDemo: React.FC = () => {
       contentContainerStyle={styles.contentContainer}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          Card Examples
-        </Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Card Examples</Text>
         <Button
-          variant="outline"
-          size="sm"
-          title={theme === "dark" ? "Light Mode" : "Dark Mode"}
+          variant='outline'
+          size='sm'
+          title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           icon={
-            <Feather
-              name={theme === "dark" ? "sun" : "moon"}
-              size={14}
-              color={colors.primary}
-            />
+            <Feather name={theme === 'dark' ? 'sun' : 'moon'} size={14} color={colors.primary} />
           }
-          iconPosition="left"
+          iconPosition='left'
           onPress={toggleTheme}
         />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Default Card
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Default Card</Text>
 
       <Card>
         <Card.Header>
           <Card.Title>Default Card</Card.Title>
-          <Card.Description>
-            This is a standard card with a border.
-          </Card.Description>
+          <Card.Description>This is a standard card with a border.</Card.Description>
         </Card.Header>
         <Card.Content>
           <Text style={{ color: colors.foreground }}>
-            Cards are containers for content and actions related to a single
-            subject. They can contain text, images, and interactive elements.
+            Cards are containers for content and actions related to a single subject. They can
+            contain text, images, and interactive elements.
           </Text>
         </Card.Content>
         <Card.Footer>
-          <Button variant="outline" title="Cancel" />
-          <Button title="Submit" />
+          <Button variant='outline' title='Cancel' />
+          <Button title='Submit' />
         </Card.Footer>
       </Card>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Card Variants
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Card Variants</Text>
 
-      <Card variant="outline" style={styles.cardSpacing}>
+      <Card variant='outline' style={styles.cardSpacing}>
         <Card.Header>
           <Card.Title>Outline Card</Card.Title>
           <Card.Description>A card with just a border.</Card.Description>
@@ -72,7 +60,7 @@ const CardDemo: React.FC = () => {
         </Card.Content>
       </Card>
 
-      <Card variant="secondary" style={styles.cardSpacing}>
+      <Card variant='secondary' style={styles.cardSpacing}>
         <Card.Header>
           <Card.Title>Secondary Card</Card.Title>
           <Card.Description>Uses secondary background color.</Card.Description>
@@ -84,7 +72,7 @@ const CardDemo: React.FC = () => {
         </Card.Content>
       </Card>
 
-      <Card variant="ghost" style={styles.cardSpacing}>
+      <Card variant='ghost' style={styles.cardSpacing}>
         <Card.Header>
           <Card.Title>Ghost Card</Card.Title>
           <Card.Description>No visible container.</Card.Description>
@@ -96,13 +84,11 @@ const CardDemo: React.FC = () => {
         </Card.Content>
       </Card>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Interactive Cards
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Interactive Cards</Text>
 
       <View style={styles.cardRow}>
         <Card style={styles.halfCard}>
-          <Card.Action onPress={() => console.log("Card pressed")}>
+          <Card.Action onPress={() => console.log('Card pressed')}>
             <Card.Header>
               <Card.Title>Clickable Card</Card.Title>
               <Card.Description>Tap this entire card</Card.Description>
@@ -127,31 +113,29 @@ const CardDemo: React.FC = () => {
           </Card.Content>
           <Card.Footer>
             <Button
-              variant="ghost"
-              size="sm"
-              icon={<Feather name="heart" size={14} color={colors.primary} />}
-              iconPosition="left"
-              title="Like"
+              variant='ghost'
+              size='sm'
+              icon={<Feather name='heart' size={14} color={colors.primary} />}
+              iconPosition='left'
+              title='Like'
             />
             <Button
-              variant="ghost"
-              size="sm"
-              icon={<Feather name="share" size={14} color={colors.primary} />}
-              iconPosition="left"
-              title="Share"
+              variant='ghost'
+              size='sm'
+              icon={<Feather name='share' size={14} color={colors.primary} />}
+              iconPosition='left'
+              title='Share'
             />
           </Card.Footer>
         </Card>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Card with Icons
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Card with Icons</Text>
 
       <Card style={styles.cardSpacing}>
         <Card.Header>
           <View style={styles.iconHeader}>
-            <Feather name="bell" size={20} color={colors.primary} />
+            <Feather name='bell' size={20} color={colors.primary} />
             <Card.Title style={styles.iconTitle}>Notification Card</Card.Title>
           </View>
           <Card.Description>An important notification</Card.Description>
@@ -163,28 +147,20 @@ const CardDemo: React.FC = () => {
         </Card.Content>
         <Card.Footer>
           <Button
-            variant="ghost"
-            title="Dismiss"
-            icon={<Feather name="x" size={14} color={colors.primary} />}
-            iconPosition="left"
+            variant='ghost'
+            title='Dismiss'
+            icon={<Feather name='x' size={14} color={colors.primary} />}
+            iconPosition='left'
           />
           <Button
-            title="Take Action"
-            icon={
-              <Feather
-                name="arrow-right"
-                size={14}
-                color={colors.primaryForeground}
-              />
-            }
-            iconPosition="right"
+            title='Take Action'
+            icon={<Feather name='arrow-right' size={14} color={colors.primaryForeground} />}
+            iconPosition='right'
           />
         </Card.Footer>
       </Card>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Complex Example
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Complex Example</Text>
 
       <Card style={styles.cardSpacing}>
         <Card.Header>
@@ -193,61 +169,38 @@ const CardDemo: React.FC = () => {
         </Card.Header>
         <Card.Content>
           <View style={styles.albumInfo}>
-            <View
-              style={[styles.albumCover, { backgroundColor: colors.muted }]}
-            >
-              <Feather name="music" size={24} color={colors.mutedForeground} />
+            <View style={[styles.albumCover, { backgroundColor: colors.muted }]}>
+              <Feather name='music' size={24} color={colors.mutedForeground} />
             </View>
             <View style={styles.songInfo}>
-              <Text style={[styles.songTitle, { color: colors.foreground }]}>
-                Song Title
-              </Text>
-              <Text
-                style={[styles.artistName, { color: colors.mutedForeground }]}
-              >
+              <Text style={[styles.songTitle, { color: colors.foreground }]}>Song Title</Text>
+              <Text style={[styles.artistName, { color: colors.mutedForeground }]}>
                 Artist Name
               </Text>
-              <View
-                style={[styles.progressBar, { backgroundColor: colors.border }]}
-              >
+              <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
                 <View
-                  style={[
-                    styles.progressFill,
-                    { backgroundColor: colors.primary, width: "60%" },
-                  ]}
+                  style={[styles.progressFill, { backgroundColor: colors.primary, width: '60%' }]}
                 />
               </View>
-              <Text style={[styles.time, { color: colors.mutedForeground }]}>
-                2:34 / 4:15
-              </Text>
+              <Text style={[styles.time, { color: colors.mutedForeground }]}>2:34 / 4:15</Text>
             </View>
           </View>
         </Card.Content>
         <Card.Footer>
           <View style={styles.playerControls}>
             <Button
-              variant="ghost"
-              size="icon"
-              icon={
-                <Feather name="skip-back" size={18} color={colors.primary} />
-              }
+              variant='ghost'
+              size='icon'
+              icon={<Feather name='skip-back' size={18} color={colors.primary} />}
             />
             <Button
-              size="icon"
-              icon={
-                <Feather
-                  name="pause"
-                  size={18}
-                  color={colors.primaryForeground}
-                />
-              }
+              size='icon'
+              icon={<Feather name='pause' size={18} color={colors.primaryForeground} />}
             />
             <Button
-              variant="ghost"
-              size="icon"
-              icon={
-                <Feather name="skip-forward" size={18} color={colors.primary} />
-              }
+              variant='ghost'
+              size='icon'
+              icon={<Feather name='skip-forward' size={18} color={colors.primary} />}
             />
           </View>
         </Card.Footer>
@@ -265,18 +218,18 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 24,
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     marginTop: 24,
     marginBottom: 12,
   },
@@ -284,7 +237,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
     marginBottom: 16,
   },
@@ -292,8 +245,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
   },
   iconTitle: {
@@ -301,23 +254,23 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   albumInfo: {
-    flexDirection: "row",
+    flexDirection: 'row',
   },
   albumCover: {
     width: 80,
     height: 80,
     borderRadius: 4,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   songInfo: {
     flex: 1,
     marginLeft: 16,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   songTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   artistName: {
     fontSize: 14,
@@ -336,10 +289,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   playerControls: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
     gap: 20,
   },
 });

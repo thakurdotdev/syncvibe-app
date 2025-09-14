@@ -1,16 +1,16 @@
-import ImageGallery from "@/components/ImageGallery";
-import StartCall from "@/components/video/StartCall";
-import SwipeableModal from "@/components/common/SwipeableModal";
-import { Message, useChat } from "@/context/SocketContext";
-import { useUser } from "@/context/UserContext";
-import { useTheme } from "@/context/ThemeContext";
-import { getOptimizedImageUrl } from "@/utils/Cloudinary";
-import useApi from "@/utils/hooks/useApi";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import ImageGallery from '@/components/ImageGallery';
+import StartCall from '@/components/video/StartCall';
+import SwipeableModal from '@/components/common/SwipeableModal';
+import { Message, useChat } from '@/context/SocketContext';
+import { useUser } from '@/context/UserContext';
+import { useTheme } from '@/context/ThemeContext';
+import { getOptimizedImageUrl } from '@/utils/Cloudinary';
+import useApi from '@/utils/hooks/useApi';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -21,9 +21,9 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Input from "@/components/ui/input";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Input from '@/components/ui/input';
 
 const MessageHeader = React.memo(
   ({
@@ -42,17 +42,14 @@ const MessageHeader = React.memo(
     return (
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={onBack} hitSlop={10} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+          <Ionicons name='chevron-back' size={22} color={colors.foreground} />
         </Pressable>
 
         <View style={styles.userContainer}>
           <View style={styles.avatarContainer}>
             <Image
               source={{ uri: user?.profilepic }}
-              style={[
-                styles.avatar,
-                { borderColor: colors.muted, backgroundColor: colors.muted },
-              ]}
+              style={[styles.avatar, { borderColor: colors.muted, backgroundColor: colors.muted }]}
             />
             {isOnline && (
               <View
@@ -68,13 +65,9 @@ const MessageHeader = React.memo(
           </View>
 
           <View style={styles.userTextContainer}>
-            <Text style={[styles.username, { color: colors.foreground }]}>
-              {user?.name}
-            </Text>
+            <Text style={[styles.username, { color: colors.foreground }]}>{user?.name}</Text>
             {isTyping && (
-              <Text style={[styles.typingText, { color: colors.primary }]}>
-                typing...
-              </Text>
+              <Text style={[styles.typingText, { color: colors.primary }]}>typing...</Text>
             )}
           </View>
         </View>
@@ -82,7 +75,7 @@ const MessageHeader = React.memo(
         <StartCall />
       </View>
     );
-  },
+  }
 );
 
 const DateSeparator = React.memo(({ date }: { date: string }) => (
@@ -122,7 +115,7 @@ const ChatMessage = React.memo(
                 uri: getOptimizedImageUrl(message.fileurl, { thumbnail: true }),
               }}
               style={styles.messageImage}
-              resizeMode="cover"
+              resizeMode='cover'
             />
           </Pressable>
         )}
@@ -139,10 +132,7 @@ const ChatMessage = React.memo(
               styles.messageBubble,
               isOwn
                 ? [styles.ownMessageBubble, { backgroundColor: colors.muted }]
-                : [
-                    styles.otherMessageBubble,
-                    { backgroundColor: colors.muted },
-                  ],
+                : [styles.otherMessageBubble, { backgroundColor: colors.muted }],
             ]}
           >
             <Text style={[styles.messageText, { color: colors.foreground }]}>
@@ -159,24 +149,16 @@ const ChatMessage = React.memo(
           {isOwn && (
             <View style={styles.readStatus}>
               {message.isread ? (
-                <MaterialCommunityIcons
-                  name="check-all"
-                  size={14}
-                  color={colors.primary}
-                />
+                <MaterialCommunityIcons name='check-all' size={14} color={colors.primary} />
               ) : (
-                <MaterialCommunityIcons
-                  name="check"
-                  size={14}
-                  color={colors.mutedForeground}
-                />
+                <MaterialCommunityIcons name='check' size={14} color={colors.mutedForeground} />
               )}
             </View>
           )}
         </View>
       </View>
     );
-  },
+  }
 );
 
 const InputToolbar = React.memo(
@@ -203,32 +185,25 @@ const InputToolbar = React.memo(
           <View style={styles.attachmentPreview}>
             <Image source={{ uri: filePreview }} style={styles.previewImage} />
             <Pressable
-              style={[
-                styles.removeAttachmentButton,
-                { backgroundColor: colors.secondary },
-              ]}
+              style={[styles.removeAttachmentButton, { backgroundColor: colors.secondary }]}
               onPress={onRemoveAttachment}
             >
-              <Ionicons
-                name="close-circle"
-                size={20}
-                color={colors.foreground}
-              />
+              <Ionicons name='close-circle' size={20} color={colors.foreground} />
             </Pressable>
           </View>
         ) : null}
 
         <View style={styles.inputContainer}>
           <Pressable style={styles.attachButton} onPress={onAttach}>
-            <Ionicons name="image-outline" size={22} color={colors.primary} />
+            <Ionicons name='image-outline' size={22} color={colors.primary} />
           </Pressable>
 
           <Input
             value={message}
             onChangeText={onChangeText}
-            placeholder="Message..."
-            variant="filled"
-            size="lg"
+            placeholder='Message...'
+            variant='filled'
+            size='lg'
             multiline
             maxLength={500}
             containerStyle={{ flex: 1, marginRight: 8 }}
@@ -238,32 +213,29 @@ const InputToolbar = React.memo(
             style={[
               styles.sendButton,
               {
-                backgroundColor:
-                  message.trim() || filePreview ? colors.primary : colors.muted,
+                backgroundColor: message.trim() || filePreview ? colors.primary : colors.muted,
               },
             ]}
             onPress={onSend}
             disabled={!message.trim() && !filePreview}
           >
             <Ionicons
-              name="send"
+              name='send'
               size={18}
               color={
-                message.trim() || filePreview
-                  ? colors.primaryForeground
-                  : colors.mutedForeground
+                message.trim() || filePreview ? colors.primaryForeground : colors.mutedForeground
               }
             />
           </Pressable>
         </View>
       </View>
     );
-  },
+  }
 );
 
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const formatDate = (dateString: string) => {
@@ -273,14 +245,14 @@ const formatDate = (dateString: string) => {
   yesterday.setDate(yesterday.getDate() - 1);
 
   if (date.toDateString() === today.toDateString()) {
-    return "Today";
+    return 'Today';
   } else if (date.toDateString() === yesterday.toDateString()) {
-    return "Yesterday";
+    return 'Yesterday';
   } else {
     return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
     });
   }
 };
@@ -312,7 +284,7 @@ const MessageOptionItem = React.memo(
         <Text style={[styles.optionText, { color: itemColor }]}>{text}</Text>
       </Pressable>
     );
-  },
+  }
 );
 
 const ChatWithUser = () => {
@@ -323,19 +295,17 @@ const ChatWithUser = () => {
   const { currentChat, setCurrentChat, socket, onlineStatuses } = useChat();
 
   // State
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [file, setFile] = useState<ImagePicker.ImagePickerSuccessResult | null>(
-    null,
-  );
+  const [file, setFile] = useState<ImagePicker.ImagePickerSuccessResult | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showGallery, setShowGallery] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showMessageOptions, setShowMessageOptions] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const [editText, setEditText] = useState("");
+  const [editText, setEditText] = useState('');
 
   // Refs
   const flatListRef = useRef<FlatList>(null);
@@ -353,7 +323,7 @@ const ChatWithUser = () => {
         setMessages(response.data.chats);
       }
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      console.error('Error fetching messages:', error);
     } finally {
       setLoading(false);
     }
@@ -369,7 +339,7 @@ const ChatWithUser = () => {
         });
 
         if (response.status === 200) {
-          socket.emit("messages-read", {
+          socket.emit('messages-read', {
             messageIds,
             chatid: currentChat.chatid,
             readerId: loggedInUserId,
@@ -377,10 +347,10 @@ const ChatWithUser = () => {
           });
         }
       } catch (error) {
-        console.error("Error fetching messages:", error);
+        console.error('Error fetching messages:', error);
       }
     },
-    [currentChat?.chatid, api],
+    [currentChat?.chatid, api]
   );
 
   useEffect(() => {
@@ -402,12 +372,12 @@ const ChatWithUser = () => {
       }
     };
 
-    socket.on("message-received", handleNewMessage);
-    socket.on("messages-read-status", handleReadStatus);
+    socket.on('message-received', handleNewMessage);
+    socket.on('messages-read-status', handleReadStatus);
 
     return () => {
-      socket.off("message-received", handleNewMessage);
-      socket.off("messages-read-status", handleReadStatus);
+      socket.off('message-received', handleNewMessage);
+      socket.off('messages-read-status', handleReadStatus);
     };
   }, [socket, currentChat?.chatid]);
 
@@ -415,7 +385,7 @@ const ChatWithUser = () => {
   useEffect(() => {
     if (currentChat?.chatid && loggedInUserId) {
       const unreadMessages = messages.filter(
-        (msg) => msg.chatid === currentChat.chatid && !msg.isread,
+        (msg) => msg.chatid === currentChat.chatid && !msg.isread
       );
 
       if (unreadMessages.length > 0) {
@@ -440,7 +410,7 @@ const ChatWithUser = () => {
       }
 
       if (socket && currentChat?.otherUser?.userid) {
-        socket.emit("typing", {
+        socket.emit('typing', {
           userId: loggedInUserId,
           recipientId: currentChat.otherUser.userid,
           isTyping: true,
@@ -448,7 +418,7 @@ const ChatWithUser = () => {
 
         typingTimeoutRef.current = setTimeout(() => {
           if (socket && currentChat?.otherUser?.userid) {
-            socket.emit("typing", {
+            socket.emit('typing', {
               userId: loggedInUserId,
               recipientId: currentChat.otherUser.userid,
               isTyping: false,
@@ -457,7 +427,7 @@ const ChatWithUser = () => {
         }, 1500);
       }
     },
-    [socket, loggedInUserId, currentChat?.otherUser?.userid],
+    [socket, loggedInUserId, currentChat?.otherUser?.userid]
   );
 
   // Send message function
@@ -481,7 +451,7 @@ const ChatWithUser = () => {
       setMessages((prev) => [...prev, newMessage]);
 
       // Clear input fields
-      setMessage("");
+      setMessage('');
       setFile(null);
       setFilePreview(null);
 
@@ -490,61 +460,57 @@ const ChatWithUser = () => {
 
       // Send to socket if no file (will be sent after upload otherwise)
       if (!file) {
-        socket?.emit("new-message", newMessage);
+        socket?.emit('new-message', newMessage);
       }
 
       // Cancel typing indicator
-      socket?.emit("typing", {
+      socket?.emit('typing', {
         userId: loggedInUserId,
         recipientId: currentChat?.otherUser.userid,
         isTyping: false,
       });
 
       // Scroll to bottom
-      setTimeout(
-        () => flatListRef.current?.scrollToEnd({ animated: true }),
-        100,
-      );
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
       if (!loggedInUserId) return;
 
       // API call to save message
       const formData = new FormData();
-      formData.append("chatid", currentChat.chatid.toString());
-      formData.append("senderid", loggedInUserId.toString());
-      formData.append("content", message);
+      formData.append('chatid', currentChat.chatid.toString());
+      formData.append('senderid', loggedInUserId.toString());
+      formData.append('content', message);
 
       if (file && file.assets?.[0]) {
         const fileAsset = file.assets[0];
-        formData.append("file", {
+        formData.append('file', {
           uri: fileAsset.uri,
           type: fileAsset.mimeType,
-          name: fileAsset.fileName || "image.jpg",
+          name: fileAsset.fileName || 'image.jpg',
         } as any);
       }
 
-      const response = await api.post("/api/send/message", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const response = await api.post('/api/send/message', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       // If we had a file, now we can notify via socket with server data
       if (file && response?.data?.message) {
         let serverMessage = response.data.message;
         serverMessage.participants = currentChat.participants;
-        socket?.emit("new-message", serverMessage);
+        socket?.emit('new-message', serverMessage);
       }
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error('Error sending message:', error);
     }
   };
 
   // Image picker
   const handleAttachment = async () => {
     try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (status === "granted") {
+      if (status === 'granted') {
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
@@ -559,14 +525,14 @@ const ChatWithUser = () => {
         }
       }
     } catch (error) {
-      console.error("Error picking image:", error);
+      console.error('Error picking image:', error);
     }
   };
 
   // Process messages with date separators
   const processedMessages = useCallback(() => {
     const result: any[] = [];
-    let currentDate = "";
+    let currentDate = '';
 
     messages.forEach((msg) => {
       const messageDate = formatDate(msg.createdat);
@@ -574,7 +540,7 @@ const ChatWithUser = () => {
       if (messageDate !== currentDate) {
         result.push({
           id: `date-${messageDate}`,
-          type: "date",
+          type: 'date',
           date: messageDate,
         });
         currentDate = messageDate;
@@ -582,7 +548,7 @@ const ChatWithUser = () => {
 
       result.push({
         ...msg,
-        type: "message",
+        type: 'message',
       });
     });
 
@@ -590,16 +556,14 @@ const ChatWithUser = () => {
   }, [messages]);
 
   // Get all image URLs for gallery view
-  const chatImages = messages
-    .filter((msg) => msg.fileurl)
-    .map((msg) => msg.fileurl || "");
+  const chatImages = messages.filter((msg) => msg.fileurl).map((msg) => msg.fileurl || '');
 
   // Find image index by URL
   const findImageIndex = useCallback(
     (url: string) => {
       return chatImages.findIndex((imgUrl) => imgUrl === url);
     },
-    [chatImages],
+    [chatImages]
   );
 
   // Handle image press to open gallery
@@ -612,7 +576,7 @@ const ChatWithUser = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     },
-    [findImageIndex],
+    [findImageIndex]
   );
 
   // Handle message long press
@@ -624,7 +588,7 @@ const ChatWithUser = () => {
   // Handle edit message
   const handleEditMessage = useCallback(() => {
     if (selectedMessage) {
-      setEditText(selectedMessage.content || "");
+      setEditText(selectedMessage.content || '');
       setEditMode(true);
       setShowMessageOptions(false);
     }
@@ -638,18 +602,14 @@ const ChatWithUser = () => {
     }
 
     try {
-      const response = await api.delete(
-        `/api/message/${selectedMessage.messageid}`,
-      );
+      const response = await api.delete(`/api/message/${selectedMessage.messageid}`);
 
       if (response.status === 200) {
         // Remove message from local state
-        setMessages((prev) =>
-          prev.filter((msg) => msg.messageid !== selectedMessage.messageid),
-        );
+        setMessages((prev) => prev.filter((msg) => msg.messageid !== selectedMessage.messageid));
 
         // Notify other users through socket
-        socket?.emit("message-deleted", {
+        socket?.emit('message-deleted', {
           messageid: selectedMessage.messageid,
           chatid: currentChat?.chatid,
         });
@@ -657,7 +617,7 @@ const ChatWithUser = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
-      console.error("Error deleting message:", error);
+      console.error('Error deleting message:', error);
     } finally {
       setShowMessageOptions(false);
     }
@@ -671,12 +631,9 @@ const ChatWithUser = () => {
     }
 
     try {
-      const response = await api.put(
-        `/api/message/${selectedMessage.messageid}`,
-        {
-          content: editText,
-        },
-      );
+      const response = await api.put(`/api/message/${selectedMessage.messageid}`, {
+        content: editText,
+      });
 
       if (response.status === 200) {
         // Update message in local state
@@ -684,12 +641,12 @@ const ChatWithUser = () => {
           prev.map((msg) =>
             msg.messageid === selectedMessage.messageid
               ? { ...msg, content: editText, edited: true }
-              : msg,
-          ),
+              : msg
+          )
         );
 
         // Notify other users through socket
-        socket?.emit("message-edited", {
+        socket?.emit('message-edited', {
           messageid: selectedMessage.messageid,
           chatid: currentChat?.chatid,
           content: editText,
@@ -698,17 +655,17 @@ const ChatWithUser = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (error) {
-      console.error("Error updating message:", error);
+      console.error('Error updating message:', error);
     } finally {
       setEditMode(false);
-      setEditText("");
+      setEditText('');
     }
   }, [selectedMessage, editText, api, socket, currentChat?.chatid]);
 
   // Handle cancel edit
   const handleCancelEdit = useCallback(() => {
     setEditMode(false);
-    setEditText("");
+    setEditText('');
   }, []);
 
   // Handle copy message text
@@ -724,7 +681,7 @@ const ChatWithUser = () => {
   // Render list items
   const renderItem = useCallback(
     ({ item }: any) => {
-      if (item.type === "date") {
+      if (item.type === 'date') {
         return <DateSeparator date={item.date} />;
       }
 
@@ -739,27 +696,27 @@ const ChatWithUser = () => {
         />
       );
     },
-    [loggedInUserId, handleImagePress, handleMessageLongPress],
+    [loggedInUserId, handleImagePress, handleMessageLongPress]
   );
 
   // List key extractor
   const keyExtractor = useCallback(
-    (item: any) => (item.type === "date" ? item.id : `msg-${item.messageid}`),
-    [],
+    (item: any) => (item.type === 'date' ? item.id : `msg-${item.messageid}`),
+    []
   );
 
   // Check if other user is online
-  const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ""];
+  const isOnline = onlineStatuses[currentChat?.otherUser?.userid || ''];
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top"]}
+      edges={['top']}
     >
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <MessageHeader
           onBack={() => {
@@ -774,7 +731,7 @@ const ChatWithUser = () => {
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#60a5fa" />
+            <ActivityIndicator size='large' color='#60a5fa' />
           </View>
         ) : (
           <FlatList
@@ -808,31 +765,28 @@ const ChatWithUser = () => {
             <View style={styles.editHeader}>
               <Text style={styles.editTitle}>Edit message</Text>
               <Pressable onPress={handleCancelEdit}>
-                <Ionicons name="close" size={22} color="#9ca3af" />
+                <Ionicons name='close' size={22} color='#9ca3af' />
               </Pressable>
             </View>
             <View style={styles.editInputContainer}>
               <Input
                 value={editText}
                 onChangeText={setEditText}
-                placeholder="Edit message..."
-                variant="filled"
-                size="md"
+                placeholder='Edit message...'
+                variant='filled'
+                size='md'
                 multiline
                 maxLength={500}
               />
               <Pressable
-                style={[
-                  styles.sendButton,
-                  editText.trim() ? styles.sendButtonActive : null,
-                ]}
+                style={[styles.sendButton, editText.trim() ? styles.sendButtonActive : null]}
                 onPress={handleSaveEdit}
                 disabled={!editText.trim()}
               >
                 <Ionicons
-                  name="checkmark"
+                  name='checkmark'
                   size={22}
-                  color={editText.trim() ? "#FFFFFF" : "#9ca3af"}
+                  color={editText.trim() ? '#FFFFFF' : '#9ca3af'}
                 />
               </Pressable>
             </View>
@@ -862,24 +816,16 @@ const ChatWithUser = () => {
         <SwipeableModal
           isVisible={showMessageOptions}
           onClose={() => setShowMessageOptions(false)}
-          maxHeight="25%"
+          maxHeight='25%'
         >
           <View style={styles.modalContent}>
+            <MessageOptionItem icon='pencil' text='Edit' onPress={handleEditMessage} />
+            <MessageOptionItem icon='copy-outline' text='Copy' onPress={handleCopyText} />
             <MessageOptionItem
-              icon="pencil"
-              text="Edit"
-              onPress={handleEditMessage}
-            />
-            <MessageOptionItem
-              icon="copy-outline"
-              text="Copy"
-              onPress={handleCopyText}
-            />
-            <MessageOptionItem
-              icon="trash-outline"
-              text="Delete"
+              icon='trash-outline'
+              text='Delete'
               onPress={handleDeleteMessage}
-              color="#ef4444"
+              color='#ef4444'
             />
           </View>
         </SwipeableModal>
@@ -893,8 +839,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -904,22 +850,22 @@ const styles = StyleSheet.create({
   },
   userContainer: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginLeft: 4,
   },
   avatarContainer: {
-    position: "relative",
+    position: 'relative',
   },
   avatar: {
     width: 38,
     height: 38,
     borderRadius: 19,
     borderWidth: 2,
-    position: "relative",
+    position: 'relative',
   },
   onlineIndicator: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
     right: 0,
     width: 10,
@@ -932,42 +878,42 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   typingText: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messageList: {
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   dateSeparator: {
-    alignItems: "center",
+    alignItems: 'center',
     marginVertical: 16,
   },
   dateText: {
     fontSize: 12,
-    color: "#9ca3af",
-    backgroundColor: "rgba(30, 41, 59, 0.7)",
+    color: '#9ca3af',
+    backgroundColor: 'rgba(30, 41, 59, 0.7)',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   messageBubbleContainer: {
     marginVertical: 4,
-    maxWidth: "80%",
+    maxWidth: '80%',
   },
   ownMessageContainer: {
-    alignSelf: "flex-end",
+    alignSelf: 'flex-end',
   },
   otherMessageContainer: {
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   messageBubble: {
     borderRadius: 20,
@@ -987,7 +933,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     marginBottom: 4,
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   messageImage: {
     width: 200,
@@ -995,9 +941,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   messageFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
     marginTop: 3,
   },
   timeText: {
@@ -1013,7 +959,7 @@ const styles = StyleSheet.create({
   },
   attachmentPreview: {
     marginBottom: 8,
-    position: "relative",
+    position: 'relative',
     width: 80,
   },
   previewImage: {
@@ -1022,28 +968,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   removeAttachmentButton: {
-    position: "absolute",
+    position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 12,
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   attachButton: {
     width: 44,
     height: 44,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sendButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sendButtonActive: {
     // Background color applied dynamically
@@ -1052,32 +998,32 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   optionItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
   },
   optionText: {
     fontSize: 16,
     marginLeft: 12,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   editContainer: {
     padding: 10,
     borderTopWidth: 1,
   },
   editHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   editTitle: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   editInputContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
 });
 

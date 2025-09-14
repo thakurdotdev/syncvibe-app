@@ -1,35 +1,21 @@
-import LoginScreen from "@/app/login";
-import SwipeableModal from "@/components/common/SwipeableModal";
-import LoginModal from "@/components/LoginModal";
-import { CardContainer, CardImage } from "@/components/music/MusicCards";
-import Button from "@/components/ui/button";
-import { usePlaylist } from "@/context/MusicContext";
-import { toast } from "@/context/ToastContext";
-import { useTheme } from "@/context/ThemeContext";
-import { useUser } from "@/context/UserContext";
-import { ensureHttpsForPlaylistUrls } from "@/utils/getHttpsUrls";
-import useApi from "@/utils/hooks/useApi";
-import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import {
-  AlertCircle,
-  Edit3,
-  Music4,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react-native";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Keyboard,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import Animated from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import LoginScreen from '@/app/login';
+import SwipeableModal from '@/components/common/SwipeableModal';
+import LoginModal from '@/components/LoginModal';
+import { CardContainer, CardImage } from '@/components/music/MusicCards';
+import Button from '@/components/ui/button';
+import { usePlaylist } from '@/context/MusicContext';
+import { toast } from '@/context/ToastContext';
+import { useTheme } from '@/context/ThemeContext';
+import { useUser } from '@/context/UserContext';
+import { ensureHttpsForPlaylistUrls } from '@/utils/getHttpsUrls';
+import useApi from '@/utils/hooks/useApi';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { AlertCircle, Edit3, Music4, Plus, Trash2, X } from 'lucide-react-native';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Keyboard, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LoadingState = () => {
   const { colors } = useTheme();
@@ -39,17 +25,17 @@ const LoadingState = () => {
       style={{
         flex: 1,
         backgroundColor: colors.background,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
-      <ActivityIndicator size="large" color={colors.primary} />
+      <ActivityIndicator size='large' color={colors.primary} />
       <Text
         style={{
           color: colors.text,
           marginTop: 16,
           fontSize: 16,
-          fontWeight: "500",
+          fontWeight: '500',
         }}
       >
         Loading playlists...
@@ -66,8 +52,8 @@ const PlaylistScreen = () => {
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
   });
   const [selectedPlaylist, setSelectedPlaylist] = useState<any>(null);
   const [showActionsModal, setShowActionsModal] = useState(false);
@@ -85,7 +71,7 @@ const PlaylistScreen = () => {
     setLoading(true);
     try {
       if (!formData.name) {
-        toast("Please provide a playlist name");
+        toast('Please provide a playlist name');
         setLoading(false);
         return;
       }
@@ -96,20 +82,19 @@ const PlaylistScreen = () => {
           name: formData.name,
           description: formData.description,
         });
-        toast("Playlist updated successfully!");
+        toast('Playlist updated successfully!');
       } else {
         await api.post(`/api/playlist/create`, {
           name: formData.name,
           description: formData.description,
         });
-        toast("Playlist created successfully!");
+        toast('Playlist created successfully!');
       }
 
       setShowUpdateModal(false);
       getPlaylists();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "An error occurred.";
+      const errorMessage = error.response?.data?.message || 'An error occurred.';
       toast(errorMessage);
     } finally {
       setLoading(false);
@@ -124,29 +109,24 @@ const PlaylistScreen = () => {
       await api.delete(`/api/playlist/delete`, {
         data: { playlistId: selectedPlaylist.id },
       });
-      toast("Playlist deleted successfully!");
+      toast('Playlist deleted successfully!');
       setShowDeleteModal(false);
       setShowActionsModal(false);
       getPlaylists();
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "An error occurred.";
+      const errorMessage = error.response?.data?.message || 'An error occurred.';
       toast(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLongPress = (playlist: {
-    name: string;
-    id: number;
-    description: string;
-  }) => {
+  const handleLongPress = (playlist: { name: string; id: number; description: string }) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedPlaylist(playlist);
     setFormData({
-      name: playlist.name || "",
-      description: playlist.description || "",
+      name: playlist.name || '',
+      description: playlist.description || '',
     });
     setShowActionsModal(true);
   };
@@ -169,11 +149,7 @@ const PlaylistScreen = () => {
 
   const renderPlaylistItem = ({ item }: { item: any }) => (
     <View style={{ flex: 1, paddingHorizontal: 6 }}>
-      <PlaylistCard
-        playlist={item}
-        isUser={true}
-        onLongPress={() => handleLongPress(item)}
-      />
+      <PlaylistCard playlist={item} isUser={true} onLongPress={() => handleLongPress(item)} />
     </View>
   );
 
@@ -181,8 +157,8 @@ const PlaylistScreen = () => {
     <View
       style={{
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center',
         paddingHorizontal: 32,
         paddingVertical: 48,
       }}
@@ -202,7 +178,7 @@ const PlaylistScreen = () => {
           color: colors.text,
           fontSize: 20,
           marginBottom: 8,
-          textAlign: "center",
+          textAlign: 'center',
         }}
       >
         No playlists yet
@@ -211,7 +187,7 @@ const PlaylistScreen = () => {
         style={{
           color: colors.mutedForeground,
           fontSize: 16,
-          textAlign: "center",
+          textAlign: 'center',
           lineHeight: 22,
           marginBottom: 32,
         }}
@@ -219,14 +195,14 @@ const PlaylistScreen = () => {
         Create your first playlist to start organizing your favorite music
       </Text>
       <Button
-        variant="default"
-        size="lg"
+        variant='default'
+        size='lg'
         icon={<Plus size={20} color={colors.primaryForeground} />}
-        iconPosition="left"
-        title="Create Playlist"
+        iconPosition='left'
+        title='Create Playlist'
         onPress={() => {
           setSelectedPlaylist(null);
-          setFormData({ name: "", description: "" });
+          setFormData({ name: '', description: '' });
           setShowUpdateModal(true);
         }}
       />
@@ -243,9 +219,9 @@ const PlaylistScreen = () => {
       {/* Header */}
       <View
         style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           paddingHorizontal: 20,
           paddingTop: 8,
           paddingBottom: 16,
@@ -260,14 +236,14 @@ const PlaylistScreen = () => {
           My Playlists
         </Text>
         <Button
-          variant="outline"
-          size="sm"
+          variant='outline'
+          size='sm'
           icon={<Plus size={18} color={colors.primary} />}
-          iconPosition="left"
-          title="Create"
+          iconPosition='left'
+          title='Create'
           onPress={() => {
             setSelectedPlaylist(null);
-            setFormData({ name: "", description: "" });
+            setFormData({ name: '', description: '' });
             setShowUpdateModal(true);
           }}
         />
@@ -284,9 +260,7 @@ const PlaylistScreen = () => {
           paddingBottom: 24,
           flexGrow: userPlaylist.length === 0 ? 1 : undefined,
         }}
-        columnWrapperStyle={
-          userPlaylist.length > 0 ? { marginBottom: 12 } : undefined
-        }
+        columnWrapperStyle={userPlaylist.length > 0 ? { marginBottom: 12 } : undefined}
         ListEmptyComponent={EmptyState}
       />
 
@@ -294,7 +268,7 @@ const PlaylistScreen = () => {
       <SwipeableModal
         isVisible={showActionsModal}
         onClose={() => setShowActionsModal(false)}
-        maxHeight="30%"
+        maxHeight='30%'
       >
         <View
           style={{
@@ -306,9 +280,9 @@ const PlaylistScreen = () => {
         >
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               marginBottom: 24,
             }}
           >
@@ -316,7 +290,7 @@ const PlaylistScreen = () => {
               style={{
                 color: colors.text,
                 fontSize: 20,
-                fontWeight: "700",
+                fontWeight: '700',
               }}
             >
               Playlist Options
@@ -335,18 +309,18 @@ const PlaylistScreen = () => {
 
           <View style={{ gap: 12 }}>
             <Button
-              variant="secondary"
-              title="Edit Playlist"
+              variant='secondary'
+              title='Edit Playlist'
               icon={<Edit3 size={20} color={colors.primary} />}
-              iconPosition="left"
+              iconPosition='left'
               onPress={handleUpdateAction}
             />
 
             <Button
-              variant="destructive"
-              title="Delete Playlist"
+              variant='destructive'
+              title='Delete Playlist'
               icon={<Trash2 size={20} color={colors.destructiveForeground} />}
-              iconPosition="left"
+              iconPosition='left'
               onPress={handleDeleteAction}
             />
           </View>
@@ -370,9 +344,9 @@ const PlaylistScreen = () => {
         >
           <View
             style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               marginBottom: 24,
             }}
           >
@@ -380,10 +354,10 @@ const PlaylistScreen = () => {
               style={{
                 color: colors.text,
                 fontSize: 22,
-                fontWeight: "700",
+                fontWeight: '700',
               }}
             >
-              {selectedPlaylist ? "Edit Playlist" : "Create Playlist"}
+              {selectedPlaylist ? 'Edit Playlist' : 'Create Playlist'}
             </Text>
             <TouchableOpacity
               style={{
@@ -404,7 +378,7 @@ const PlaylistScreen = () => {
                   color: colors.text,
                   fontSize: 16,
                   marginBottom: 8,
-                  fontWeight: "600",
+                  fontWeight: '600',
                 }}
               >
                 Name
@@ -420,10 +394,8 @@ const PlaylistScreen = () => {
                   borderColor: colors.border,
                 }}
                 value={formData.name}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, name: text }))
-                }
-                placeholder="Enter playlist name"
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, name: text }))}
+                placeholder='Enter playlist name'
                 placeholderTextColor={colors.mutedForeground}
                 selectionColor={colors.primary}
               />
@@ -435,7 +407,7 @@ const PlaylistScreen = () => {
                   color: colors.text,
                   fontSize: 16,
                   marginBottom: 8,
-                  fontWeight: "600",
+                  fontWeight: '600',
                 }}
               >
                 Description
@@ -447,16 +419,14 @@ const PlaylistScreen = () => {
                   padding: 16,
                   borderRadius: 12,
                   height: 100,
-                  textAlignVertical: "top",
+                  textAlignVertical: 'top',
                   fontSize: 16,
                   borderWidth: 1,
                   borderColor: colors.border,
                 }}
                 value={formData.description}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, description: text }))
-                }
-                placeholder="Enter description"
+                onChangeText={(text) => setFormData((prev) => ({ ...prev, description: text }))}
+                placeholder='Enter description'
                 placeholderTextColor={colors.mutedForeground}
                 multiline={true}
                 numberOfLines={3}
@@ -465,9 +435,9 @@ const PlaylistScreen = () => {
             </View>
 
             <Button
-              variant="default"
-              size="lg"
-              title={selectedPlaylist ? "Save Changes" : "Create Playlist"}
+              variant='default'
+              size='lg'
+              title={selectedPlaylist ? 'Save Changes' : 'Create Playlist'}
               disabled={loading}
               isLoading={loading}
               onPress={handleSavePlaylist}
@@ -480,7 +450,7 @@ const PlaylistScreen = () => {
       <SwipeableModal
         isVisible={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        maxHeight="35%"
+        maxHeight='35%'
       >
         <View
           style={{
@@ -490,13 +460,11 @@ const PlaylistScreen = () => {
             borderTopRightRadius: 20,
           }}
         >
-          <View style={{ alignItems: "center", marginBottom: 20 }}>
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
             <View
               style={{
                 backgroundColor:
-                  theme === "dark"
-                    ? "rgba(127, 29, 29, 0.3)"
-                    : "rgba(254, 202, 202, 0.3)",
+                  theme === 'dark' ? 'rgba(127, 29, 29, 0.3)' : 'rgba(254, 202, 202, 0.3)',
                 padding: 16,
                 borderRadius: 20,
                 marginBottom: 16,
@@ -508,7 +476,7 @@ const PlaylistScreen = () => {
               style={{
                 color: colors.text,
                 fontSize: 22,
-                fontWeight: "700",
+                fontWeight: '700',
                 marginBottom: 8,
               }}
             >
@@ -518,32 +486,32 @@ const PlaylistScreen = () => {
               style={{
                 color: colors.mutedForeground,
                 fontSize: 16,
-                textAlign: "center",
+                textAlign: 'center',
                 lineHeight: 22,
               }}
             >
-              Are you sure you want to delete "{selectedPlaylist?.name}"? This
-              action cannot be undone.
+              Are you sure you want to delete "{selectedPlaylist?.name}"? This action cannot be
+              undone.
             </Text>
           </View>
 
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
             <Button
-              variant="secondary"
-              title="Cancel"
-              size="default"
+              variant='secondary'
+              title='Cancel'
+              size='default'
               style={{ flex: 1 }}
               onPress={() => setShowDeleteModal(false)}
             />
 
             <Button
-              variant="destructive"
-              title="Delete"
-              size="default"
+              variant='destructive'
+              title='Delete'
+              size='default'
               isLoading={loading}
               disabled={loading}
               icon={<Trash2 size={18} color={colors.destructiveForeground} />}
-              iconPosition="left"
+              iconPosition='left'
               style={{ flex: 1 }}
               onPress={handleDeletePlaylist}
             />
@@ -561,29 +529,26 @@ export const PlaylistCard = memo(({ playlist, isUser, onLongPress }: any) => {
 
   const handlePress = useCallback(() => {
     router.push({
-      pathname: "/user-playlist",
+      pathname: '/user-playlist',
       params: { id: playlist.id },
     });
   }, [playlist?.id]);
 
   if (!playlist?.name) return null;
 
-  const securedPlaylist = useMemo(
-    () => ensureHttpsForPlaylistUrls(playlist),
-    [playlist],
-  );
+  const securedPlaylist = useMemo(() => ensureHttpsForPlaylistUrls(playlist), [playlist]);
 
-  const subtitle = securedPlaylist.description || "Playlist";
+  const subtitle = securedPlaylist.description || 'Playlist';
   const imageUrl = securedPlaylist?.image
     ? securedPlaylist.image[2]?.link
-    : "https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_500,w_500/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp";
+    : 'https://res.cloudinary.com/dr7lkelwl/image/upload/c_thumb,h_500,w_500/f_auto/v1736541047/posts/sjzxfa31iet8ftznv2mo.webp';
 
   return (
     <CardContainer
       onPress={handlePress}
       onLongPress={isUser ? () => onLongPress(playlist) : undefined}
       key={securedPlaylist.id}
-      width={"100%"}
+      width={'100%'}
     >
       <View style={{ padding: 12, gap: 8 }}>
         <CardImage uri={imageUrl} alt={`Playlist: ${securedPlaylist.name}`} />
@@ -592,12 +557,12 @@ export const PlaylistCard = memo(({ playlist, isUser, onLongPress }: any) => {
           <Text
             style={{
               color: colors.text,
-              fontWeight: "600",
+              fontWeight: '600',
               fontSize: 15,
               lineHeight: 20,
             }}
             numberOfLines={1}
-            ellipsizeMode="tail"
+            ellipsizeMode='tail'
           >
             {securedPlaylist.name}
           </Text>
@@ -608,7 +573,7 @@ export const PlaylistCard = memo(({ playlist, isUser, onLongPress }: any) => {
               lineHeight: 18,
             }}
             numberOfLines={1}
-            ellipsizeMode="tail"
+            ellipsizeMode='tail'
           >
             {subtitle}
           </Text>

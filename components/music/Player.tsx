@@ -1,12 +1,12 @@
-import { SONG_URL } from "@/constants";
-import { usePlayer, usePlayerState, usePlaylist } from "@/context/MusicContext";
-import { useTheme } from "@/context/ThemeContext";
-import { Song } from "@/types/song";
-import { ensureHttpsForSongUrls } from "@/utils/getHttpsUrls";
-import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
-import { usePathname } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { SONG_URL } from '@/constants';
+import { usePlayer, usePlayerState, usePlaylist } from '@/context/MusicContext';
+import { useTheme } from '@/context/ThemeContext';
+import { Song } from '@/types/song';
+import { ensureHttpsForSongUrls } from '@/utils/getHttpsUrls';
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { usePathname } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
@@ -16,8 +16,8 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+} from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   Extrapolation,
@@ -27,30 +27,24 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import TrackPlayer from "react-native-track-player";
-import Button from "../ui/button";
-import { ProgressBar, SongControls } from "./MusicCards";
-import { MusicQueue } from "./MusicLists";
-import NewPlayerDrawer from "./NewPlayerDrawer";
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TrackPlayer from 'react-native-track-player';
+import Button from '../ui/button';
+import { ProgressBar, SongControls } from './MusicCards';
+import { MusicQueue } from './MusicLists';
+import NewPlayerDrawer from './NewPlayerDrawer';
 
-const { height } = Dimensions.get("window");
+const { height } = Dimensions.get('window');
 const ANIMATION_DURATION = 300;
 const SWIPE_THRESHOLD = 150;
 
 // Tab constants for easier reference
-const TABS = ["player", "queue"] as const;
+const TABS = ['player', 'queue'] as const;
 type TabType = (typeof TABS)[number];
 
 const PlayerTab = React.memo(
-  ({
-    currentSong,
-    artistName,
-  }: {
-    currentSong: Song | null;
-    artistName: string;
-  }) => {
+  ({ currentSong, artistName }: { currentSong: Song | null; artistName: string }) => {
     const { colors } = useTheme();
 
     return (
@@ -66,20 +60,20 @@ const PlayerTab = React.memo(
               shadowRadius: 12,
             },
           ]}
-          resizeMode="cover"
+          resizeMode='cover'
         />
         <View style={styles.songInfoContainer}>
           <Text
             style={[styles.songTitle, { color: colors.text }]}
             numberOfLines={1}
-            ellipsizeMode="tail"
+            ellipsizeMode='tail'
           >
             {currentSong?.name}
           </Text>
           <Text
             style={[styles.artistName, { color: colors.mutedForeground }]}
             numberOfLines={1}
-            ellipsizeMode="tail"
+            ellipsizeMode='tail'
           >
             {artistName}
           </Text>
@@ -87,7 +81,7 @@ const PlayerTab = React.memo(
         <SongControls />
       </View>
     );
-  },
+  }
 );
 
 const QueueTab = React.memo(() => (
@@ -102,7 +96,7 @@ export default function Player() {
   const { currentSong, isPlaying, isLoading } = usePlayerState();
   const { playlist } = usePlaylist();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("player");
+  const [activeTab, setActiveTab] = useState<TabType>('player');
   const insets = useSafeAreaInsets();
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
@@ -123,27 +117,21 @@ export default function Player() {
   };
 
   const pathname = usePathname();
-  const isHomeActive = pathname.includes("/home");
+  const isHomeActive = pathname.includes('/home');
 
   const getRecommendations = useCallback(async () => {
     if (!currentSong?.id || playlist.length > 2) return;
 
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${SONG_URL}/song/recommend?id=${currentSong.id}`,
-      );
+      const response = await axios.get(`${SONG_URL}/song/recommend?id=${currentSong.id}`);
       if (response.data?.data) {
-        const newRecommendations = response.data.data?.map(
-          ensureHttpsForSongUrls,
-        );
+        const newRecommendations = response.data.data?.map(ensureHttpsForSongUrls);
         setRecommendations(newRecommendations);
 
         if (newRecommendations.length > 0) {
           const filteredRecommendations = newRecommendations.filter(
-            (rec: Song) =>
-              rec.id !== currentSong.id &&
-              !playlist.some((item) => item.id === rec.id),
+            (rec: Song) => rec.id !== currentSong.id && !playlist.some((item) => item.id === rec.id)
           );
 
           if (filteredRecommendations.length > 0) {
@@ -156,7 +144,7 @@ export default function Player() {
         }
       }
     } catch (error) {
-      console.error("Error fetching recommendations:", error);
+      console.error('Error fetching recommendations:', error);
     } finally {
       setLoading(false);
     }
@@ -189,7 +177,7 @@ export default function Player() {
       () => {
         runOnJS(setIsExpanded)(false);
         gestureTranslateY.value = 0;
-      },
+      }
     );
     miniPlayerOpacity.value = withTiming(1, {
       duration: ANIMATION_DURATION,
@@ -204,7 +192,7 @@ export default function Player() {
         setActiveTab(tab);
       }
     },
-    [activeTab],
+    [activeTab]
   );
 
   const artistName = useMemo(
@@ -212,24 +200,24 @@ export default function Player() {
       currentSong?.artist_map?.artists
         ?.slice(0, 3)
         ?.map((artist) => artist.name)
-        .join(", ") || "",
-    [currentSong],
+        .join(', ') || '',
+    [currentSong]
   );
 
   const verticalGesture = Gesture.Pan()
     .onStart(() => {
-      "worklet";
+      'worklet';
       startY.value = gestureTranslateY.value;
     })
     .onUpdate((e) => {
-      "worklet";
+      'worklet';
       if (e.translationY > 0) {
         const dampenedDrag = e.translationY * 0.8;
         gestureTranslateY.value = startY.value + dampenedDrag;
       }
     })
     .onEnd((e) => {
-      "worklet";
+      'worklet';
       if (e.translationY > SWIPE_THRESHOLD || e.velocityY > 500) {
         runOnJS(closePlayer)();
       } else {
@@ -247,9 +235,9 @@ export default function Player() {
         { translateY: translateY.value + gestureTranslateY.value },
         { scale: scale.value },
       ],
-      position: "absolute",
-      width: "100%",
-      height: "100%",
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
       zIndex: isExpanded ? 10 : -1,
     };
   });
@@ -259,7 +247,7 @@ export default function Player() {
       translateY.value,
       [0, height * 0.2, height * 0.5],
       [0, 0, 1],
-      Extrapolation.CLAMP,
+      Extrapolation.CLAMP
     );
 
     return {
@@ -270,7 +258,7 @@ export default function Player() {
             translateY.value,
             [height * 0.7, height],
             [10, 0],
-            Extrapolation.CLAMP,
+            Extrapolation.CLAMP
           ),
         },
       ],
@@ -282,7 +270,7 @@ export default function Player() {
       style={[
         expandedPlayerStyle,
         {
-          backfaceVisibility: "hidden",
+          backfaceVisibility: 'hidden',
         },
       ]}
     >
@@ -299,36 +287,28 @@ export default function Player() {
         <GestureDetector gesture={verticalGesture}>
           <Animated.View>
             <View style={styles.header}>
-              <Button onPress={closePlayer} variant="ghost" size="icon">
-                <Ionicons name="chevron-down" size={24} color={colors.text} />
+              <Button onPress={closePlayer} variant='ghost' size='icon'>
+                <Ionicons name='chevron-down' size={24} color={colors.text} />
               </Button>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>
-                Now Playing
-              </Text>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Now Playing</Text>
               <Button
-                variant="ghost"
-                size="icon"
+                variant='ghost'
+                size='icon'
                 onPress={() => {
                   setPlayerDrawerOpen(true);
                 }}
               >
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={20}
-                  color={colors.text}
-                />
+                <Ionicons name='ellipsis-horizontal' size={20} color={colors.text} />
               </Button>
             </View>
           </Animated.View>
         </GestureDetector>
 
-        <View
-          style={[styles.tabsContainer, { borderBottomColor: colors.border }]}
-        >
+        <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
           {TABS.map((tab) => (
             <Button
               key={tab}
-              variant="ghost"
+              variant='ghost'
               style={styles.tab}
               onPress={() => handleTabPress(tab)}
             >
@@ -336,15 +316,12 @@ export default function Player() {
                 style={[
                   styles.tabText,
                   {
-                    color:
-                      activeTab === tab
-                        ? colors.primary
-                        : colors.mutedForeground,
+                    color: activeTab === tab ? colors.primary : colors.mutedForeground,
                   },
                   activeTab === tab ? styles.activeTabText : undefined,
                 ]}
               >
-                {tab === "player" ? "Playing" : "Queue"}
+                {tab === 'player' ? 'Playing' : 'Queue'}
               </Text>
             </Button>
           ))}
@@ -354,7 +331,7 @@ export default function Player() {
           <View style={{ flex: 1 }}>
             <View
               style={{
-                display: activeTab === "player" ? "flex" : "none",
+                display: activeTab === 'player' ? 'flex' : 'none',
                 flex: 1,
               }}
             >
@@ -363,7 +340,7 @@ export default function Player() {
 
             <View
               style={{
-                display: activeTab === "queue" ? "flex" : "none",
+                display: activeTab === 'queue' ? 'flex' : 'none',
                 flex: 1,
               }}
             >
@@ -391,12 +368,9 @@ export default function Player() {
       <Pressable
         style={styles.miniPlayerContent}
         onPress={openPlayer}
-        android_ripple={{ color: colors.primary + "20" }}
+        android_ripple={{ color: colors.primary + '20' }}
       >
-        <Image
-          source={{ uri: currentSong?.image[1]?.link }}
-          style={styles.miniPlayerImage}
-        />
+        <Image source={{ uri: currentSong?.image[1]?.link }} style={styles.miniPlayerImage} />
         <View style={styles.miniPlayerTextContainer}>
           <Text
             style={[
@@ -421,8 +395,8 @@ export default function Player() {
             e.stopPropagation();
             handlePlayPauseSong();
           }}
-          variant="ghost"
-          size="icon"
+          variant='ghost'
+          size='icon'
         >
           {isLoading ? (
             <ActivityIndicator
@@ -432,23 +406,19 @@ export default function Player() {
               aria-disabled={true}
             />
           ) : (
-            <Ionicons
-              name={isPlaying ? "pause" : "play"}
-              size={22}
-              color={colors.text}
-            />
+            <Ionicons name={isPlaying ? 'pause' : 'play'} size={22} color={colors.text} />
           )}
         </Button>
         <Button
-          variant="ghost"
-          size="icon"
+          variant='ghost'
+          size='icon'
           onPress={(e) => {
             e.stopPropagation();
             handleNextSong();
           }}
           style={{ marginLeft: 8 }}
         >
-          <Ionicons name="play-skip-forward" size={22} color={colors.text} />
+          <Ionicons name='play-skip-forward' size={22} color={colors.text} />
         </Button>
       </Pressable>
       <ProgressBar />
@@ -464,10 +434,7 @@ export default function Player() {
       return false;
     };
 
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction,
-    );
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
 
     return () => backHandler.remove();
   }, [isExpanded, closePlayer]);
@@ -491,16 +458,16 @@ export default function Player() {
 
 const styles = StyleSheet.create({
   miniPlayerContainer: {
-    position: "absolute",
-    width: "100%",
-    overflow: "hidden",
+    position: 'absolute',
+    width: '100%',
+    overflow: 'hidden',
     zIndex: 5,
   },
   miniPlayerContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 14,
-    width: "100%",
+    width: '100%',
   },
   miniPlayerImage: {
     width: 48,
@@ -512,7 +479,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   miniPlayerTitle: {
-    fontWeight: "600",
+    fontWeight: '600',
     fontSize: 15,
     letterSpacing: 0.2,
   },
@@ -523,44 +490,44 @@ const styles = StyleSheet.create({
 
   expandedPlayerBackground: {
     flex: 1,
-    height: "100%",
+    height: '100%',
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 4,
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: "600",
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
   tabsContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 10,
     marginBottom: 16,
     borderBottomWidth: 1,
-    position: "relative",
+    position: 'relative',
   },
   tab: {
     flex: 1,
     paddingVertical: 14,
-    alignItems: "center",
-    position: "relative",
+    alignItems: 'center',
+    position: 'relative',
     borderRadius: 0,
   },
   tabText: {
-    textAlign: "center",
-    fontWeight: "500",
+    textAlign: 'center',
+    fontWeight: '500',
     fontSize: 15,
     letterSpacing: 0.3,
   },
   activeTabText: {
-    fontWeight: "600",
+    fontWeight: '600',
   },
 
   contentContainer: {
@@ -572,31 +539,31 @@ const styles = StyleSheet.create({
   },
 
   playerTabContainer: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   albumArt: {
-    width: "90%",
+    width: '90%',
     aspectRatio: 1,
     borderRadius: 10,
-    alignSelf: "center",
+    alignSelf: 'center',
     maxHeight: height * 0.5,
     marginTop: 10,
   },
   songInfoContainer: {
-    width: "100%",
+    width: '100%',
     marginTop: 36,
     marginBottom: 20,
   },
   songTitle: {
     fontSize: 26,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: 'bold',
+    textAlign: 'center',
     letterSpacing: 0.4,
     paddingHorizontal: 10,
   },
   artistName: {
     fontSize: 18,
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: 10,
   },
 });

@@ -6,7 +6,7 @@ export interface User {
   bio: string;
   profilepic: string;
   verified: boolean;
-  logintype: "EMAILPASSWORD" | "GOOGLE" | "GUEST";
+  logintype: 'EMAILPASSWORD' | 'GOOGLE' | 'GUEST';
   isDeleted: boolean;
   passkeyEnabled: boolean;
   lastPasskeyLogin?: string;

@@ -1,13 +1,13 @@
-import SwipeableModal from "@/components/common/SwipeableModal";
-import { SongCard } from "@/components/music/MusicCards";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
-import { useTheme } from "@/context/ThemeContext";
-import { useUser } from "@/context/UserContext";
-import { Song } from "@/types/song";
-import useApi from "@/utils/hooks/useApi";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import SwipeableModal from '@/components/common/SwipeableModal';
+import { SongCard } from '@/components/music/MusicCards';
+import Button from '@/components/ui/button';
+import Input from '@/components/ui/input';
+import { useTheme } from '@/context/ThemeContext';
+import { useUser } from '@/context/UserContext';
+import { Song } from '@/types/song';
+import useApi from '@/utils/hooks/useApi';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -18,8 +18,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ITEMS_PER_PAGE = 15;
 
@@ -29,28 +29,28 @@ type SortOption = {
   icon: React.ReactNode;
 };
 
-type SortOrder = "ASC" | "DESC";
+type SortOrder = 'ASC' | 'DESC';
 
 const sortOptions: SortOption[] = [
   {
-    label: "Recently Played",
-    value: "lastPlayedAt",
-    icon: <Ionicons name="time-outline" size={20} color="white" />,
+    label: 'Recently Played',
+    value: 'lastPlayedAt',
+    icon: <Ionicons name='time-outline' size={20} color='white' />,
   },
   {
-    label: "Song Title",
-    value: "songName",
-    icon: <Ionicons name="text-outline" size={20} color="white" />,
+    label: 'Song Title',
+    value: 'songName',
+    icon: <Ionicons name='text-outline' size={20} color='white' />,
   },
   {
-    label: "Most Played",
-    value: "playedCount",
-    icon: <Ionicons name="repeat-outline" size={20} color="white" />,
+    label: 'Most Played',
+    value: 'playedCount',
+    icon: <Ionicons name='repeat-outline' size={20} color='white' />,
   },
   {
-    label: "Language",
-    value: "songLanguage",
-    icon: <Ionicons name="language-outline" size={20} color="white" />,
+    label: 'Language',
+    value: 'songLanguage',
+    icon: <Ionicons name='language-outline' size={20} color='white' />,
   },
 ];
 
@@ -65,12 +65,12 @@ const SongHistory = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalSongs, setTotalSongs] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
-  const [sortBy, setSortBy] = useState("lastPlayedAt");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("DESC");
+  const [sortBy, setSortBy] = useState('lastPlayedAt');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
   const [isFiltering, setIsFiltering] = useState(false);
 
   const [currentDataPage, setCurrentDataPage] = useState(1);
@@ -112,9 +112,7 @@ const SongHistory = () => {
           setLoading(true);
         } else if (
           !append &&
-          (debouncedSearchQuery ||
-            sortBy !== "lastPlayedAt" ||
-            sortOrder !== "DESC")
+          (debouncedSearchQuery || sortBy !== 'lastPlayedAt' || sortOrder !== 'DESC')
         ) {
           // Show the filtering indicator for search and sort operations
           setIsFiltering(true);
@@ -124,7 +122,7 @@ const SongHistory = () => {
           setLoadingMore(true);
         }
 
-        const response = await api.get("/api/music/latestHistory", {
+        const response = await api.get('/api/music/latestHistory', {
           params: {
             page: pageNum,
             limit: ITEMS_PER_PAGE,
@@ -147,7 +145,7 @@ const SongHistory = () => {
           setHasMore(pageNum * ITEMS_PER_PAGE < count);
         }
       } catch (error) {
-        console.error("Error fetching song history:", error);
+        console.error('Error fetching song history:', error);
       } finally {
         setLoading(false);
         setInitialLoading(false); // Initial loading is done
@@ -156,14 +154,7 @@ const SongHistory = () => {
         setLoadingMore(false);
       }
     },
-    [
-      user?.userid,
-      api,
-      debouncedSearchQuery,
-      sortBy,
-      sortOrder,
-      initialLoading,
-    ],
+    [user?.userid, api, debouncedSearchQuery, sortBy, sortOrder, initialLoading]
   );
 
   const handleRefresh = useCallback(() => {
@@ -174,7 +165,7 @@ const SongHistory = () => {
 
   const toggleSortOrder = useCallback(() => {
     setIsFiltering(true);
-    setSortOrder((prevOrder) => (prevOrder === "ASC" ? "DESC" : "ASC"));
+    setSortOrder((prevOrder) => (prevOrder === 'ASC' ? 'DESC' : 'ASC'));
   }, []);
 
   const handleSortSelect = useCallback((option: string) => {
@@ -188,8 +179,8 @@ const SongHistory = () => {
       const newState = !prev;
       if (!newState) {
         // Reset search when hiding
-        setSearchQuery("");
-        setDebouncedSearchQuery("");
+        setSearchQuery('');
+        setDebouncedSearchQuery('');
       } else {
         // Focus input when showing
         setTimeout(() => {
@@ -212,22 +203,18 @@ const SongHistory = () => {
     const headerOpacity = scrollY.interpolate({
       inputRange: [0, 80, 120],
       outputRange: [1, 0.8, 0.8],
-      extrapolate: "clamp",
+      extrapolate: 'clamp',
     });
 
     const searchScale = scrollY.interpolate({
       inputRange: [0, 100],
       outputRange: [1, 0.95],
-      extrapolate: "clamp",
+      extrapolate: 'clamp',
     });
 
     return (
       <Animated.View
-        style={[
-          styles.header,
-          { opacity: headerOpacity },
-          { backgroundColor: colors.background },
-        ]}
+        style={[styles.header, { opacity: headerOpacity }, { backgroundColor: colors.background }]}
       >
         {!showSearch ? (
           <>
@@ -235,31 +222,22 @@ const SongHistory = () => {
               <Text style={[styles.headerTitle, { color: colors.foreground }]}>
                 Your Listening History
               </Text>
-              <Text
-                style={[
-                  styles.headerSubtitle,
-                  { color: colors.mutedForeground },
-                ]}
-              >
+              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
                 {totalSongs} tracks
               </Text>
             </View>
             <View style={styles.headerActions}>
               <Button
-                variant="ghost"
-                size="icon"
-                icon={
-                  <Feather name="search" size={22} color={colors.foreground} />
-                }
+                variant='ghost'
+                size='icon'
+                icon={<Feather name='search' size={22} color={colors.foreground} />}
                 onPress={toggleSearch}
                 style={{ marginLeft: 8 }}
               />
               <Button
-                variant="ghost"
-                size="icon"
-                icon={
-                  <Feather name="sliders" size={22} color={colors.foreground} />
-                }
+                variant='ghost'
+                size='icon'
+                icon={<Feather name='sliders' size={22} color={colors.foreground} />}
                 onPress={() => setShowSortModal(true)}
                 style={{ marginLeft: 8 }}
               />
@@ -270,28 +248,22 @@ const SongHistory = () => {
             style={[
               styles.searchContainer,
               { transform: [{ scale: searchScale }] },
-              { flexGrow: 1, width: "100%" },
+              { flexGrow: 1, width: '100%' },
             ]}
           >
             <Input
               ref={searchInputRef}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search songs..."
-              variant="filled"
-              leftIcon={
-                <Feather
-                  name="search"
-                  size={20}
-                  color={colors.mutedForeground}
-                />
-              }
+              placeholder='Search songs...'
+              variant='filled'
+              leftIcon={<Feather name='search' size={20} color={colors.mutedForeground} />}
               rightIcon={
                 <TouchableOpacity onPress={toggleSearch}>
-                  <Feather name="x" size={20} color={colors.mutedForeground} />
+                  <Feather name='x' size={20} color={colors.mutedForeground} />
                 </TouchableOpacity>
               }
-              className="flex-1"
+              className='flex-1'
               autoFocus
             />
           </Animated.View>
@@ -301,25 +273,20 @@ const SongHistory = () => {
   };
 
   const renderSortIndicator = () => {
-    if (!sortBy || sortBy === "lastPlayedAt") return null;
+    if (!sortBy || sortBy === 'lastPlayedAt') return null;
 
     const currentSort = sortOptions.find((option) => option.value === sortBy);
     if (!currentSort) return null;
 
     return (
-      <View
-        style={[styles.sortIndicator, { backgroundColor: colors.secondary }]}
-      >
+      <View style={[styles.sortIndicator, { backgroundColor: colors.secondary }]}>
         <Text style={[styles.sortText, { color: colors.secondaryForeground }]}>
           Sorted by: {currentSort.label}
-          {sortOrder === "ASC" ? " (A-Z)" : " (Z-A)"}
+          {sortOrder === 'ASC' ? ' (A-Z)' : ' (Z-A)'}
         </Text>
-        <TouchableOpacity
-          style={styles.sortOrderButton}
-          onPress={toggleSortOrder}
-        >
+        <TouchableOpacity style={styles.sortOrderButton} onPress={toggleSortOrder}>
           <Feather
-            name={sortOrder === "ASC" ? "arrow-up" : "arrow-down"}
+            name={sortOrder === 'ASC' ? 'arrow-up' : 'arrow-down'}
             size={16}
             color={colors.primary}
           />
@@ -333,7 +300,7 @@ const SongHistory = () => {
 
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.primary} />
+        <ActivityIndicator size='small' color={colors.primary} />
       </View>
     );
   };
@@ -342,9 +309,7 @@ const SongHistory = () => {
     if (loading) return null;
 
     return (
-      <View
-        style={[styles.emptyContainer, { backgroundColor: colors.background }]}
-      >
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         {debouncedSearchQuery ? (
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             No songs found matching "{debouncedSearchQuery}"
@@ -361,13 +326,8 @@ const SongHistory = () => {
   // Only show the full-screen loader for the initial load
   if (loading && initialLoading) {
     return (
-      <SafeAreaView
-        style={[
-          styles.loadingContainer,
-          { backgroundColor: colors.background },
-        ]}
-      >
-        <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size='large' color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.foreground }]}>
           Loading your music history...
         </Text>
@@ -376,9 +336,7 @@ const SongHistory = () => {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
       {renderSortIndicator()}
 
@@ -391,14 +349,12 @@ const SongHistory = () => {
           ]}
         >
           <ActivityIndicator
-            size="small"
+            size='small'
             color={colors.primaryForeground}
             style={styles.filteringLoader}
           />
-          <Text
-            style={[styles.filteringText, { color: colors.primaryForeground }]}
-          >
-            {debouncedSearchQuery ? "Searching..." : "Updating results..."}
+          <Text style={[styles.filteringText, { color: colors.primaryForeground }]}>
+            {debouncedSearchQuery ? 'Searching...' : 'Updating results...'}
           </Text>
         </View>
       )}
@@ -408,21 +364,13 @@ const SongHistory = () => {
         renderItem={({ item }) => <SongCard song={item} />}
         keyExtractor={(item, index) => `${item.id}-${index}`}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.listContent,
-          isFiltering && styles.dimmedContent,
-        ]}
+        contentContainerStyle={[styles.listContent, isFiltering && styles.dimmedContent]}
         onEndReached={loadMoreSongs}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyState}
         ItemSeparatorComponent={() => (
-          <View
-            style={[
-              styles.separator,
-              { backgroundColor: `${colors.border}33` },
-            ]}
-          />
+          <View style={[styles.separator, { backgroundColor: `${colors.border}33` }]} />
         )}
         refreshControl={
           <RefreshControl
@@ -432,10 +380,9 @@ const SongHistory = () => {
             colors={[colors.primary]}
           />
         }
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false },
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: false,
+        })}
         removeClippedSubviews={true}
         initialNumToRender={10}
         maxToRenderPerBatch={5}
@@ -446,12 +393,10 @@ const SongHistory = () => {
       <SwipeableModal
         isVisible={showSortModal}
         onClose={() => setShowSortModal(false)}
-        maxHeight="45%"
+        maxHeight='45%'
       >
         <View style={styles.sortModalContent}>
-          <Text style={[styles.sortModalTitle, { color: colors.foreground }]}>
-            Sort by
-          </Text>
+          <Text style={[styles.sortModalTitle, { color: colors.foreground }]}>Sort by</Text>
 
           {sortOptions.map((option) => (
             <TouchableOpacity
@@ -470,19 +415,14 @@ const SongHistory = () => {
                   color: colors.foreground,
                 })}
               </View>
-              <Text
-                style={[styles.sortOptionText, { color: colors.foreground }]}
-              >
+              <Text style={[styles.sortOptionText, { color: colors.foreground }]}>
                 {option.label}
               </Text>
 
               {sortBy === option.value && (
-                <TouchableOpacity
-                  style={styles.sortDirectionButton}
-                  onPress={toggleSortOrder}
-                >
+                <TouchableOpacity style={styles.sortDirectionButton} onPress={toggleSortOrder}>
                   <Feather
-                    name={sortOrder === "ASC" ? "arrow-up" : "arrow-down"}
+                    name={sortOrder === 'ASC' ? 'arrow-up' : 'arrow-down'}
                     size={20}
                     color={colors.primary}
                   />
@@ -492,10 +432,10 @@ const SongHistory = () => {
           ))}
 
           <Button
-            variant="secondary"
-            title="Close"
+            variant='secondary'
+            title='Close'
             onPress={() => setShowSortModal(false)}
-            className="mt-6"
+            className='mt-6'
           />
         </View>
       </SwipeableModal>
@@ -509,54 +449,54 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingText: {
-    color: "white",
+    color: 'white',
     marginTop: 16,
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    color: "white",
+    color: 'white',
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 4,
   },
   headerSubtitle: {
-    color: "white",
+    color: 'white',
     opacity: 0.7,
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   iconButton: {
     padding: 8,
     marginLeft: 8,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
     width: 40,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchContainer: {
     flex: 1,
-    flexDirection: "row",
+    flexDirection: 'row',
     borderRadius: 8,
-    alignItems: "center",
+    alignItems: 'center',
     height: 44,
   },
   searchIcon: {
@@ -564,21 +504,21 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "white",
+    color: 'white',
     fontSize: 16,
     padding: 8,
   },
   sortIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   sortText: {
-    color: "white",
+    color: 'white',
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
     flex: 1,
   },
   sortOrderButton: {
@@ -586,16 +526,16 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: "#121212",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#121212',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
     minHeight: 300,
   },
   emptyText: {
-    color: "white",
+    color: 'white',
     fontSize: 18,
-    textAlign: "center",
+    textAlign: 'center',
     opacity: 0.7,
   },
   listContent: {
@@ -613,65 +553,65 @@ const styles = StyleSheet.create({
   },
   footerLoader: {
     paddingVertical: 20,
-    alignItems: "center",
+    alignItems: 'center',
   },
   filteringIndicator: {
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     borderRadius: 25,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    position: "absolute",
+    position: 'absolute',
     top: 120,
-    alignSelf: "center",
+    alignSelf: 'center',
     zIndex: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filteringLoader: {
     marginRight: 8,
   },
   filteringText: {
-    color: "white",
+    color: 'white',
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   sortModalContent: {
     padding: 20,
   },
   sortModalTitle: {
-    color: "white",
+    color: 'white',
     fontSize: 22,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 20,
-    textAlign: "center",
+    textAlign: 'center',
   },
   sortOption: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   sortOptionSelected: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 8,
     paddingHorizontal: 12,
   },
   sortOptionIcon: {
     width: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   sortOptionText: {
-    color: "white",
+    color: 'white',
     fontSize: 16,
     flex: 1,
   },
   sortOptionTextSelected: {
-    color: "white",
-    fontWeight: "600",
+    color: 'white',
+    fontWeight: '600',
   },
   sortDirectionButton: {
     padding: 8,

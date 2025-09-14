@@ -1,5 +1,5 @@
 // src/components/ui/button.tsx
-import React from "react";
+import React from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -13,30 +13,23 @@ import {
   Platform,
   Pressable,
   PressableProps,
-} from "react-native";
-import { useTheme } from "@/context/ThemeContext";
+} from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 // Button variants exactly matching shadcn/ui
-export type ButtonVariant =
-  | "default"
-  | "destructive"
-  | "outline"
-  | "secondary"
-  | "ghost"
-  | "link";
+export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 
 // Button sizes
-export type ButtonSize = "default" | "sm" | "lg" | "icon";
+export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 
 // Props for the Button component, matching shadcn/ui's API
-export interface ButtonProps
-  extends Omit<TouchableOpacityProps & PressableProps, "style"> {
+export interface ButtonProps extends Omit<TouchableOpacityProps & PressableProps, 'style'> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   asChild?: boolean;
   isLoading?: boolean;
   icon?: React.ReactNode;
-  iconPosition?: "left" | "right";
+  iconPosition?: 'left' | 'right';
   title?: string;
   children?: React.ReactNode;
   className?: string; // For adding string-based styles (won't actually be used in RN)
@@ -45,11 +38,11 @@ export interface ButtonProps
 }
 
 export const Button: React.FC<ButtonProps> = ({
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   isLoading = false,
   icon,
-  iconPosition = "left",
+  iconPosition = 'left',
   title,
   children,
   disabled = false,
@@ -67,40 +60,36 @@ export const Button: React.FC<ButtonProps> = ({
     borderWidth?: number;
   } => {
     switch (variant) {
-      case "default":
+      case 'default':
         return {
           backgroundColor: disabled ? colors.primaryDisabled : colors.primary,
           color: colors.primaryForeground,
         };
-      case "destructive":
+      case 'destructive':
         return {
-          backgroundColor: disabled
-            ? colors.destructiveDisabled
-            : colors.destructive,
+          backgroundColor: disabled ? colors.destructiveDisabled : colors.destructive,
           color: colors.destructiveForeground,
         };
-      case "outline":
+      case 'outline':
         return {
-          backgroundColor: "transparent",
+          backgroundColor: 'transparent',
           color: disabled ? colors.mutedForeground : colors.primary,
           borderColor: colors.border,
           borderWidth: 1,
         };
-      case "secondary":
+      case 'secondary':
         return {
-          backgroundColor: disabled
-            ? colors.secondaryDisabled
-            : colors.secondary,
+          backgroundColor: disabled ? colors.secondaryDisabled : colors.secondary,
           color: colors.secondaryForeground,
         };
-      case "ghost":
+      case 'ghost':
         return {
-          backgroundColor: "transparent",
+          backgroundColor: 'transparent',
           color: disabled ? colors.mutedForeground : colors.primary,
         };
-      case "link":
+      case 'link':
         return {
-          backgroundColor: "transparent",
+          backgroundColor: 'transparent',
           color: disabled ? colors.mutedForeground : colors.primary,
         };
       default:
@@ -120,19 +109,19 @@ export const Button: React.FC<ButtonProps> = ({
     width?: number;
   } => {
     switch (size) {
-      case "sm":
+      case 'sm':
         return {
           paddingHorizontal: 12,
           paddingVertical: 6,
           fontSize: 13,
         };
-      case "lg":
+      case 'lg':
         return {
           paddingHorizontal: 24,
           paddingVertical: 10,
           fontSize: 16,
         };
-      case "icon":
+      case 'icon':
         return {
           paddingHorizontal: 0,
           paddingVertical: 0,
@@ -140,7 +129,7 @@ export const Button: React.FC<ButtonProps> = ({
           height: 40,
           width: 40,
         };
-      case "default":
+      case 'default':
       default:
         return {
           paddingHorizontal: 16,
@@ -155,16 +144,16 @@ export const Button: React.FC<ButtonProps> = ({
 
   // Get ripple color for Android
   const getRippleColor = () => {
-    if (variant === "outline" || variant === "ghost" || variant === "link") {
+    if (variant === 'outline' || variant === 'ghost' || variant === 'link') {
       // Matching the hover state of button in shadcn
       return Platform.select({
-        android: theme === "light" ? "#00000010" : "#FFFFFF10", // 10% opacity
-        default: "transparent",
+        android: theme === 'light' ? '#00000010' : '#FFFFFF10', // 10% opacity
+        default: 'transparent',
       });
     }
     return Platform.select({
-      android: theme === "light" ? "#00000010" : "#FFFFFF20", // Subtle ripple
-      default: "transparent",
+      android: theme === 'light' ? '#00000010' : '#FFFFFF20', // Subtle ripple
+      default: 'transparent',
     });
   };
 
@@ -173,14 +162,10 @@ export const Button: React.FC<ButtonProps> = ({
     const content = title || children;
 
     // For icon-only button
-    if (size === "icon" && icon) {
+    if (size === 'icon' && icon) {
       return (
         <View style={styles.iconOnly}>
-          {isLoading ? (
-            <ActivityIndicator size="small" color={variantStyles.color} />
-          ) : (
-            icon
-          )}
+          {isLoading ? <ActivityIndicator size='small' color={variantStyles.color} /> : icon}
         </View>
       );
     }
@@ -189,16 +174,10 @@ export const Button: React.FC<ButtonProps> = ({
     return (
       <View style={[styles.contentContainer, { height: sizeStyles.height }]}>
         {isLoading ? (
-          <ActivityIndicator
-            size="small"
-            color={variantStyles.color}
-            style={styles.loader}
-          />
+          <ActivityIndicator size='small' color={variantStyles.color} style={styles.loader} />
         ) : (
           <>
-            {icon && iconPosition === "left" && (
-              <View style={styles.leftIcon}>{icon}</View>
-            )}
+            {icon && iconPosition === 'left' && <View style={styles.leftIcon}>{icon}</View>}
 
             {content && (
               <Text
@@ -207,8 +186,7 @@ export const Button: React.FC<ButtonProps> = ({
                   {
                     color: variantStyles.color,
                     fontSize: sizeStyles.fontSize,
-                    textDecorationLine:
-                      variant === "link" ? "underline" : "none",
+                    textDecorationLine: variant === 'link' ? 'underline' : 'none',
                   },
                   textStyle,
                 ]}
@@ -218,9 +196,7 @@ export const Button: React.FC<ButtonProps> = ({
               </Text>
             )}
 
-            {icon && iconPosition === "right" && (
-              <View style={styles.rightIcon}>{icon}</View>
-            )}
+            {icon && iconPosition === 'right' && <View style={styles.rightIcon}>{icon}</View>}
           </>
         )}
       </View>
@@ -228,20 +204,19 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   // Use Pressable on Android for ripple effect, TouchableOpacity on iOS
-  const ButtonComponent =
-    Platform.OS === "android" ? Pressable : TouchableOpacity;
+  const ButtonComponent = Platform.OS === 'android' ? Pressable : TouchableOpacity;
 
   // Common props for both button types
   const commonProps = {
     disabled: disabled || isLoading,
-    accessibilityRole: "button" as "button",
+    accessibilityRole: 'button' as 'button',
     accessibilityState: { disabled: disabled || isLoading },
     ...props,
   };
 
   // Android-specific props
   const androidProps =
-    Platform.OS === "android"
+    Platform.OS === 'android'
       ? {
           android_ripple: {
             color: getRippleColor(),
@@ -278,20 +253,20 @@ export const Button: React.FC<ButtonProps> = ({
 const styles = StyleSheet.create({
   button: {
     borderRadius: 6, // shadcn uses radius-md which is generally 6px
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
     minWidth: 32,
   },
   contentContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
-    fontWeight: "500", // Medium weight like shadcn
-    textAlign: "center",
+    fontWeight: '500', // Medium weight like shadcn
+    textAlign: 'center',
   },
   leftIcon: {
     marginRight: 8,
@@ -300,13 +275,13 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   loader: {
-    alignSelf: "center",
+    alignSelf: 'center',
   },
   iconOnly: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    height: "100%",
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
 });
 

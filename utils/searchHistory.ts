@@ -1,4 +1,4 @@
-import { storageCache } from "./storageCache";
+import { storageCache } from './storageCache';
 
 interface SearchHistoryItem {
   id: string;
@@ -7,7 +7,7 @@ interface SearchHistoryItem {
   resultCount?: number;
 }
 
-const SEARCH_HISTORY_KEY = "@syncvibe/search_history";
+const SEARCH_HISTORY_KEY = '@syncvibe/search_history';
 const MAX_HISTORY_ITEMS = 20;
 const MIN_QUERY_LENGTH = 2;
 
@@ -39,15 +39,13 @@ class SearchHistoryManager {
       // Filter history if a filter is provided
       if (filter && filter.trim().length > 0) {
         const filterLower = filter.toLowerCase().trim();
-        history = history.filter((item) =>
-          item.query.toLowerCase().includes(filterLower),
-        );
+        history = history.filter((item) => item.query.toLowerCase().includes(filterLower));
       }
 
       // Sort by timestamp (most recent first)
       return history.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
-      console.error("Error getting search history:", error);
+      console.error('Error getting search history:', error);
       return [];
     }
   }
@@ -69,7 +67,7 @@ class SearchHistoryManager {
 
       // Check if this exact query already exists
       const existingIndex = history.findIndex(
-        (item) => item.query.toLowerCase() === trimmedQuery.toLowerCase(),
+        (item) => item.query.toLowerCase() === trimmedQuery.toLowerCase()
       );
 
       if (existingIndex !== -1) {
@@ -94,12 +92,9 @@ class SearchHistoryManager {
 
       // Update cache and storage
       this.cache = limitedHistory;
-      await storageCache.setItem(
-        SEARCH_HISTORY_KEY,
-        JSON.stringify(limitedHistory),
-      );
+      await storageCache.setItem(SEARCH_HISTORY_KEY, JSON.stringify(limitedHistory));
     } catch (error) {
-      console.error("Error adding to search history:", error);
+      console.error('Error adding to search history:', error);
     }
   }
 
@@ -112,12 +107,9 @@ class SearchHistoryManager {
       const filteredHistory = history.filter((item) => item.id !== id);
 
       this.cache = filteredHistory;
-      await storageCache.setItem(
-        SEARCH_HISTORY_KEY,
-        JSON.stringify(filteredHistory),
-      );
+      await storageCache.setItem(SEARCH_HISTORY_KEY, JSON.stringify(filteredHistory));
     } catch (error) {
-      console.error("Error removing history item:", error);
+      console.error('Error removing history item:', error);
     }
   }
 
@@ -129,7 +121,7 @@ class SearchHistoryManager {
       this.cache = [];
       await storageCache.removeItem(SEARCH_HISTORY_KEY);
     } catch (error) {
-      console.error("Error clearing search history:", error);
+      console.error('Error clearing search history:', error);
     }
   }
 
@@ -138,7 +130,7 @@ class SearchHistoryManager {
    */
   public async getRecentSearches(
     excludeQuery?: string,
-    limit: number = 10,
+    limit: number = 10
   ): Promise<SearchHistoryItem[]> {
     try {
       const history = await this.getHistory();
@@ -146,14 +138,12 @@ class SearchHistoryManager {
       let filtered = history;
       if (excludeQuery) {
         const excludeLower = excludeQuery.toLowerCase().trim();
-        filtered = history.filter(
-          (item) => item.query.toLowerCase() !== excludeLower,
-        );
+        filtered = history.filter((item) => item.query.toLowerCase() !== excludeLower);
       }
 
       return filtered.slice(0, limit);
     } catch (error) {
-      console.error("Error getting recent searches:", error);
+      console.error('Error getting recent searches:', error);
       return [];
     }
   }

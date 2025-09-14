@@ -1,6 +1,6 @@
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { AlertCircle, Check, CheckCircle, Info } from "lucide-react-native";
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { AlertCircle, Check, CheckCircle, Info } from 'lucide-react-native';
 import React, {
   createContext,
   ReactNode,
@@ -10,7 +10,7 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from "react";
+} from 'react';
 import {
   Animated,
   Dimensions,
@@ -19,11 +19,11 @@ import {
   Text,
   TouchableWithoutFeedback,
   View,
-} from "react-native";
-import { useTheme } from "./ThemeContext";
+} from 'react-native';
+import { useTheme } from './ThemeContext';
 
 // Toast types for different scenarios
-export type ToastType = "default" | "success" | "error" | "info";
+export type ToastType = 'default' | 'success' | 'error' | 'info';
 
 interface ToastOptions {
   type?: ToastType;
@@ -40,9 +40,7 @@ export const toast = (message: string, options?: ToastOptions) => {
   if (globalToast) {
     globalToast(message, options);
   } else {
-    console.warn(
-      "Toast not initialized yet. Make sure ToastProvider is mounted.",
-    );
+    console.warn('Toast not initialized yet. Make sure ToastProvider is mounted.');
   }
 };
 
@@ -59,7 +57,7 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (context === undefined) {
-    throw new Error("useToast must be used within a ToastProvider");
+    throw new Error('useToast must be used within a ToastProvider');
   }
   return context;
 };
@@ -67,8 +65,8 @@ export const useToast = () => {
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const { colors } = useTheme();
   const [visible, setVisible] = useState<boolean>(false);
-  const [message, setMessage] = useState<string>("");
-  const [toastType, setToastType] = useState<ToastType>("default");
+  const [message, setMessage] = useState<string>('');
+  const [toastType, setToastType] = useState<ToastType>('default');
 
   // Animation properties
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -83,17 +81,17 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const getToastColor = useCallback(
     (type: ToastType) => {
       switch (type) {
-        case "success":
+        case 'success':
           return colors.primary;
-        case "error":
+        case 'error':
           return colors.destructive;
-        case "info":
+        case 'info':
           return colors.accent;
         default:
           return colors.primary;
       }
     },
-    [colors],
+    [colors]
   );
 
   const getToastIcon = useCallback(
@@ -112,19 +110,19 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       };
 
       switch (type) {
-        case "success":
+        case 'success':
           return (
             <Animated.View style={iconStyle}>
               <CheckCircle size={size} color={color} strokeWidth={2.5} />
             </Animated.View>
           );
-        case "error":
+        case 'error':
           return (
             <Animated.View style={iconStyle}>
               <AlertCircle size={size} color={color} strokeWidth={2.5} />
             </Animated.View>
           );
-        case "info":
+        case 'info':
           return (
             <Animated.View style={iconStyle}>
               <Info size={size} color={color} strokeWidth={2.5} />
@@ -138,7 +136,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
           );
       }
     },
-    [getToastColor, iconScaleAnim],
+    [getToastColor, iconScaleAnim]
   );
 
   // Enhanced pan responder for better swipe handling
@@ -159,9 +157,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         }),
         onPanResponderRelease: (_, gestureState) => {
           if (Math.abs(gestureState.dx) > 80) {
-            const velocity =
-              Math.sign(gestureState.dx) *
-              Math.min(Math.abs(gestureState.vx), 5);
+            const velocity = Math.sign(gestureState.dx) * Math.min(Math.abs(gestureState.vx), 5);
             Animated.decay(swipeAnim, {
               velocity: velocity,
               deceleration: 0.997,
@@ -183,12 +179,12 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
           }
         },
       }),
-    [swipeAnim, visible],
+    [swipeAnim, visible]
   );
 
   const showToast = useCallback(
     (msg: string, options?: ToastOptions) => {
-      const type = options?.type || "default";
+      const type = options?.type || 'default';
       const duration = options?.duration || 3000;
 
       setMessage(msg);
@@ -236,7 +232,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         hideToast();
       }, duration);
     },
-    [fadeAnim, translateYAnim, scaleAnim, swipeAnim, iconScaleAnim],
+    [fadeAnim, translateYAnim, scaleAnim, swipeAnim, iconScaleAnim]
   );
 
   const hideToast = useCallback(
@@ -271,7 +267,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         animationInProgressRef.current = false;
       }
     },
-    [fadeAnim, translateYAnim, scaleAnim],
+    [fadeAnim, translateYAnim, scaleAnim]
   );
 
   useEffect(() => {
@@ -290,7 +286,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     () => ({
       toast: showToast,
     }),
-    [showToast],
+    [showToast]
   );
 
   return (
@@ -313,12 +309,12 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         >
           <TouchableWithoutFeedback onPress={() => hideToast()}>
             <Card
-              variant="default"
+              variant='default'
               className={cn(
-                "flex-row items-center px-4 py-3",
-                toastType === "error" && "border-destructive",
-                toastType === "success" && "border-primary",
-                toastType === "info" && "border-accent",
+                'flex-row items-center px-4 py-3',
+                toastType === 'error' && 'border-destructive',
+                toastType === 'success' && 'border-primary',
+                toastType === 'info' && 'border-accent'
               )}
               style={[
                 styles.toastCard,
@@ -329,9 +325,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
                 },
               ]}
             >
-              <View style={styles.iconContainer}>
-                {getToastIcon(toastType)}
-              </View>
+              <View style={styles.iconContainer}>{getToastIcon(toastType)}</View>
               <View style={styles.toastContent}>
                 <Text
                   style={[
@@ -355,15 +349,15 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
 
 const styles = StyleSheet.create({
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 80,
-    alignSelf: "center",
-    width: Dimensions.get("window").width - 40,
+    alignSelf: 'center',
+    width: Dimensions.get('window').width - 40,
     maxWidth: 380,
     zIndex: 9999,
   },
   toastCard: {
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -372,8 +366,8 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginRight: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     width: 28,
     height: 28,
   },
@@ -382,7 +376,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
     lineHeight: 20,
     letterSpacing: 0.2,
   },
