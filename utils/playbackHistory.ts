@@ -2,7 +2,6 @@ import { API_URL } from '@/constants';
 import { Song } from '@/types/song';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { AppState } from 'react-native';
 
 interface PlaybackProgress {
   songId: string;

@@ -5,20 +5,16 @@ import {
   RecommendationGrid,
   TrendingSongs,
 } from '@/components/music/MusicLists';
-import { SONG_URL } from '@/constants';
 import { useTheme } from '@/context/ThemeContext';
 import { useUser } from '@/context/UserContext';
 import { useHomePageMusic, useRecentMusic } from '@/queries/useMusic';
-import { Song } from '@/types/song';
-import useApi from '@/utils/hooks/useApi';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { LoaderIcon } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { RefreshControl, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -30,23 +26,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface HomePageData {
-  trending: Song[];
-  playlists: any[] | undefined;
-  albums: any[] | undefined;
-  charts: any[] | undefined;
-  artists: any[] | undefined;
-}
-
-interface Recommendations {
-  songs: Song[];
-  recentlyPlayed: Song[];
-}
-
 export default function HomeScreen() {
   const { selectedLanguages, user } = useUser();
   const { colors, theme } = useTheme();
-  const [refreshing, setRefreshing] = useState(false);
   const scrollViewRef = useRef(null);
 
   // Animation values
@@ -57,7 +39,7 @@ export default function HomeScreen() {
   const headerScale = useSharedValue(1);
 
   const { data: homePageData, isLoading: loading, error } = useHomePageMusic();
-  const { data: recommendations, refetch } = useRecentMusic();
+  const { data: recommendations, refetch, isLoading } = useRecentMusic();
 
   // Setup initial animations
   useEffect(() => {
@@ -120,7 +102,6 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setRefreshing(true);
     if (user?.userid) {
       refetch();
     }
@@ -230,7 +211,7 @@ export default function HomeScreen() {
             onScroll={scrollHandler}
             scrollEventThrottle={16}
             contentContainerStyle={{ paddingBottom: 20, paddingTop: 20 }}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}
           >
             <View className='px-2 pb-10'>
               {typeof error === 'string' ? (

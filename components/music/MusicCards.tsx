@@ -22,6 +22,7 @@ import { useSharedValue, withTiming } from 'react-native-reanimated';
 import TrackPlayer, { State, usePlaybackState, useProgress } from 'react-native-track-player';
 import Card from '../ui/card';
 import NewPlayerDrawer from './NewPlayerDrawer';
+import { useAddToHistory } from '@/queries/useMusic';
 
 interface SongCardProps {
   song: Song;
@@ -90,6 +91,7 @@ export const SongCard = memo(
     const { currentSong, isPlaying, isLoading } = usePlayerState();
     const { user } = useUser();
     const { colors } = useTheme();
+    const addToHistory = useAddToHistory();
 
     const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
     const isCurrentSong = currentSong?.id === securedSong.id;
@@ -110,7 +112,7 @@ export const SongCard = memo(
       } else {
         playSong(securedSong);
         if (user?.userid) {
-          addToHistory(securedSong, 10);
+          addToHistory.mutate({ songData: securedSong, playedTime: 10 });
         }
       }
     }, [isCurrentSong, isPlaying, securedSong, playSong, onPressCallback]);
@@ -291,6 +293,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
   const { colors } = useTheme();
   const isCurrentSong = currentSong?.id === song.id;
   const [playerDrawerOpen, setPlayerDrawerOpen] = useState(false);
+  const addToHistory = useAddToHistory();
 
   const securedSong = useMemo(() => ensureHttpsForSongUrls(song), [song]);
 
@@ -308,7 +311,7 @@ export const NewSongCard = memo(({ song }: SongCardProps) => {
     } else {
       playSong(securedSong);
       if (user?.userid) {
-        addToHistory(securedSong, 10);
+        addToHistory.mutate({ songData: securedSong, playedTime: 10 });
       }
     }
   };
